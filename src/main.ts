@@ -2,6 +2,7 @@ import { Plugin } from 'obsidian';
 import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
+import { registerFileMenu } from './context/MenuBuilder';
 
 export default class WorldBuilderPlugin extends Plugin {
 	settings!: WorldBuilderSettings;
@@ -20,6 +21,14 @@ export default class WorldBuilderPlugin extends Plugin {
 
 		this.addSettingTab(new WorldBuilderSettingTab(this.app, this));
 
+		// Register context menu
+		this.registerEvent(
+			this.app.workspace.on('file-menu', (menu, file) => {
+				registerFileMenu(this.app, menu, file, this.state);
+			})
+		);
+
+		// Watch for vault changes that affect state
 		this.registerEvent(
 			this.app.vault.on('modify', (file) => {
 				if (

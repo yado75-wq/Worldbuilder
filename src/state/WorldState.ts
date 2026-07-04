@@ -4,7 +4,6 @@ import {
 	WorldInfo,
 	TemplateSetInfo,
 	FieldDefinition,
-	FieldType,
 	DisplayType,
 	FolderRule,
 	ValidationIssue,
@@ -26,16 +25,19 @@ export async function scanVault(
 	app: App,
 	settings: WorldBuilderSettings
 ): Promise<PluginState> {
-	const worlds = await findWorlds(app);
-	const activeWorld = findActiveWorld(worlds);
 	const templateSets = await findTemplateSets(app, settings);
+	const worlds = await findWorlds(app, templateSets);
+	const activeWorld = findActiveWorld(worlds);
 
 	return { activeWorld, worlds, templateSets };
 }
 
 // ── World scanning ────────────────────────────────────────────────────────────
 
-async function findWorlds(app: App): Promise<WorldInfo[]> {
+async function findWorlds(
+	app: App,
+	templateSets: TemplateSetInfo[]
+): Promise<WorldInfo[]> {
 	const worlds: WorldInfo[] = [];
 
 	const indexFiles = app.vault.getFiles().filter(
@@ -46,20 +48,24 @@ async function findWorlds(app: App): Promise<WorldInfo[]> {
 		const cache = app.metadataCache.getFileCache(file);
 		if (!cache) continue;
 
-		// Use Obsidian's getAllTags helper — avoids unsafe frontmatter access for tags
 		const tags = getAllTags(cache) ?? [];
 		if (!tags.includes('world') && !tags.includes('#world')) continue;
 
 		const folder = file.parent;
 		if (!folder) continue;
 
-		// frontmatter is typed as { [key: string]: any } in Obsidian — unavoidable
-		
+		// frontmatter is typed as { [key: string]: any } in Obsidian's API
 		const rawName: unknown = cache.frontmatter?.['name'];
-		
 		const rawStatus: unknown = cache.frontmatter?.['status'];
-		
 		const rawTemplateSet: unknown = cache.frontmatter?.['template_set'];
+
+		const templateSetName = typeof rawTemplateSet === 'string'
+			? rawTemplateSet
+			: 'default';
+
+		// Find matching template set to carry folderRules and worldTemplate
+		const templateSet = templateSets.find(ts => ts.name === templateSetName)
+			?? templateSets[0];
 
 		worlds.push({
 			name: typeof rawName === 'string' ? rawName : folder.name,
@@ -67,7 +73,9 @@ async function findWorlds(app: App): Promise<WorldInfo[]> {
 			folder,
 			indexFile: file,
 			status: rawStatus === 'active' ? 'active' : 'inactive',
-			templateSet: typeof rawTemplateSet === 'string' ? rawTemplateSet : 'default',
+			templateSet: templateSetName,
+			folderRules: templateSet?.folderRules ?? [],
+			worldTemplate: templateSet?.worldTemplate ?? [],
 		});
 	}
 

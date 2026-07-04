@@ -1,11 +1,11 @@
 import { TFile, TFolder } from 'obsidian';
 
-// ── Settings ─────────────────────────────────────────────────────────────────
+// ── Settings ──────────────────────────────────────────────────────────────────
 
 export interface WorldBuilderSettings {
-	systemFolder: string;       // default: "_system"
-	templatesFolder: string;    // default: "templates"
-	scriptsFolder: string;      // default: "scripts"
+	systemFolder: string;
+	templatesFolder: string;
+	scriptsFolder: string;
 }
 
 export const DEFAULT_SETTINGS: WorldBuilderSettings = {
@@ -17,24 +17,26 @@ export const DEFAULT_SETTINGS: WorldBuilderSettings = {
 // ── World ─────────────────────────────────────────────────────────────────────
 
 export interface WorldInfo {
-	name: string;               // display name from frontmatter or folder name
-	path: string;               // vault-relative path to world root folder
-	folder: TFolder;            // TFolder reference
-	indexFile: TFile;           // _index.md TFile reference
+	name: string;
+	path: string;
+	folder: TFolder;
+	indexFile: TFile;
 	status: 'active' | 'inactive';
-	templateSet: string;        // name of template set used by this world
+	templateSet: string;
+	folderRules: FolderRule[];       // carried from template set for context resolution
+	worldTemplate: string[];         // subfolder list, needed for sync
 }
 
 // ── Template Sets ─────────────────────────────────────────────────────────────
 
 export interface TemplateSetInfo {
-	name: string;               // folder name under _system/templates/
-	path: string;               // full vault-relative path
+	name: string;
+	path: string;
 	isValid: boolean;
 	issues: ValidationIssue[];
 	folderRules: FolderRule[];
-	worldTemplate: string[];    // subfolder names from world-template.md
-	fieldSets: Record<string, FieldDefinition[]>; // entityType → fields
+	worldTemplate: string[];
+	fieldSets: Record<string, FieldDefinition[]>;
 }
 
 export interface ValidationIssue {
@@ -45,14 +47,14 @@ export interface ValidationIssue {
 // ── Fields ────────────────────────────────────────────────────────────────────
 
 export interface FieldDefinition {
-	key: string;                // camelCase identifier
-	label: string;              // human-readable label
-	mandatory: boolean;         // only title field actually blocks submit
+	key: string;
+	label: string;
+	mandatory: boolean;
 	type: FieldType;
 	display: DisplayType;
-	options?: string[];         // for select: type
-	linkFolder?: string;        // for link: type primary folder
-	linkFallback?: string;      // for link:Primary>Fallback type
+	options?: string[];
+	linkFolder?: string;
+	linkFallback?: string;
 }
 
 export type FieldType = 'text' | 'link' | 'select';
@@ -62,16 +64,16 @@ export type DisplayType = 'title' | 'property' | 'section';
 
 export interface FolderRule {
 	entityType: string;
-	targetFolder: string;       // '*' means ask user
+	targetFolder: string;
 }
 
 // ── Entities ──────────────────────────────────────────────────────────────────
 
 export interface EntityInfo {
-	type: string;               // e.g. "Character"
+	type: string;
 	file: TFile;
-	name: string;               // from frontmatter or filename
-	worldRoot: string;          // vault-relative path to world root
+	name: string;
+	worldRoot: string;
 }
 
 // ── Forms ─────────────────────────────────────────────────────────────────────
@@ -84,11 +86,11 @@ export interface FormResult {
 
 export type MenuContext =
 	| { type: 'vault-root' }
-	| { type: 'world-root';         world: WorldInfo }
-	| { type: 'entity-folder';      world: WorldInfo; entityType: string }
-	| { type: 'entity-file';        world: WorldInfo; entityType: string; file: TFile }
-	| { type: 'index-file';         world: WorldInfo }
-	| { type: 'generic-folder' }
+	| { type: 'world-root';     world: WorldInfo }
+	| { type: 'entity-folder';  world: WorldInfo; entityType: string; folder: TFolder }
+	| { type: 'entity-file';    world: WorldInfo; entityType: string; file: TFile }
+	| { type: 'index-file';     world: WorldInfo }
+	| { type: 'generic-folder'; world: WorldInfo; folder: TFolder }
 	| { type: 'unknown' };
 
 // ── Plugin State ──────────────────────────────────────────────────────────────
