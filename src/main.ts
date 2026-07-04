@@ -1,8 +1,9 @@
-import { Plugin } from 'obsidian';
+import { Plugin, normalizePath } from 'obsidian';
 import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
 import { registerFileMenu } from './context/MenuBuilder';
+import { ensureDefaultTemplates } from './commands/SetupCommand';
 
 export default class WorldBuilderPlugin extends Plugin {
 	settings!: WorldBuilderSettings;
@@ -17,6 +18,17 @@ export default class WorldBuilderPlugin extends Plugin {
 			templateSets: [],
 		};
 
+		await this.refreshState();
+
+		// Ensure defaults folder exists and is populated
+		await ensureDefaultTemplates(
+			this.app,
+			this.settings,
+			this.pluginDir,
+			this.state.templateSets
+		);
+
+		// Refresh state after setup
 		await this.refreshState();
 
 		this.addSettingTab(new WorldBuilderSettingTab(this.app, this));
@@ -65,11 +77,11 @@ export default class WorldBuilderPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	get templatesPath(): string {
-		return `${this.settings.systemFolder}/${this.settings.templatesFolder}`;
+	get pluginDir(): string {
+		return normalizePath(`${this.app.vault.configDir}/plugins/${this.manifest.id}`);
 	}
 
-	get scriptsPath(): string {
-		return `${this.settings.systemFolder}/${this.settings.scriptsFolder}`;
+	get templatesPath(): string {
+		return `${this.settings.systemFolder}/${this.settings.templatesFolder}`;
 	}
 }

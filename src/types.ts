@@ -3,15 +3,13 @@ import { TFile, TFolder } from 'obsidian';
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 export interface WorldBuilderSettings {
-	systemFolder: string;
-	templatesFolder: string;
-	scriptsFolder: string;
+	systemFolder: string;       // fixed: _system
+	templatesFolder: string;    // fixed: templates
 }
 
 export const DEFAULT_SETTINGS: WorldBuilderSettings = {
 	systemFolder: '_system',
 	templatesFolder: 'templates',
-	scriptsFolder: 'scripts',
 };
 
 // ── World ─────────────────────────────────────────────────────────────────────
@@ -23,8 +21,8 @@ export interface WorldInfo {
 	indexFile: TFile;
 	status: 'active' | 'inactive';
 	templateSet: string;
-	folderRules: FolderRule[];       // carried from template set for context resolution
-	worldTemplate: string[];         // subfolder list, needed for sync
+	folderRules: FolderRule[];
+	worldTemplate: string[];
 }
 
 // ── Template Sets ─────────────────────────────────────────────────────────────
