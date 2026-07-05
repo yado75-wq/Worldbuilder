@@ -4,6 +4,7 @@ import { resolveContext } from './ContextResolver';
 import { newWorld } from '../commands/NewWorldCommand';
 import { switchToWorld } from '../commands/SwitchWorldCommand';
 import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
+import { refreshDashboard } from '../commands/RefreshDashboardCommand';
 
 export function registerFileMenu(
 	app: App,
@@ -51,7 +52,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Refresh dashboard')
 				.setIcon('layout-dashboard')
-				.onClick(() => { void onRefreshDashboard(app, context.world.path); })
+				.onClick(() => { void refreshDashboard(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Sync world folders')
@@ -95,7 +96,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Refresh dashboard')
 				.setIcon('layout-dashboard')
-				.onClick(() => { void onRefreshDashboard(app, context.world.path); })
+				.onClick(() => { void refreshDashboard(app, state, context.world.path); })
 			);
 			break;
 
@@ -108,10 +109,6 @@ export function registerFileMenu(
 
 function onEditWorldMeta(app: App, worldPath: string): void {
 	new Notice(`Edit world meta: ${worldPath}`);
-}
-
-function onRefreshDashboard(app: App, worldPath: string): void {
-	new Notice(`Refresh dashboard: ${worldPath}`);
 }
 
 function onCreateEntity(
