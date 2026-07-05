@@ -6,6 +6,7 @@ export class InputModal extends Modal {
 	private initialValue: string;
 	private onSubmit: (value: string) => void;
 	private onCancel: () => void;
+	private submitted = false;
 
 	constructor(
 		app: App,
@@ -62,6 +63,7 @@ export class InputModal extends Modal {
 				input.focus();
 				return;
 			}
+			this.submitted = true;
 			this.close();
 			this.onSubmit(value);
 		};
@@ -78,6 +80,6 @@ export class InputModal extends Modal {
 	onClose(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		this.onCancel();
+		if (!this.submitted) this.onCancel();
 	}
 }

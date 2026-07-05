@@ -1,14 +1,23 @@
-import { App, Menu, Notice, TAbstractFile } from 'obsidian';
-import { PluginState } from '../types';
+import { App, Menu, Notice, TAbstractFile, TFolder } from 'obsidian';
+import { PluginState, WorldBuilderSettings } from '../types';
 import { resolveContext } from './ContextResolver';
 import { newWorld } from '../commands/NewWorldCommand';
+import { switchToWorld } from '../commands/SwitchWorldCommand';
 
 export function registerFileMenu(
 	app: App,
 	menu: Menu,
 	file: TAbstractFile,
-	state: PluginState
+	state: PluginState,
+	settings: WorldBuilderSettings
 ): void {
+
+	// Never show menu items on system folder or its children
+	if (
+		file.path === settings.systemFolder ||
+		file.path.startsWith(settings.systemFolder + '/')
+	) return;
+
 	const context = resolveContext(file, state.worlds);
 
 	switch (context.type) {
@@ -21,12 +30,14 @@ export function registerFileMenu(
 			);
 			break;
 
-		case 'generic-folder':
-			menu.addItem(item => item
-				.setTitle('New world')
-				.setIcon('globe')
-				.onClick(() => { void newWorld(app, state, context.folder.path); })
-			);
+		case 'unknown':
+			if (file instanceof TFolder) {
+				menu.addItem(item => item
+					.setTitle('New world')
+					.setIcon('globe')
+					.onClick(() => { void newWorld(app, state, file.path); })
+				);
+			}
 			break;
 
 		case 'world-root':
@@ -49,7 +60,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Switch to this world')
 				.setIcon('check')
-				.onClick(() => { void onSwitchToWorld(app, context.world.path); })
+				.onClick(() => { void switchToWorld(app, state, context.world.path); })
 			);
 			menu.addSeparator();
 			break;
@@ -87,7 +98,7 @@ export function registerFileMenu(
 			);
 			break;
 
-		case 'unknown':
+		case 'generic-folder':
 			break;
 	}
 }
@@ -104,10 +115,6 @@ function onRefreshDashboard(app: App, worldPath: string): void {
 
 function onSyncWorldFolders(app: App, worldPath: string): void {
 	new Notice(`Sync folders: ${worldPath}`);
-}
-
-function onSwitchToWorld(app: App, worldPath: string): void {
-	new Notice(`Switch to world: ${worldPath}`);
 }
 
 function onCreateEntity(

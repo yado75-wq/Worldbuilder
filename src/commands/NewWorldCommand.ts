@@ -10,9 +10,11 @@ export async function newWorld(
 ): Promise<void> {
 
 	// Resolve template set from active world or first available
-	const templateSet = state.activeWorld
+	/*const templateSet = state.activeWorld
 		? state.templateSets.find(ts => ts.name === state.activeWorld?.templateSet)
-		: state.templateSets[0];
+		: state.templateSets[0];*/
+
+	const templateSet = state.templateSets.find(ts => ts.isValid);
 
 	if (!templateSet) {
 		new Notice('No template sets found. Create one in _system/templates/ first.');
@@ -41,6 +43,7 @@ export async function newWorld(
 	const makeActive = await askConfirm(app, `Make "${name}" the active world?`);
 
 	// Step 3 — Create folders
+	new Notice(`Creating ${templateSet.worldTemplate.length} subfolders`);
 	await app.vault.createFolder(base);
 	for (const sub of templateSet.worldTemplate) {
 		await app.vault.createFolder(`${base}/${sub}`);

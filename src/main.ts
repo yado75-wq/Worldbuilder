@@ -1,4 +1,4 @@
-import { Plugin, normalizePath } from 'obsidian';
+import { Plugin, normalizePath, TFolder } from 'obsidian';
 import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
@@ -36,13 +36,14 @@ export default class WorldBuilderPlugin extends Plugin {
 		// Register context menu
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
-				registerFileMenu(this.app, menu, file, this.state);
+				registerFileMenu(this.app, menu, file, this.state, this.settings);
 			})
 		);
 
-		// Watch for vault changes that affect state
+		// Metadata cache — fires after frontmatter is fully parsed
+		// Handles content changes to _index.md and config files
 		this.registerEvent(
-			this.app.vault.on('modify', (file) => {
+			this.app.metadataCache.on('changed', (file) => {
 				if (
 					file.name === '_index.md' ||
 					file.name.endsWith('_Fields.md') ||
@@ -54,7 +55,12 @@ export default class WorldBuilderPlugin extends Plugin {
 			})
 		);
 
-		this.registerEvent(this.app.vault.on('create', () => void this.refreshState()));
+		// Vault — handles structural changes (folder create/delete/rename)
+		this.registerEvent(
+			this.app.vault.on('create', (file) => {
+				if (file instanceof TFolder) void this.refreshState();
+			})
+		);
 		this.registerEvent(this.app.vault.on('delete', () => void this.refreshState()));
 		this.registerEvent(this.app.vault.on('rename', () => void this.refreshState()));
 	}
