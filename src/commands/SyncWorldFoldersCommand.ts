@@ -51,7 +51,7 @@ export async function syncWorldFolders(
 		// Skip non-empty folders
 		if (child.children.length > 0) continue;
 
-		await app.vault.delete(child);
+		await app.fileManager.trashFile(child);
 		deleted.push(child.name);
 	}
 

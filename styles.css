@@ -1,3 +1,7 @@
 .wb-hidden {
 	display: none;
 }
+
+.wb-full-width {
+	width: 100%;
+}

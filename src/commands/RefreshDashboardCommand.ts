@@ -1,4 +1,4 @@
-import { App, Notice, TFile } from 'obsidian';
+import { App, Notice, TFile, getAllTags } from 'obsidian';
 import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
 
 const MARKER = '<!-- AUTO-GENERATED: everything above this line is overwritten on refresh -->';
@@ -80,8 +80,8 @@ export async function refreshDashboard(
 				f.path.startsWith(folderPath + '/') &&
 				f.extension === 'md' &&
 				f.basename !== '_index' &&
-				!app.metadataCache.getFileCache(f)?.frontmatter?.['tags']
-					?.toString().includes('generic')
+				!getAllTags(app.metadataCache.getFileCache(f) ?? {})
+					?.some(t => t === '#generic' || t === 'generic')
 			);
 
 			const count = entities.length;

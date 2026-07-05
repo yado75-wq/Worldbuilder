@@ -5,6 +5,7 @@ import { newWorld } from '../commands/NewWorldCommand';
 import { switchToWorld } from '../commands/SwitchWorldCommand';
 import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
 import { refreshDashboard } from '../commands/RefreshDashboardCommand';
+import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 
 export function registerFileMenu(
 	app: App,
@@ -47,7 +48,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Edit world meta')
 				.setIcon('pencil')
-				.onClick(() => { void onEditWorldMeta(app, context.world.path); })
+				.onClick(() => { void editWorldMeta(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Refresh dashboard')
@@ -91,7 +92,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Edit world meta')
 				.setIcon('pencil')
-				.onClick(() => { void onEditWorldMeta(app, context.world.path); })
+				.onClick(() => { void editWorldMeta(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Refresh dashboard')
@@ -106,10 +107,6 @@ export function registerFileMenu(
 }
 
 // ── Stubs — replaced as commands are implemented ──────────────────────────────
-
-function onEditWorldMeta(app: App, worldPath: string): void {
-	new Notice(`Edit world meta: ${worldPath}`);
-}
 
 function onCreateEntity(
 	app: App,

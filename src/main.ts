@@ -18,19 +18,6 @@ export default class WorldBuilderPlugin extends Plugin {
 			templateSets: [],
 		};
 
-		await this.refreshState();
-
-		// Ensure defaults folder exists and is populated
-		await ensureDefaultTemplates(
-			this.app,
-			this.settings,
-			this.pluginDir,
-			this.state.templateSets
-		);
-
-		// Refresh state after setup
-		await this.refreshState();
-
 		this.addSettingTab(new WorldBuilderSettingTab(this.app, this));
 
 		// Register context menu
@@ -41,7 +28,6 @@ export default class WorldBuilderPlugin extends Plugin {
 		);
 
 		// Metadata cache — fires after frontmatter is fully parsed
-		// Handles content changes to _index.md and config files
 		this.registerEvent(
 			this.app.metadataCache.on('changed', (file) => {
 				if (
@@ -55,7 +41,7 @@ export default class WorldBuilderPlugin extends Plugin {
 			})
 		);
 
-		// Vault — handles structural changes (folder create/delete/rename)
+		// Vault — handles structural changes
 		this.registerEvent(
 			this.app.vault.on('create', (file) => {
 				if (file instanceof TFolder) void this.refreshState();
@@ -63,6 +49,17 @@ export default class WorldBuilderPlugin extends Plugin {
 		);
 		this.registerEvent(this.app.vault.on('delete', () => void this.refreshState()));
 		this.registerEvent(this.app.vault.on('rename', () => void this.refreshState()));
+
+		// Wait for vault to be fully ready before scanning
+		this.app.workspace.onLayoutReady(async () => {
+			await ensureDefaultTemplates(
+				this.app,
+				this.settings,
+				this.pluginDir,
+				this.state.templateSets
+			);
+			await this.refreshState();
+		});
 	}
 
 	onunload() {}
