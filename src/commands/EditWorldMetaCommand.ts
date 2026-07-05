@@ -1,6 +1,7 @@
 import { App, Notice, getAllTags } from 'obsidian';
 import { PluginState, WorldInfo, FieldDefinition } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
+import { refreshDashboard } from './RefreshDashboardCommand';
 
 export async function editWorldMeta(
 	app: App,
@@ -22,8 +23,10 @@ export async function editWorldMeta(
 		return;
 	}
 
-	const fields = templateSet.fieldSets['WorldMeta'] ?? [];
-	if (fields.length === 0) {
+	const allFields = templateSet.fieldSets['WorldMeta'] ?? [];
+	// Filter out title field — world name is not editable through meta form
+	const fields = allFields.filter(f => f.display !== 'title');
+	if (allFields.length === 0) {
 		new Notice('WorldMeta_Fields.md not found or empty.');
 		return;
 	}
@@ -46,9 +49,16 @@ export async function editWorldMeta(
 
 	if (!result) return;
 
-	const newContent = buildIndexContent(fields, result.data, world.status, world.templateSet);
+	// Use world.name directly — name is not part of meta form
+	const newContent = buildIndexContent(fields, result.data, world.name, world.status, world.templateSet);
 	await app.vault.modify(world.indexFile, newContent);
 	new Notice(`World meta updated for "${world.name}".`);
+
+	// Refresh dashboard if it exists
+	const dashPath = `${worldPath}/_dashboard.md`;
+	if (app.vault.getAbstractFileByPath(dashPath)) {
+		await refreshDashboard(app, state, worldPath);
+	}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -118,14 +128,10 @@ function buildLinkCandidates(
 function buildIndexContent(
 	fields: FieldDefinition[],
 	data: Record<string, string | null>,
+	worldName: string,
 	status: string,
 	templateSet: string
 ): string {
-	const titleField = fields.find(f => f.display === 'title');
-	const titleKey = titleField?.key ?? 'name';
-	const entries = Object.entries(data).find(([k]) => k === titleKey);
-	const title = entries?.[1] ?? 'Unknown';
-
 	const frontmatterProps = fields
 		.filter(f => f.display === 'property' && data[f.key])
 		.map(f => `${f.key}: "${data[f.key] ?? ''}"`)
@@ -146,10 +152,11 @@ tags:
   - world
 status: ${status}
 template_set: ${templateSet}
+name: "${worldName}"
 ${frontmatterProps}
 ---
 
-# ${title}
+# ${worldName}
 
 ${propertiesBlock}
 ${sectionsBlock}`;

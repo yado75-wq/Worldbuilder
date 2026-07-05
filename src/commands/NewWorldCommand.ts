@@ -1,7 +1,8 @@
-import { App, Notice } from 'obsidian';
-import { PluginState } from '../types';
+import { App, Notice, TFolder } from 'obsidian';
+import { PluginState, WorldInfo } from '../types';
 import { InputModal } from '../ui/InputModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { refreshDashboard } from './RefreshDashboardCommand';
 
 export async function newWorld(
 	app: App,
@@ -10,11 +11,9 @@ export async function newWorld(
 ): Promise<void> {
 
 	// Resolve template set from active world or first available
-	/*const templateSet = state.activeWorld
+	const templateSet = state.activeWorld
 		? state.templateSets.find(ts => ts.name === state.activeWorld?.templateSet)
-		: state.templateSets[0];*/
-
-	const templateSet = state.templateSets.find(ts => ts.isValid);
+		: state.templateSets[0];
 
 	if (!templateSet) {
 		new Notice('No template sets found. Create one in _system/templates/ first.');
@@ -43,7 +42,6 @@ export async function newWorld(
 	const makeActive = await askConfirm(app, `Make "${name}" the active world?`);
 
 	// Step 3 — Create folders
-	new Notice(`Creating ${templateSet.worldTemplate.length} subfolders`);
 	await app.vault.createFolder(base);
 	for (const sub of templateSet.worldTemplate) {
 		await app.vault.createFolder(`${base}/${sub}`);
@@ -56,9 +54,29 @@ export async function newWorld(
 
 	// Step 5 — Create _index.md
 	const indexContent = buildMinimalIndex(name, makeActive ? 'active' : 'inactive', templateSet.name);
-	await app.vault.create(`${base}/_index.md`, indexContent);
+	const indexFile = await app.vault.create(`${base}/_index.md`, indexContent);
 
 	new Notice(`"${name}" created${makeActive ? ' and set as active world' : ''}.`);
+
+	// Create dashboard immediately using the new world's folder
+	const newFolder = app.vault.getAbstractFileByPath(base);
+	if (newFolder instanceof TFolder) {
+		const newWorld: WorldInfo = {
+			name,
+			path: base,
+			folder: newFolder,
+			indexFile,
+			status: makeActive ? 'active' : 'inactive',
+			templateSet: templateSet.name,
+			folderRules: templateSet.folderRules,
+			worldTemplate: templateSet.worldTemplate,
+		};
+		const newState: PluginState = {
+			...state,
+			worlds: [...state.worlds, newWorld],
+		};
+		await refreshDashboard(app, newState, base);
+	}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

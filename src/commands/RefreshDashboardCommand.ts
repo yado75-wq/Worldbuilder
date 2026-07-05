@@ -36,17 +36,24 @@ export async function refreshDashboard(
 		}
 	}
 
-	// Read world meta from _index.md
+	// Read world meta from _index.md directly — cache may not be updated yet
 	const indexContent = await app.vault.read(world.indexFile);
-	const meta = app.metadataCache.getFileCache(world.indexFile)?.frontmatter;
 
-	// Build meta properties block — skip internal fields
+	// Parse frontmatter from raw content
+	const frontmatterMatch = indexContent.match(/^---\n([\s\S]*?)\n---/);
+	const frontmatterContent = frontmatterMatch?.[1] ?? '';
 	const skipKeys = ['tags', 'status', 'name', 'template_set', 'position'];
-	const metaProps = meta
-		? Object.entries(meta)
-			.filter(([k]) => !skipKeys.includes(k))
-			.filter(([, v]) => v !== null && v !== undefined && v !== '')
-			.map(([k, v]) => `- **${k.charAt(0).toUpperCase() + k.slice(1)}:** ${String(v)}`)
+	const metaProps = frontmatterContent.length > 0
+		? frontmatterContent
+			.split('\n')
+			.map(line => line.match(/^(\w+):\s*"?([^"]*)"?$/))
+			.filter((m): m is RegExpMatchArray => m !== null && !skipKeys.includes(m[1] ?? ''))
+			.filter(m => (m[2] ?? '').trim().length > 0)
+			.map(m => {
+				const key = m[1] ?? '';
+				const val = (m[2] ?? '').trim();
+				return `- **${key.charAt(0).toUpperCase() + key.slice(1)}:** ${val}`;
+			})
 			.join('\n')
 		: '';
 
