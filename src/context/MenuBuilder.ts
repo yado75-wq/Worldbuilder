@@ -3,6 +3,7 @@ import { PluginState, WorldBuilderSettings } from '../types';
 import { resolveContext } from './ContextResolver';
 import { newWorld } from '../commands/NewWorldCommand';
 import { switchToWorld } from '../commands/SwitchWorldCommand';
+import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
 
 export function registerFileMenu(
 	app: App,
@@ -55,7 +56,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Sync world folders')
 				.setIcon('folder-sync')
-				.onClick(() => { void onSyncWorldFolders(app, context.world.path); })
+				.onClick(() => { void syncWorldFolders(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Switch to this world')
@@ -111,10 +112,6 @@ function onEditWorldMeta(app: App, worldPath: string): void {
 
 function onRefreshDashboard(app: App, worldPath: string): void {
 	new Notice(`Refresh dashboard: ${worldPath}`);
-}
-
-function onSyncWorldFolders(app: App, worldPath: string): void {
-	new Notice(`Sync folders: ${worldPath}`);
 }
 
 function onCreateEntity(
