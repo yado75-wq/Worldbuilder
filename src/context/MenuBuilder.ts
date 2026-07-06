@@ -1,4 +1,4 @@
-import { App, Menu, Notice, TAbstractFile, TFolder } from 'obsidian';
+import { App, Menu, MenuItem, TAbstractFile, TFolder } from 'obsidian';
 import { PluginState, WorldBuilderSettings } from '../types';
 import { resolveContext } from './ContextResolver';
 import { newWorld } from '../commands/NewWorldCommand';
@@ -7,6 +7,7 @@ import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
 import { refreshDashboard } from '../commands/RefreshDashboardCommand';
 import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 import { createEntity } from '../commands/CreateEntityCommand';
+import { editEntity } from '../commands/EditEntityCommand';
 
 export function registerFileMenu(
 	app: App,
@@ -44,7 +45,7 @@ export function registerFileMenu(
 			}
 			break;
 
-		case 'world-root':
+		case 'world-root': {
 			menu.addSeparator();
 			menu.addItem(item => item
 				.setTitle('Edit world meta')
@@ -66,8 +67,19 @@ export function registerFileMenu(
 				.setIcon('check')
 				.onClick(() => { void switchToWorld(app, state, context.world.path); })
 			);
+
+			const worldWildcardTypes = getWildcardTypes(state, context.world.templateSet);
+			if (worldWildcardTypes.length > 0) {
+				menu.addSeparator();
+				addWildcardItems(menu, worldWildcardTypes, () => context.world.path,
+					(entityType, folderPath) => {
+						void createEntity(app, state, context.world.path, entityType, folderPath);
+					}
+				);
+			}
 			menu.addSeparator();
 			break;
+		}
 
 		case 'entity-folder': {
 			menu.addItem(item => item
@@ -77,22 +89,12 @@ export function registerFileMenu(
 					void createEntity(app, state, context.world.path, context.entityType, context.folder.path);
 				})
 			);
-			// Also show wildcard entity types
-			const templateSet = state.templateSets.find(ts => ts.name === context.world.templateSet)
-				?? state.templateSets[0];
-			const wildcardTypes = templateSet?.folderRules
-				.filter(r => r.targetFolder === '*')
-				.map(r => r.entityType) ?? [];
-
-			for (const entityType of wildcardTypes) {
-				menu.addItem(item => item
-					.setTitle(`New ${entityType.toLowerCase()}`)
-					.setIcon('file-plus')
-					.onClick(() => {
-						void createEntity(app, state, context.world.path, entityType, context.folder.path);
-					})
-				);
-			}
+			const entityWildcardTypes = getWildcardTypes(state, context.world.templateSet);
+			addWildcardItems(menu, entityWildcardTypes, () => context.folder.path,
+				(entityType, folderPath) => {
+					void createEntity(app, state, context.world.path, entityType, folderPath);
+				}
+			);
 			break;
 		}
 
@@ -101,7 +103,7 @@ export function registerFileMenu(
 				.setTitle(`Edit ${context.entityType.toLowerCase()}`)
 				.setIcon('pencil')
 				.onClick(() => {
-					void onEditEntity(app, context.world.path, context.entityType, context.file.path);
+					void editEntity(app, state, context.world.path, context.entityType, context.file.path);
 				})
 			);
 			break;
@@ -120,35 +122,54 @@ export function registerFileMenu(
 			break;
 
 		case 'generic-folder': {
-			// Show all entity types that have * as their target folder
-			const world = context.world;
-			const templateSet = state.templateSets.find(ts => ts.name === world.templateSet)
-				?? state.templateSets[0];
-			const wildcardTypes = templateSet?.folderRules
-				.filter(r => r.targetFolder === '*')
-				.map(r => r.entityType) ?? [];
-
-			for (const entityType of wildcardTypes) {
-				menu.addItem(item => item
-					.setTitle(`New ${entityType.toLowerCase()}`)
-					.setIcon('file-plus')
-					.onClick(() => {
-						void createEntity(app, state, world.path, entityType, context.folder.path);
-					})
-				);
-			}
+			const genericWildcardTypes = getWildcardTypes(state, context.world.templateSet);
+			addWildcardItems(menu, genericWildcardTypes, () => context.folder.path,
+				(entityType, folderPath) => {
+					void createEntity(app, state, context.world.path, entityType, folderPath);
+				}
+			);
 			break;
 		}
 	}
 }
 
-// ── Stubs — replaced as commands are implemented ──────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-function onEditEntity(
-	app: App,
-	worldPath: string,
-	entityType: string,
-	filePath: string
-): void {
-	new Notice(`Edit ${entityType}: ${filePath}`);
+function getWildcardTypes(state: PluginState, templateSetName: string): string[] {
+	const templateSet = state.templateSets.find(ts => ts.name === templateSetName)
+		?? state.templateSets[0];
+	return templateSet?.folderRules
+		.filter(r => r.targetFolder === '*')
+		.map(r => r.entityType) ?? [];
 }
+
+function addWildcardItems(
+	menu: Menu,
+	types: string[],
+	getFolderPath: () => string,
+	onCreate: (entityType: string, folderPath: string) => void
+): void {
+	if (types.length === 0) return;
+
+	if (types.length > 3) {
+		// Add a separator and label instead of submenu
+		menu.addSeparator();
+		for (const entityType of types) {
+			menu.addItem((item: MenuItem) => item
+				.setTitle(`New ${entityType.toLowerCase()}`)
+				.setIcon('file-plus')
+				.onClick(() => { onCreate(entityType, getFolderPath()); })
+			);
+		}
+	} else {
+		for (const entityType of types) {
+			menu.addItem((item: MenuItem) => item
+				.setTitle(`New ${entityType.toLowerCase()}`)
+				.setIcon('file-plus')
+				.onClick(() => { onCreate(entityType, getFolderPath()); })
+			);
+		}
+	}
+}
+
+
