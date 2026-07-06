@@ -1,92 +1,101 @@
-# Obsidian Sample Plugin
+# WorldBuilder Tools for Obsidian
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate the core functionality of tools like World Anvil and Chronicler — directly inside your vault, with no external dependencies.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## Features
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
+- **World management** — create worlds with templated folder structures, switch between active worlds, sync folders as your template evolves
+- **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu
+- **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
+- **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, and a protected Notes section that survives refresh
+- **World meta** — structured world bible (genre, tone, themes, premise, conflict etc.) editable via form
+- **File sync** — move misplaced entity files to their correct folders based on their tags
+- **Context-aware menus** — right-click commands appear only where they make sense
 
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open modal (simple)" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and outputs a Notice on click.
-- Registers a global interval which logs 'setInterval' to the console.
+## How it works
 
-## First time developing plugins?
+WorldBuilder uses a **template set** — a folder of plain markdown config files that define your world's structure:
 
-Quick starting guide for new plugin devs:
-
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `src/main.ts` to `main.js`.
-- Make changes to `src/main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
-
-## Releasing new releases
-
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
-
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
-
-## Adding your plugin to the community plugin list
-
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
-
-## How to use
-
-- Clone this repo.
-- Make sure your NodeJS is at least v18 (`node --version`).
-- `npm i` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
-
-## Manually installing the plugin
-
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
-
-## Improve code quality with eslint
-
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code.
-- This project already has eslint preconfigured, you can invoke a check by running`npm run lint`
-- Together with a custom eslint [plugin](https://github.com/obsidianmd/eslint-plugin) for Obsidan specific code guidelines.
-- A GitHub action is preconfigured to automatically lint every commit on all branches.
-
-## Funding URL
-
-You can include funding URLs where people who use your plugin can financially support it.
-
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
-
-```json
-{
-	"fundingUrl": "https://buymeacoffee.com"
-}
+```
+_system/templates/
+  defaults/               ← plugin defaults, your starting point
+  fantasy/                ← your working set (copy and customize)
+    world-template.md     ← subfolders created for every new world
+    folder-rules.md       ← maps entity types to folders
+    WorldMeta_Fields.md   ← world bible fields
+    Character_Fields.md   ← character form fields
+    Location_Fields.md    ← location form fields
+    Faction_Fields.md     ← faction form fields
+    Generic_Fields.md     ← minimal fallback for any entity
 ```
 
-If you have multiple URLs, you can also do:
+### Field file format
 
-```json
-{
-	"fundingUrl": {
-		"Buy Me a Coffee": "https://buymeacoffee.com",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
-	}
-}
+Each `_Fields.md` file defines one field per line:
+
+```
+- key | Label | mandatory/optional | type | display
 ```
 
-## API Documentation
+| Column | Values |
+|--------|--------|
+| `type` | `text` \| `link:FolderName` \| `link:Primary>Fallback` \| `select:A,B,C` |
+| `display` | `title` \| `property` \| `section` |
 
-See https://docs.obsidian.md
+### Folder rules format
+
+```
+- EntityType | TargetFolder
+```
+
+Use `*` as target folder to allow placement anywhere (e.g. `Generic | *`).
+
+## Right-click commands
+
+| Context | Commands |
+|---------|---------|
+| Vault root or non-world folder | New world |
+| World root folder | Edit world meta, Refresh dashboard, Sync world folders, Sync world files, Switch to this world |
+| Entity folder | New `<entity type>`, New generic |
+| Entity file | Edit `<entity type>` |
+| `_index.md` | Edit world meta, Refresh dashboard |
+
+## Installation
+
+### Manual install
+1. Download `main.js`, `styles.css`, `manifest.json` from the latest release
+2. Copy to your vault: `.obsidian/plugins/WorldBuilder/`
+3. Enable the plugin in Obsidian settings → Community plugins
+
+### Development
+```bash
+git clone https://github.com/yourusername/worldbuilder-obsidian
+cd worldbuilder-obsidian
+npm install
+npm run dev
+```
+
+Requires Node.js v18+.
+
+## First run
+
+On first load the plugin creates `_system/templates/defaults/` in your vault with the default template set. This is your starting point — copy it, rename the copy, and customize freely. The `defaults/` folder is restored from plugin built-ins if deleted.
+
+## Customization
+
+- **Add entity types** — create a new `_Fields.md` file and add a line to `folder-rules.md`. No code changes needed.
+- **Translate labels** — edit any `_Fields.md` file, change the label column to your language
+- **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
+- **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings
+
+## Roadmap
+
+- Timeline system (epoch entities, equipment lifespan, era-aware creation)
+- Sub-dashboards per entity type
+- Relationship wizard
+- Template set localization
+
+## Requirements
+
+- Obsidian v1.6.6 or later
+- Desktop only (Windows, macOS, Linux)
