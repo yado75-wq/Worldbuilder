@@ -1,5 +1,7 @@
-import { App, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
 import WorldBuilderPlugin from './main';
+import { resetTemplateSet } from './commands/SetupCommand';
+import { InputModal } from './ui/InputModal';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
 	plugin: WorldBuilderPlugin;
@@ -34,9 +36,62 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 				new Setting(containerEl)
 					.setName(`${statusIcon} ${set.name}`)
-					.setDesc(desc);
+					.setDesc(desc)
+					.addButton(btn => btn
+						.setButtonText('Reset to defaults')
+						.setWarning()
+						.onClick(() => {
+							void (async () => {
+								await resetTemplateSet(
+									this.app,
+									this.plugin.settings,
+									this.plugin.pluginDir,
+									set.name
+								);
+								await this.plugin.refreshState();
+								this.display();
+							})();
+						})
+					);
 			}
 		}
+
+		// ── New template set ───────────────────────────────────────────────
+
+		new Setting(containerEl)
+			.setName('New template set')
+			.setDesc('Create a new template set copied from plugin defaults.')
+			.addButton(btn => btn
+				.setButtonText('Create')
+				.setCta()
+				.onClick(() => {
+					new InputModal(
+						this.app,
+						'Template set name',
+						'fantasy',
+						'',
+						(name) => {
+							void (async () => {
+								const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${name}`;
+								if (this.app.vault.getAbstractFileByPath(path)) {
+									new Notice(`"${name}" already exists.`);
+									return;
+								}
+								await this.app.vault.createFolder(path);
+								await resetTemplateSet(
+									this.app,
+									this.plugin.settings,
+									this.plugin.pluginDir,
+									name
+								);
+								await this.plugin.refreshState();
+								this.display();
+							})();
+						},
+						() => {}
+					).open();
+				})
+			);
 
 		// ── Active world ───────────────────────────────────────────────────
 
@@ -54,13 +109,6 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 	}
 
 	getSettingDefinitions() {
-		return [
-			{
-				id: 'activeWorld',
-				name: 'Active world',
-				desc: 'Currently active world',
-				type: 'text' as const,
-			},
-		];
+		return [];
 	}
 }

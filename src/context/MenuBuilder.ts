@@ -4,6 +4,7 @@ import { resolveContext } from './ContextResolver';
 import { newWorld } from '../commands/NewWorldCommand';
 import { switchToWorld } from '../commands/SwitchWorldCommand';
 import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
+import { syncWorldFiles } from '../commands/SyncWorldFilesCommand';
 import { refreshDashboard } from '../commands/RefreshDashboardCommand';
 import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 import { createEntity } from '../commands/CreateEntityCommand';
@@ -61,6 +62,11 @@ export function registerFileMenu(
 				.setTitle('Sync world folders')
 				.setIcon('folder-sync')
 				.onClick(() => { void syncWorldFolders(app, state, context.world.path); })
+			);
+			menu.addItem(item => item
+				.setTitle('Sync world files')
+				.setIcon('arrow-right-left')
+				.onClick(() => { void syncWorldFiles(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Switch to this world')

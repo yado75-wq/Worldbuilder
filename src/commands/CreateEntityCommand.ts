@@ -1,6 +1,7 @@
 import { App, Notice, TFile, getAllTags } from 'obsidian';
 import { PluginState, WorldInfo, FieldDefinition } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
+import { refreshDashboard } from './RefreshDashboardCommand';
 
 export async function createEntity(
 	app: App,
@@ -79,6 +80,12 @@ export async function createEntity(
 	}
 
 	new Notice(`${entityType} "${title}" created.`);
+
+	// Refresh dashboard if it exists
+	const dashPath = `${worldPath}/_dashboard.md`;
+	if (app.vault.getAbstractFileByPath(dashPath)) {
+		await refreshDashboard(app, state, worldPath);
+	}
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
