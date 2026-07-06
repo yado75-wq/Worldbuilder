@@ -6,6 +6,9 @@ const DEFAULT_FILES = [
 	'folder-rules.md',
 	'WorldMeta_Fields.md',
 	'Generic_Fields.md',
+	'Character_Fields.md',
+	'Location_Fields.md',
+	'Faction_Fields.md',
 ];
 
 export async function ensureDefaultTemplates(
@@ -19,7 +22,6 @@ export async function ensureDefaultTemplates(
 	);
 	const defaultsPath = normalizePath(`${templatesRoot}/defaults`);
 
-	// Ensure folder structure exists
 	await ensureFolder(app, settings.systemFolder);
 	await ensureFolder(app, templatesRoot);
 	await ensureFolder(app, defaultsPath);
@@ -39,14 +41,42 @@ export async function ensureDefaultTemplates(
 		}
 	}
 
-	// If no other sets exist, use defaults as working set
 	const otherSets = existingSets.filter(s => s.name !== 'defaults');
 	if (otherSets.length === 0) return 'defaults';
 
 	return otherSets[0]?.name ?? 'defaults';
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+export async function resetTemplateSet(
+	app: App,
+	settings: WorldBuilderSettings,
+	pluginDir: string,
+	setName: string
+): Promise<void> {
+	const setPath = normalizePath(
+		`${settings.systemFolder}/${settings.templatesFolder}/${setName}`
+	);
+	await ensureFolder(app, setPath);
+
+	for (const filename of DEFAULT_FILES) {
+		const sourcePath = normalizePath(`${pluginDir}/defaults/${filename}`);
+		const targetPath = normalizePath(`${setPath}/${filename}`);
+
+		try {
+			const content = await app.vault.adapter.read(sourcePath);
+			const existing = app.vault.getAbstractFileByPath(targetPath);
+			if (existing) {
+				await app.vault.adapter.write(targetPath, content);
+			} else {
+				await app.vault.create(targetPath, content);
+			}
+		} catch {
+			new Notice(`Warning: could not copy "${filename}" to "${setName}".`);
+		}
+	}
+
+	new Notice(`Template set "${setName}" reset to plugin defaults.`);
+}
 
 async function ensureFolder(app: App, path: string): Promise<void> {
 	const existing = app.vault.getAbstractFileByPath(path);

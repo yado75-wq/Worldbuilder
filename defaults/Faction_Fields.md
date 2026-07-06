@@ -1,0 +1,4 @@
+- name | Name | mandatory | text | title
+- type | Type | optional | text | property
+- description | Description | optional | text | section
+- goals | Goals | optional | text | section

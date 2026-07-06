@@ -6,6 +6,7 @@ import { switchToWorld } from '../commands/SwitchWorldCommand';
 import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
 import { refreshDashboard } from '../commands/RefreshDashboardCommand';
 import { editWorldMeta } from '../commands/EditWorldMetaCommand';
+import { createEntity } from '../commands/CreateEntityCommand';
 
 export function registerFileMenu(
 	app: App,
@@ -68,15 +69,32 @@ export function registerFileMenu(
 			menu.addSeparator();
 			break;
 
-		case 'entity-folder':
+		case 'entity-folder': {
 			menu.addItem(item => item
 				.setTitle(`New ${context.entityType.toLowerCase()}`)
 				.setIcon('plus-circle')
 				.onClick(() => {
-					void onCreateEntity(app, context.world.path, context.entityType, context.folder.path);
+					void createEntity(app, state, context.world.path, context.entityType, context.folder.path);
 				})
 			);
+			// Also show wildcard entity types
+			const templateSet = state.templateSets.find(ts => ts.name === context.world.templateSet)
+				?? state.templateSets[0];
+			const wildcardTypes = templateSet?.folderRules
+				.filter(r => r.targetFolder === '*')
+				.map(r => r.entityType) ?? [];
+
+			for (const entityType of wildcardTypes) {
+				menu.addItem(item => item
+					.setTitle(`New ${entityType.toLowerCase()}`)
+					.setIcon('file-plus')
+					.onClick(() => {
+						void createEntity(app, state, context.world.path, entityType, context.folder.path);
+					})
+				);
+			}
 			break;
+		}
 
 		case 'entity-file':
 			menu.addItem(item => item
@@ -101,21 +119,30 @@ export function registerFileMenu(
 			);
 			break;
 
-		case 'generic-folder':
+		case 'generic-folder': {
+			// Show all entity types that have * as their target folder
+			const world = context.world;
+			const templateSet = state.templateSets.find(ts => ts.name === world.templateSet)
+				?? state.templateSets[0];
+			const wildcardTypes = templateSet?.folderRules
+				.filter(r => r.targetFolder === '*')
+				.map(r => r.entityType) ?? [];
+
+			for (const entityType of wildcardTypes) {
+				menu.addItem(item => item
+					.setTitle(`New ${entityType.toLowerCase()}`)
+					.setIcon('file-plus')
+					.onClick(() => {
+						void createEntity(app, state, world.path, entityType, context.folder.path);
+					})
+				);
+			}
 			break;
+		}
 	}
 }
 
 // ── Stubs — replaced as commands are implemented ──────────────────────────────
-
-function onCreateEntity(
-	app: App,
-	worldPath: string,
-	entityType: string,
-	folderPath: string
-): void {
-	new Notice(`Create ${entityType} in: ${folderPath}`);
-}
 
 function onEditEntity(
 	app: App,
