@@ -10,10 +10,10 @@ export async function newWorld(
 	parentPath: string
 ): Promise<void> {
 
-	// Resolve template set from active world or first available
-	const templateSet = state.activeWorld
-		? state.templateSets.find(ts => ts.name === state.activeWorld?.templateSet)
-		: state.templateSets[0];
+	// Resolve template set — use default or first valid
+	const templateSet = state.templateSets.find(ts => ts.name === state.activeWorld?.templateSet)
+		?? state.templateSets.find(ts => ts.isValid)
+		?? state.templateSets[0];
 
 	if (!templateSet) {
 		new Notice('No template sets found. Create one in _system/templates/ first.');

@@ -1,9 +1,11 @@
 import { TAbstractFile, TFile, TFolder } from 'obsidian';
-import { MenuContext, WorldInfo } from '../types';
+import { MenuContext, WorldInfo, TemplateSetInfo } from '../types';
 
 export function resolveContext(
 	file: TAbstractFile,
-	worlds: WorldInfo[]
+	worlds: WorldInfo[],
+	templateSets: TemplateSetInfo[],
+	templatesRootPath: string
 ): MenuContext {
 
 	// ── Vault root ────────────────────────────────────────────────────────
@@ -30,6 +32,10 @@ export function resolveContext(
 	// ── Folder contexts ───────────────────────────────────────────────────
 	if (file instanceof TFolder) {
 
+		// Template set folder — direct child of templates root
+		const templateSet = findTemplateSet(file, templateSets, templatesRootPath);
+		if (templateSet) return { type: 'template-set', templateSet };
+
 		// World root folder
 		const worldRoot = findWorldByFolder(file, worlds);
 		if (worldRoot) return { type: 'world-root', world: worldRoot };
@@ -48,6 +54,16 @@ export function resolveContext(
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function findTemplateSet(
+	folder: TFolder,
+	templateSets: TemplateSetInfo[],
+	templatesRootPath: string
+): TemplateSetInfo | null {
+	// Template set folder must be a direct child of the templates root
+	if (folder.parent?.path !== templatesRootPath) return null;
+	return templateSets.find(ts => ts.path === folder.path) ?? null;
+}
+
 function findWorldByIndexFile(file: TFile, worlds: WorldInfo[]): WorldInfo | null {
 	return worlds.find(w => w.indexFile.path === file.path) ?? null;
 }
@@ -65,9 +81,7 @@ function findEntityFolder(
 	worlds: WorldInfo[]
 ): MenuContext | null {
 	for (const world of worlds) {
-		// Must be a direct child of the world root
 		if (folder.parent?.path !== world.path) continue;
-
 		const rule = world.folderRules.find(r => r.targetFolder === folder.name);
 		if (rule) {
 			return {
@@ -87,17 +101,12 @@ function findEntityFile(
 ): MenuContext | null {
 	for (const world of worlds) {
 		if (!file.path.startsWith(world.path + '/')) continue;
-
 		const parentFolder = file.parent;
 		if (!parentFolder) continue;
-
-		// Entity files are exactly one level inside the world root
 		if (parentFolder.parent?.path !== world.path) continue;
-
 		const rule = world.folderRules.find(
 			r => r.targetFolder === parentFolder.name
 		);
-
 		if (rule) {
 			return {
 				type: 'entity-file',

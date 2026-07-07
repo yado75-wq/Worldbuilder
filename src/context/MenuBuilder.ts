@@ -15,16 +15,22 @@ export function registerFileMenu(
 	menu: Menu,
 	file: TAbstractFile,
 	state: PluginState,
-	settings: WorldBuilderSettings
+	settings: WorldBuilderSettings,
+	saveSettings: () => void
 ): void {
 
 	// Never show menu items on system folder or its children
-	if (
-		file.path === settings.systemFolder ||
-		file.path.startsWith(settings.systemFolder + '/')
-	) return;
+	// Exception: template set folders inside templates root ARE shown
+	const templatesRootPath = `${settings.systemFolder}/${settings.templatesFolder}`;
+	const isSystemButNotTemplate =
+		(file.path === settings.systemFolder ||
+		file.path.startsWith(settings.systemFolder + '/')) &&
+		!file.path.startsWith(templatesRootPath + '/') &&
+		file.path !== templatesRootPath;
 
-	const context = resolveContext(file, state.worlds);
+	if (isSystemButNotTemplate) return;
+
+	const context = resolveContext(file, state.worlds, state.templateSets, templatesRootPath);
 
 	switch (context.type) {
 
@@ -46,7 +52,24 @@ export function registerFileMenu(
 			}
 			break;
 
+		case 'template-set': {
+			const isDefault = context.templateSet.name === settings.defaultTemplateSet;
+			const isValid = context.templateSet.isValid;
+
+			menu.addItem(item => {
+				item.setTitle('Set as default template set')
+					.setIcon('star')
+					.setDisabled(isDefault || !isValid)
+					.onClick(() => {
+						settings.defaultTemplateSet = context.templateSet.name;
+						saveSettings();
+					});
+			});
+			break;
+		}
+
 		case 'world-root': {
+			const isActive = context.world.status === 'active';
 			menu.addSeparator();
 			menu.addItem(item => item
 				.setTitle('Edit world meta')
@@ -71,6 +94,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Switch to this world')
 				.setIcon('check')
+				.setDisabled(isActive)
 				.onClick(() => { void switchToWorld(app, state, context.world.path); })
 			);
 
@@ -158,24 +182,14 @@ function addWildcardItems(
 	if (types.length === 0) return;
 
 	if (types.length > 3) {
-		// Add a separator and label instead of submenu
 		menu.addSeparator();
-		for (const entityType of types) {
-			menu.addItem((item: MenuItem) => item
-				.setTitle(`New ${entityType.toLowerCase()}`)
-				.setIcon('file-plus')
-				.onClick(() => { onCreate(entityType, getFolderPath()); })
-			);
-		}
-	} else {
-		for (const entityType of types) {
-			menu.addItem((item: MenuItem) => item
-				.setTitle(`New ${entityType.toLowerCase()}`)
-				.setIcon('file-plus')
-				.onClick(() => { onCreate(entityType, getFolderPath()); })
-			);
-		}
+	}
+
+	for (const entityType of types) {
+		menu.addItem((item: MenuItem) => item
+			.setTitle(`New ${entityType.toLowerCase()}`)
+			.setIcon('file-plus')
+			.onClick(() => { onCreate(entityType, getFolderPath()); })
+		);
 	}
 }
-
-

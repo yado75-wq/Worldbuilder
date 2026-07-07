@@ -5,3 +5,7 @@
 .wb-full-width {
 	width: 100%;
 }
+
+.wb-invalid {
+	color: var(--color-red);
+}

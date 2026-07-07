@@ -1,4 +1,4 @@
-import { App, Notice, PluginSettingTab, Setting } from 'obsidian';
+import { App, Modal, Notice, PluginSettingTab, Setting } from 'obsidian';
 import WorldBuilderPlugin from './main';
 import { resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './ui/InputModal';
@@ -22,6 +22,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			.setHeading();
 
 		const templateSets = this.plugin.state.templateSets;
+		const defaultSet = this.plugin.settings.defaultTemplateSet;
 
 		if (templateSets.length === 0) {
 			new Setting(containerEl)
@@ -30,13 +31,31 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		} else {
 			for (const set of templateSets) {
 				const statusIcon = set.isValid ? '✓' : '✗';
-				const desc = set.isValid
-					? 'Template set is valid.'
-					: `${set.issues.length} issue(s): ${set.issues.map(i => i.message).join(', ')}`;
+				const isDefault = set.name === defaultSet;
+				const desc = [
+					set.isValid ? 'Valid.' : `${set.issues.length} issue(s): ${set.issues.map(i => i.message).join(', ')}`,
+					isDefault ? 'Default for new worlds.' : '',
+				].filter(Boolean).join(' ');
 
-				new Setting(containerEl)
-					.setName(`${statusIcon} ${set.name}`)
+				const setting = new Setting(containerEl)
+					.setName(`${statusIcon} ${set.name}${isDefault ? ' ★' : ''}`)
 					.setDesc(desc)
+					.addButton(btn => btn
+						.setButtonText('Set as default')
+						.setDisabled(isDefault || !set.isValid)
+						.onClick(async () => {
+							this.plugin.settings.defaultTemplateSet = set.name;
+							await this.plugin.saveSettings();
+							this.display();
+						})
+					)
+					.addButton(btn => btn
+						.setButtonText('Assign to world')
+						.setDisabled(!set.isValid)
+						.onClick(async () => {
+							await this.assignTemplateSetToWorld(set.name);
+						})
+					)
 					.addButton(btn => btn
 						.setButtonText('Reset to defaults')
 						.setWarning()
@@ -53,6 +72,10 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							})();
 						})
 					);
+
+				if (!set.isValid) {
+					setting.nameEl.addClass('wb-invalid');
+				}
 			}
 		}
 
@@ -106,6 +129,55 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				? `Template set: ${activeWorld.templateSet}`
 				: 'Create or switch to a world to get started.'
 			);
+	}
+
+	private async assignTemplateSetToWorld(templateSetName: string): Promise<void> {
+		const worlds = this.plugin.state.worlds;
+		if (worlds.length === 0) {
+			new Notice('No worlds found.');
+			return;
+		}
+
+		const picked = await new Promise<number | null>((resolve) => {
+			const modal = new Modal(this.app);
+			modal.titleEl.setText(`Assign "${templateSetName}" to world`);
+
+			for (let i = 0; i < worlds.length; i++) {
+				const world = worlds[i];
+				if (!world) continue;
+				const active = world.status === 'active' ? ' ★' : '';
+				const current = world.templateSet === templateSetName ? ' (current)' : '';
+				const label = `${world.name}${active}${current}`;
+
+				const btn = modal.contentEl.createEl('button', {
+					text: label,
+					attr: { style: 'display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; cursor: pointer; text-align: left;' }
+				});
+				btn.addEventListener('click', () => {
+					modal.close();
+					resolve(i);
+				});
+			}
+
+			modal.onClose = () => resolve(null);
+			modal.open();
+		});
+
+		if (picked === null) return;
+
+		const world = worlds[picked];
+		if (!world) return;
+
+		let content = await this.app.vault.read(world.indexFile);
+		if (content.includes('template_set:')) {
+			content = content.replace(/^template_set:.*$/m, `template_set: ${templateSetName}`);
+		} else {
+			content = content.replace(/^---$/m, `---\ntemplate_set: ${templateSetName}`);
+		}
+		await this.app.vault.modify(world.indexFile, content);
+		await this.plugin.refreshState();
+		this.display();
+		new Notice(`Assigned "${templateSetName}" to "${world.name}".`);
 	}
 
 	getSettingDefinitions() {

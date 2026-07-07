@@ -23,7 +23,14 @@ export default class WorldBuilderPlugin extends Plugin {
 		// Register context menu
 		this.registerEvent(
 			this.app.workspace.on('file-menu', (menu, file) => {
-				registerFileMenu(this.app, menu, file, this.state, this.settings);
+				registerFileMenu(
+					this.app,
+					menu,
+					file,
+					this.state,
+					this.settings,
+					() => void this.saveSettings()
+				);
 			})
 		);
 
