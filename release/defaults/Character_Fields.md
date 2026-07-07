@@ -1,0 +1,4 @@
+- name | Name | mandatory | text | title
+- race | Race | optional | text | property
+- profession | Profession | optional | text | property
+- background | Background | optional | text | section

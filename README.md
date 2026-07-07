@@ -66,9 +66,10 @@ Use `*` as target folder to allow placement anywhere (e.g. `Generic | *`).
 
 ### Manual install
 
-1. Download `main.js`, `styles.css`, `manifest.json` from the latest release
-2. Copy to your vault: `.obsidian/plugins/WorldBuilder/`
-3. Enable the plugin in Obsidian settings → Community plugins
+1. Download the latest `worldbuilder.zip` from the GitHub release page
+2. Extract it into your vault at `.obsidian/plugins/WorldBuilder/`
+3. Ensure the plugin folder contains `main.js`, `manifest.json`, `styles.css` (if present), and the `defaults/` directory
+4. Enable the plugin in Obsidian settings → Community plugins
 
 ### Development
 
@@ -91,7 +92,7 @@ On first load the plugin creates `_system/templates/defaults/` in your vault wit
 - Update versions.json so the new version maps to the minimum Obsidian version.
 - Run `npm run build` to produce the release artifacts.
 - Create a Git tag matching the manifest version, for example `1.0.1`, and push it to GitHub.
-- The existing GitHub Actions workflow will create a draft release with `main.js`, `manifest.json`, and `styles.css`.
+- The existing GitHub Actions workflow will create a draft release containing a ready-to-install `worldbuilder.zip` archive.
 
 ## Customization
 

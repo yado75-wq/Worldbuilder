@@ -1,0 +1,11 @@
+- name | Name | mandatory | text | title
+- genre | Genre | optional | text | property
+- tone | Tone | optional | text | property
+- themes | Themes | optional | text | property
+- audience | Target Audience | optional | text | property
+- magic | Magic System | optional | text | property
+- premise | Premise / Hook | optional | text | section
+- conflict | Central Conflict | optional | text | section
+- avoid | Things to Avoid | optional | text | section
+- todo | TODO | optional | text | section
+- notes | Author Notes | optional | text | section
