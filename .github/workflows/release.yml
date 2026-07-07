@@ -30,6 +30,10 @@ jobs:
               run: |
                   rm -rf release worldbuilder.zip
                   mkdir -p release
+                  if [ ! -d defaults ]; then
+                      echo "Missing defaults directory in source tree"
+                      exit 1
+                  fi
                   cp main.js manifest.json release/
                   if [ -f styles.css ]; then cp styles.css release/; fi
                   cp -R defaults release/
