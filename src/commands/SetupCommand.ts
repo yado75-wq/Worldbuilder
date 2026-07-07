@@ -1,4 +1,4 @@
-import { App, Notice, normalizePath, TFolder } from 'obsidian';
+import { App, Notice, normalizePath, TAbstractFile, TFile, TFolder } from 'obsidian';
 import { WorldBuilderSettings, TemplateSetInfo } from '../types';
 
 const DEFAULT_FILES = [
@@ -47,6 +47,38 @@ export async function ensureDefaultTemplates(
 	return otherSets[0]?.name ?? 'defaults';
 }
 
+export async function cloneTemplateSet(
+	app: App,
+	settings: WorldBuilderSettings,
+	sourceSetName: string,
+	newSetName: string
+): Promise<boolean> {
+	const templatesRoot = normalizePath(
+		`${settings.systemFolder}/${settings.templatesFolder}`
+	);
+	const sourcePath = normalizePath(`${templatesRoot}/${sourceSetName}`);
+	const targetPath = normalizePath(`${templatesRoot}/${newSetName}`);
+
+	const sourceFolder = app.vault.getAbstractFileByPath(sourcePath);
+	if (!(sourceFolder instanceof TFolder)) {
+		new Notice(`Template set "${sourceSetName}" not found.`);
+		return false;
+	}
+
+	if (app.vault.getAbstractFileByPath(targetPath)) {
+		new Notice(`Template set "${newSetName}" already exists.`);
+		return false;
+	}
+
+	await ensureFolder(app, targetPath);
+	for (const child of sourceFolder.children) {
+		await copyTemplateNode(app, child, targetPath);
+	}
+
+	new Notice(`Template set "${newSetName}" created from "${sourceSetName}".`);
+	return true;
+}
+
 export async function resetTemplateSet(
 	app: App,
 	settings: WorldBuilderSettings,
@@ -76,6 +108,26 @@ export async function resetTemplateSet(
 	}
 
 	new Notice(`Template set "${setName}" reset to plugin defaults.`);
+}
+
+async function copyTemplateNode(
+	app: App,
+	node: TAbstractFile,
+	targetParentPath: string
+): Promise<void> {
+	const targetPath = normalizePath(`${targetParentPath}/${node.name}`);
+
+	if (node instanceof TFolder) {
+		await ensureFolder(app, targetPath);
+		for (const child of node.children) {
+			await copyTemplateNode(app, child, targetPath);
+		}
+		return;
+	}
+
+	if (node instanceof TFile) {
+		await app.vault.adapter.copy(node.path, targetPath);
+	}
 }
 
 async function ensureFolder(app: App, path: string): Promise<void> {

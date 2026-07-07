@@ -1,6 +1,6 @@
 import { App, Modal, Notice, PluginSettingTab, Setting } from 'obsidian';
 import WorldBuilderPlugin from './main';
-import { resetTemplateSet } from './commands/SetupCommand';
+import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './ui/InputModal';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
@@ -47,6 +47,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							this.plugin.settings.defaultTemplateSet = set.name;
 							await this.plugin.saveSettings();
 							this.display();
+						})
+					)
+					.addButton(btn => btn
+						.setButtonText('Clone')
+						.onClick(() => {
+							this.cloneTemplateSet(set.name);
 						})
 					)
 					.addButton(btn => btn
@@ -129,6 +135,32 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				? `Template set: ${activeWorld.templateSet}`
 				: 'Create or switch to a world to get started.'
 			);
+	}
+
+	private cloneTemplateSet(sourceName: string): void {
+		new InputModal(
+			this.app,
+			'Name for cloned template set',
+			'fantasy-copy',
+			`${sourceName}-copy`,
+			(name) => {
+				void (async () => {
+					const created = await cloneTemplateSet(
+						this.app,
+						this.plugin.settings,
+						sourceName,
+						name
+					);
+					if (!created) return;
+
+					this.plugin.settings.defaultTemplateSet = name;
+					await this.plugin.saveSettings();
+					await this.plugin.refreshState();
+					this.display();
+				})();
+			},
+			() => {}
+		).open();
 	}
 
 	private async assignTemplateSetToWorld(templateSetName: string): Promise<void> {
