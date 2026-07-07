@@ -1,4 +1,4 @@
-import { App, TFile, TFolder, getAllTags } from 'obsidian';
+import { App, TFile, TFolder } from 'obsidian';
 import {
 	WorldBuilderSettings,
 	WorldInfo,
@@ -45,19 +45,17 @@ async function findWorlds(
 	);
 
 	for (const file of indexFiles) {
-		const cache = app.metadataCache.getFileCache(file);
-		if (!cache) continue;
-
-		const tags = getAllTags(cache) ?? [];
+		const frontmatter = await readFrontmatter(app, file);
+		const tags = collectTags(frontmatter);
 		if (!tags.includes('world') && !tags.includes('#world')) continue;
 
 		const folder = file.parent;
 		if (!folder) continue;
 
 		// frontmatter is typed as { [key: string]: any } in Obsidian's API
-		const rawName: unknown = cache.frontmatter?.['name'];
-		const rawStatus: unknown = cache.frontmatter?.['status'];
-		const rawTemplateSet: unknown = cache.frontmatter?.['template_set'];
+		const rawName: unknown = frontmatter['name'];
+		const rawStatus: unknown = frontmatter['status'];
+		const rawTemplateSet: unknown = frontmatter['template_set'];
 
 		const templateSetName = typeof rawTemplateSet === 'string'
 			? rawTemplateSet
@@ -191,6 +189,73 @@ async function buildTemplateSetInfo(
 }
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
+
+async function readFrontmatter(app: App, file: TFile): Promise<Record<string, unknown>> {
+	const cache = app.metadataCache.getFileCache(file);
+	const cachedFrontmatter = cache?.frontmatter;
+	const content = await app.vault.read(file);
+	const parsed = parseFrontmatter(content);
+	return { ...(cachedFrontmatter ?? {}), ...parsed };
+}
+
+function collectTags(frontmatter: Record<string, unknown>): string[] {
+	const raw = frontmatter.tags;
+	if (Array.isArray(raw)) {
+		return raw.map(value => typeof value === 'string' ? value : '').filter(Boolean);
+	}
+	if (typeof raw === 'string') {
+		return [raw];
+	}
+	return [];
+}
+
+function parseFrontmatter(content: string): Record<string, unknown> {
+	const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/);
+	if (!match?.[1]) return {};
+
+	const result: Record<string, unknown> = {};
+	const lines = match[1].split('\n');
+
+	for (let index = 0; index < lines.length; index++) {
+		const line = lines[index]?.trim();
+		if (!line || line.startsWith('#') || !line.includes(':')) continue;
+
+		const [rawKey, ...rest] = line.split(':');
+		const key = rawKey?.trim();
+		const valueText = rest.join(':').trim();
+		if (!key) continue;
+
+		if (!valueText) {
+			const listItems: string[] = [];
+			for (let next = index + 1; next < lines.length; next++) {
+				const item = lines[next]?.trim();
+				if (!item) continue;
+				if (!item.startsWith('- ')) {
+					index = next - 1;
+					break;
+				}
+				listItems.push(stripQuotes(item.slice(2).trim()));
+				index = next;
+			}
+			if (listItems.length > 0) {
+				result[key] = listItems;
+			}
+			continue;
+		}
+
+		result[key] = stripQuotes(valueText);
+	}
+
+	return result;
+}
+
+function stripQuotes(value: string): string {
+	const trimmed = value.trim();
+	if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+		return trimmed.slice(1, -1);
+	}
+	return trimmed;
+}
 
 function parseLineList(raw: string): string[] {
 	return raw

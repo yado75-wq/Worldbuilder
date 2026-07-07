@@ -38,7 +38,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('New world')
 				.setIcon('globe')
-				.onClick(() => { void newWorld(app, state, ''); })
+				.onClick(() => { void newWorld(app, settings, state, ''); })
 			);
 			break;
 
@@ -47,7 +47,7 @@ export function registerFileMenu(
 				menu.addItem(item => item
 					.setTitle('New world')
 					.setIcon('globe')
-					.onClick(() => { void newWorld(app, state, file.path); })
+					.onClick(() => { void newWorld(app, settings, state, file.path); })
 				);
 			}
 			break;

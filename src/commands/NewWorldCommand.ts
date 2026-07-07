@@ -1,17 +1,19 @@
 import { App, Notice, TFolder } from 'obsidian';
-import { PluginState, WorldInfo } from '../types';
+import { PluginState, WorldBuilderSettings, WorldInfo } from '../types';
 import { InputModal } from '../ui/InputModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 
 export async function newWorld(
 	app: App,
+	settings: WorldBuilderSettings,
 	state: PluginState,
 	parentPath: string
 ): Promise<void> {
 
-	// Resolve template set — use default or first valid
-	const templateSet = state.templateSets.find(ts => ts.name === state.activeWorld?.templateSet)
+	// Resolve template set — prefer the configured default, then fall back to the first valid set
+	const preferredSetName = settings.defaultTemplateSet || state.activeWorld?.templateSet || '';
+	const templateSet = state.templateSets.find(ts => ts.name === preferredSetName)
 		?? state.templateSets.find(ts => ts.isValid)
 		?? state.templateSets[0];
 

@@ -57,7 +57,6 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					)
 					.addButton(btn => btn
 						.setButtonText('Assign to world')
-						.setDisabled(!set.isValid)
 						.onClick(async () => {
 							await this.assignTemplateSetToWorld(set.name);
 						})
@@ -200,13 +199,9 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		const world = worlds[picked];
 		if (!world) return;
 
-		let content = await this.app.vault.read(world.indexFile);
-		if (content.includes('template_set:')) {
-			content = content.replace(/^template_set:.*$/m, `template_set: ${templateSetName}`);
-		} else {
-			content = content.replace(/^---$/m, `---\ntemplate_set: ${templateSetName}`);
-		}
-		await this.app.vault.modify(world.indexFile, content);
+		await this.app.fileManager.processFrontMatter(world.indexFile, (frontmatter: Record<string, unknown>) => {
+			frontmatter.template_set = templateSetName;
+		});
 		await this.plugin.refreshState();
 		this.display();
 		new Notice(`Assigned "${templateSetName}" to "${world.name}".`);
