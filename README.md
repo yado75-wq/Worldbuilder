@@ -69,8 +69,8 @@ Use `*` as target folder to allow placement anywhere (e.g. `Generic | *`).
 
 ### Development
 ```bash
-git clone https://github.com/yourusername/worldbuilder-obsidian
-cd worldbuilder-obsidian
+git clone https://github.com/yado75-wq/Worldbuilder
+cd Worldbuilder
 npm install
 npm run dev
 ```
