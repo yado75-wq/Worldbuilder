@@ -1,7 +1,7 @@
 {
-	"name": "obsidian-sample-plugin",
-	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"name": "worldbuilder-obsidian-plugin",
+	"version": "1.0.1",
+	"description": "Template-driven worldbuilding tools for Obsidian",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {

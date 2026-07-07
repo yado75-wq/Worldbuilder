@@ -85,6 +85,14 @@ Requires Node.js v18+.
 
 On first load the plugin creates `_system/templates/defaults/` in your vault with the default template set. This is your starting point — copy it, rename the copy, and customize freely. The `defaults/` folder is restored from plugin built-ins if deleted.
 
+## Releasing
+
+- Bump the version in manifest.json and package.json.
+- Update versions.json so the new version maps to the minimum Obsidian version.
+- Run `npm run build` to produce the release artifacts.
+- Create a Git tag matching the manifest version, for example `1.0.1`, and push it to GitHub.
+- The existing GitHub Actions workflow will create a draft release with `main.js`, `manifest.json`, and `styles.css`.
+
 ## Customization
 
 - **Add entity types** — create a new `_Fields.md` file and add a line to `folder-rules.md`. No code changes needed.
