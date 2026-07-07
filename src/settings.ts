@@ -170,6 +170,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		}
 
 		const picked = await new Promise<number | null>((resolve) => {
+			let resolved = false;
 			const modal = new Modal(this.app);
 			modal.titleEl.setText(`Assign "${templateSetName}" to world`);
 
@@ -185,12 +186,16 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					attr: { style: 'display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; cursor: pointer; text-align: left;' }
 				});
 				btn.addEventListener('click', () => {
+					if (resolved) return;
+					resolved = true;
 					modal.close();
 					resolve(i);
 				});
 			}
 
-			modal.onClose = () => resolve(null);
+			modal.onClose = () => {
+				if (!resolved) resolve(null);
+			};
 			modal.open();
 		});
 
@@ -199,9 +204,9 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		const world = worlds[picked];
 		if (!world) return;
 
-		await this.app.fileManager.processFrontMatter(world.indexFile, (frontmatter: Record<string, unknown>) => {
-			frontmatter.template_set = templateSetName;
-		});
+		const currentContent = await this.app.vault.read(world.indexFile);
+		const updatedContent = updateTemplateSetFrontmatter(currentContent, templateSetName);
+		await this.app.vault.modify(world.indexFile, updatedContent);
 		await this.plugin.refreshState();
 		this.display();
 		new Notice(`Assigned "${templateSetName}" to "${world.name}".`);
@@ -210,4 +215,28 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 	getSettingDefinitions() {
 		return [];
 	}
+}
+
+function updateTemplateSetFrontmatter(content: string, templateSetName: string): string {
+	const frontmatterPattern = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/;
+	const match = content.match(frontmatterPattern);
+
+	if (!match?.[1]) {
+		return `---\ntags:\n  - world\ntemplate_set: ${templateSetName}\n---\n\n${content}`;
+	}
+
+	const frontmatterBody = match[1];
+	const updatedFrontmatter = frontmatterBody.replace(
+		/^template_set:.*$/m,
+		`template_set: ${templateSetName}`
+	);
+
+	if (updatedFrontmatter === frontmatterBody) {
+		return content.replace(
+			frontmatterPattern,
+			`---\n${frontmatterBody}\ntemplate_set: ${templateSetName}\n---\n`
+		);
+	}
+
+	return content.replace(frontmatterPattern, `---\n${updatedFrontmatter}\n---\n`);
 }
