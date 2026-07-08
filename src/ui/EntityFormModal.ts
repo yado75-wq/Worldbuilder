@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from 'obsidian';
 import { FieldDefinition, FormResult } from '../types';
+import { InputModal } from './InputModal';
 
 export interface EntityFormModalOptions {
 	title: string;
@@ -8,6 +9,7 @@ export interface EntityFormModalOptions {
 	linkCandidates: Record<string, string[]>;
 	onSubmit: (result: FormResult) => void;
 	onCancel: () => void;
+	onCreateLink?: (field: FieldDefinition, name: string) => Promise<string | null>;
 }
 
 export class EntityFormModal extends Modal {
@@ -53,14 +55,33 @@ export class EntityFormModal extends Modal {
 					.setName(name)
 					.addDropdown(drop => {
 						const UNDEFINED = '— None / not yet defined —';
+						const CREATE_VALUE = '__create__';
+						const createLabel = `Create new ${f.linkFolder ?? 'item'}…`;
 						drop.addOption(UNDEFINED, UNDEFINED);
 						for (const c of candidates) {
 							drop.addOption(c, c);
 						}
+						if (this.options.onCreateLink) {
+							drop.addOption(CREATE_VALUE, createLabel);
+						}
 						const current = this.values[f.key]?.replace(/^\[\[|\]\]$/g, '') ?? '';
 						drop.setValue(candidates.includes(current) ? current : UNDEFINED);
 						drop.onChange(value => {
-							this.values[f.key] = value === UNDEFINED ? '' : `[[${value}]]`;
+							void (async () => {
+								if (value === CREATE_VALUE) {
+									const created = await this.createLinkValue(f);
+									if (created) {
+										const createdName = created.replace(/^\[\[|\]\]$/g, '');
+										drop.addOption(createdName, createdName);
+										drop.setValue(createdName);
+										this.values[f.key] = created;
+									} else {
+										drop.setValue(candidates.includes(current) ? current : UNDEFINED);
+									}
+									return;
+								}
+								this.values[f.key] = value === UNDEFINED ? '' : `[[${value}]]`;
+							})();
 						});
 					});
 
@@ -115,6 +136,28 @@ export class EntityFormModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 		if (!this.submitted) this.options.onCancel();
+	}
+
+	private async createLinkValue(field: FieldDefinition): Promise<string | null> {
+		if (!this.options.onCreateLink) return null;
+
+		return new Promise((resolve) => {
+			new InputModal(
+				this.app,
+				`Name for new ${field.linkFolder ?? 'item'}`,
+				'New item',
+				'',
+				(value: string) => {
+					const trimmed = value.trim();
+					if (!trimmed) {
+						resolve(null);
+						return;
+					}
+					void this.options.onCreateLink?.(field, trimmed).then(resolve);
+				},
+				() => resolve(null)
+			).open();
+		});
 	}
 
 	private submit(errorEl: HTMLElement): void {

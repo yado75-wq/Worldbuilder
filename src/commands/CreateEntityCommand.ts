@@ -1,6 +1,7 @@
 import { App, Notice, TFile, getAllTags } from 'obsidian';
-import { PluginState, WorldInfo, FieldDefinition } from '../types';
+import { PluginState, WorldInfo, FieldDefinition, TemplateSetInfo } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
+
 import { refreshDashboard } from './RefreshDashboardCommand';
 
 export async function createEntity(
@@ -42,6 +43,7 @@ export async function createEntity(
 			linkCandidates,
 			onSubmit: (r) => { submitted = true; resolve(r); },
 			onCancel: () => { if (!submitted) resolve(null); },
+			onCreateLink: async (field, name) => createLinkedEntity(app, state, world, templateSet, folderPath, field, name),
 		});
 		modal.open();
 	});
@@ -89,6 +91,84 @@ export async function createEntity(
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function createLinkedEntity(
+	app: App,
+	state: PluginState,
+	world: WorldInfo,
+	templateSet: TemplateSetInfo,
+	folderPath: string,
+	field: FieldDefinition,
+	name: string
+): Promise<string | null> {
+	const linkedFolderName = field.linkFolder?.trim();
+	if (!linkedFolderName) return null;
+
+	const trimmedName = name.trim();
+	if (!trimmedName) return null;
+
+	// Find entity type from folder rule (e.g. "Factions" → "Faction")
+	const rule = templateSet.folderRules.find(r => r.targetFolder === linkedFolderName);
+	const entityType = rule?.entityType ?? linkedFolderName;
+
+	const linkedFields = templateSet.fieldSets[entityType];
+	const targetFolder = resolveLinkedTargetFolder(world, templateSet, linkedFolderName, folderPath);
+	await ensureFolder(app, targetFolder);
+
+	const targetPath = `${targetFolder}/${trimmedName}.md`;
+	if (app.vault.getAbstractFileByPath(targetPath)) {
+		new Notice(`"${trimmedName}" already exists in ${targetFolder}.`);
+		return null;
+	}
+
+	const content = linkedFields && linkedFields.length > 0
+		? buildEntityContent(linkedFields, {}, entityType, trimmedName)
+		: buildMinimalEntityContent(entityType, trimmedName);
+
+	await app.vault.create(targetPath, content);
+	new Notice(`${entityType} "${trimmedName}" created.`);
+
+	const dashPath = `${world.path}/_dashboard.md`;
+	if (app.vault.getAbstractFileByPath(dashPath)) {
+		await refreshDashboard(app, state, world.path);
+	}
+
+	return `[[${trimmedName}]]`;
+}
+
+function resolveLinkedTargetFolder(
+	world: WorldInfo,
+	templateSet: TemplateSetInfo,
+	linkedFolderName: string,
+	fallbackFolderPath: string
+): string {
+	// linkedFolderName is the folder name (e.g. "Factions")
+	// match against targetFolder in rules
+	const rule = templateSet.folderRules.find(
+		r => r.targetFolder === linkedFolderName
+	);
+	if (rule?.targetFolder && rule.targetFolder !== '*') {
+		return `${world.path}/${rule.targetFolder}`;
+	}
+	return fallbackFolderPath;
+}
+
+async function ensureFolder(app: App, path: string): Promise<void> {
+	const existing = app.vault.getAbstractFileByPath(path);
+	if (existing) return;
+	await app.vault.createFolder(path);
+}
+
+function buildMinimalEntityContent(entityType: string, title: string): string {
+	return `---
+tags:
+  - ${entityType.toLowerCase()}
+name: "${title}"
+---
+
+# ${title}
+`;
+}
 
 function buildLinkCandidates(
 	app: App,

@@ -1,7 +1,7 @@
 {
 	"id": "WorldBuilder",
 	"name": "World Builder Tools",
-	"version": "1.0.1.2",
+	"version": "1.0.1.3",
 	"minAppVersion": "1.6.6",
 	"description": "Template-driven worldbuilding tools for Obsidian, including worlds, entities, dashboards, and template sets.",
 	"author": "YaDo",
