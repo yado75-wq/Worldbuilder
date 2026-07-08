@@ -1,4 +1,4 @@
-import { Plugin, normalizePath, TFolder } from 'obsidian';
+import { Notice, Plugin, TFolder, normalizePath } from 'obsidian';
 import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
@@ -54,7 +54,13 @@ export default class WorldBuilderPlugin extends Plugin {
 				if (file instanceof TFolder) void this.refreshState();
 			})
 		);
-		this.registerEvent(this.app.vault.on('delete', () => void this.refreshState()));
+
+		this.registerEvent(
+			this.app.vault.on('delete', (file) => {
+				void this.handleDelete(file);
+			})
+		);
+
 		this.registerEvent(this.app.vault.on('rename', () => void this.refreshState()));
 
 		// Wait for vault to be fully ready before scanning
@@ -73,6 +79,31 @@ export default class WorldBuilderPlugin extends Plugin {
 
 	async refreshState() {
 		this.state = await scanVault(this.app, this.settings);
+
+		// If default template set no longer exists, fall back to first available
+		const defaultExists = this.state.templateSets
+			.some(ts => ts.name === this.settings.defaultTemplateSet);
+
+		if (!defaultExists && this.state.templateSets.length > 0) {
+			const fallback = this.state.templateSets[0]?.name ?? 'defaults';
+			this.settings.defaultTemplateSet = fallback;
+			await this.saveSettings();
+			new Notice(`Default template set was removed. Switched to "${fallback}".`);
+		}
+	}
+
+	private async handleDelete(file: { path: string; name: string }): Promise<void> {
+		const templatesRoot = `${this.settings.systemFolder}/${this.settings.templatesFolder}`;
+
+		// Check if a template set folder was deleted
+		if (file instanceof TFolder) {
+			const parentPath = (file as TFolder).parent?.path ?? '';
+			if (parentPath === templatesRoot) {
+				new Notice(`Template set "${file.name}" was deleted.`);
+			}
+		}
+
+		await this.refreshState();
 	}
 
 	async loadSettings() {
