@@ -1,4 +1,4 @@
-import { Notice, Plugin, TAbstractFile, TFolder, normalizePath } from 'obsidian';
+import { Menu, Notice, Plugin, TAbstractFile, TFolder, normalizePath, setTooltip } from 'obsidian';
 import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
@@ -8,6 +8,7 @@ import { ensureDefaultTemplates } from './commands/SetupCommand';
 export default class WorldBuilderPlugin extends Plugin {
 	settings!: WorldBuilderSettings;
 	state!: PluginState;
+	private ribbonIconEl!: HTMLElement;
 
 	async onload() {
 		await this.loadSettings();
@@ -19,6 +20,11 @@ export default class WorldBuilderPlugin extends Plugin {
 		};
 
 		this.addSettingTab(new WorldBuilderSettingTab(this.app, this));
+
+		// Ribbon icon — shows active world on hover, status + settings link on click
+		this.ribbonIconEl = this.addRibbonIcon('globe', 'Worldbuilder', (evt) => {
+			this.showStatusMenu(evt);
+		});
 
 		// Register context menu
 		this.registerEvent(
@@ -90,6 +96,44 @@ export default class WorldBuilderPlugin extends Plugin {
 			await this.saveSettings();
 			new Notice(`Default template set was removed. Switched to "${fallback}".`);
 		}
+
+		this.updateRibbonTooltip();
+	}
+
+	private updateRibbonTooltip(): void {
+		const worldName = this.state.activeWorld?.name;
+		const tooltip = worldName ? `Worldbuilder — Active: ${worldName}` : 'Worldbuilder — No active world';
+		setTooltip(this.ribbonIconEl, tooltip);
+	}
+
+	private showStatusMenu(evt: MouseEvent): void {
+		const menu = new Menu();
+
+		const activeWorld = this.state.activeWorld;
+		menu.addItem(item => item
+			.setTitle(activeWorld ? `Active world: ${activeWorld.name}` : 'No active world')
+			.setIcon('globe')
+			.setDisabled(true)
+		);
+
+		menu.addItem(item => item
+			.setTitle(`Default template set: ${this.settings.defaultTemplateSet || 'none'}`)
+			.setIcon('layout-template')
+			.setDisabled(true)
+		);
+
+		menu.addSeparator();
+
+		menu.addItem(item => item
+			.setTitle('Open worldbuilder settings')
+			.setIcon('settings')
+			.onClick(() => {
+				this.app.setting.open();
+				this.app.setting.openTabById(this.manifest.id);
+			})
+		);
+
+		menu.showAtMouseEvent(evt);
 	}
 
 	private async handleDelete(file: TAbstractFile): Promise<void> {
