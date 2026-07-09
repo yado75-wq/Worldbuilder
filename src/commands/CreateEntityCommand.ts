@@ -1,6 +1,7 @@
-import { App, Notice, TFile, getAllTags } from 'obsidian';
+import { App, Notice, TFile } from 'obsidian';
 import { PluginState, WorldInfo, FieldDefinition, TemplateSetInfo } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
+import { buildEntityContent, buildLinkCandidates, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
 
 import { refreshDashboard } from './RefreshDashboardCommand';
 
@@ -71,14 +72,14 @@ export async function createEntity(
 	}
 
 	// Build file content
-	const content = buildEntityContent(fields, result.data, entityType, title);
+	const content = buildEntityContent(fields, result.data, entityType, title, DEFAULT_ENTITY_NOTES);
 
 	await app.vault.create(targetPath, content);
 
 	// Open the new file
 	const newFile = app.vault.getAbstractFileByPath(targetPath);
 	if (newFile instanceof TFile) {
-		await app.workspace.getLeaf(true).openFile(newFile);
+		await app.workspace.getLeaf(false).openFile(newFile);
 	}
 
 	new Notice(`${entityType} "${title}" created.`);
@@ -86,7 +87,7 @@ export async function createEntity(
 	// Refresh dashboard if it exists
 	const dashPath = `${worldPath}/_dashboard.md`;
 	if (app.vault.getAbstractFileByPath(dashPath)) {
-		await refreshDashboard(app, state, worldPath);
+		await refreshDashboard(app, state, worldPath, false);
 	}
 }
 
@@ -122,15 +123,15 @@ async function createLinkedEntity(
 	}
 
 	const content = linkedFields && linkedFields.length > 0
-		? buildEntityContent(linkedFields, {}, entityType, trimmedName)
-		: buildMinimalEntityContent(entityType, trimmedName);
+		? buildEntityContent(linkedFields, {}, entityType, trimmedName, DEFAULT_ENTITY_NOTES)
+		: buildMinimalEntityContent(entityType, trimmedName, DEFAULT_ENTITY_NOTES);
 
 	await app.vault.create(targetPath, content);
 	new Notice(`${entityType} "${trimmedName}" created.`);
 
 	const dashPath = `${world.path}/_dashboard.md`;
 	if (app.vault.getAbstractFileByPath(dashPath)) {
-		await refreshDashboard(app, state, world.path);
+		await refreshDashboard(app, state, world.path, false);
 	}
 
 	return `[[${trimmedName}]]`;
@@ -157,88 +158,4 @@ async function ensureFolder(app: App, path: string): Promise<void> {
 	const existing = app.vault.getAbstractFileByPath(path);
 	if (existing) return;
 	await app.vault.createFolder(path);
-}
-
-function buildMinimalEntityContent(entityType: string, title: string): string {
-	return `---
-tags:
-  - ${entityType.toLowerCase()}
-name: "${title}"
----
-
-# ${title}
-`;
-}
-
-function buildLinkCandidates(
-	app: App,
-	world: WorldInfo,
-	fields: FieldDefinition[]
-): Record<string, string[]> {
-	const candidates: Record<string, string[]> = {};
-
-	for (const f of fields) {
-		if (f.type !== 'link' || !f.linkFolder) continue;
-
-		const folderPath = `${world.path}/${f.linkFolder}`;
-		const files = app.vault.getFiles().filter(file => {
-			if (!file.path.startsWith(folderPath + '/')) return false;
-			if (file.extension !== 'md') return false;
-			if (file.basename === '_index') return false;
-			const cache = app.metadataCache.getFileCache(file);
-			const tags = getAllTags(cache ?? {}) ?? [];
-			return !tags.includes('generic') && !tags.includes('#generic');
-		});
-
-		candidates[f.key] = files.map(file => file.basename);
-
-		const current = candidates[f.key];
-		if (current !== undefined && current.length === 0 && f.linkFallback) {
-			const fallbackPath = `${world.path}/${f.linkFallback}`;
-			const fallbackFiles = app.vault.getFiles().filter(file =>
-				file.path.startsWith(fallbackPath + '/') &&
-				file.extension === 'md' &&
-				file.basename !== '_index'
-			);
-			candidates[f.key] = fallbackFiles.map(file => file.basename);
-		}
-	}
-
-	return candidates;
-}
-
-function buildEntityContent(
-	fields: FieldDefinition[],
-	data: Record<string, string | null>,
-	entityType: string,
-	title: string
-): string {
-	const tag = entityType.toLowerCase();
-
-	const frontmatterProps = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `${f.key}: "${data[f.key] ?? ''}"`)
-		.join('\n');
-
-	const propertiesBlock = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `- **${f.label}:** ${data[f.key] ?? ''}`)
-		.join('\n');
-
-	const sectionsBlock = fields
-		.filter(f => f.display === 'section' && data[f.key])
-		.map(f => `\n## ${f.label}\n${data[f.key] ?? ''}`)
-		.join('\n');
-
-	return `---
-tags:
-  - ${tag}
-name: "${title}"
-${frontmatterProps}
----
-
-# ${title}
-
-${propertiesBlock}
-${sectionsBlock}`;
 }

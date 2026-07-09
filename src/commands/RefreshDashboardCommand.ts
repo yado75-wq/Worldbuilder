@@ -1,13 +1,14 @@
 import { App, Notice, TFile, getAllTags } from 'obsidian';
 import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
+import { PRESERVED_SECTION_MARKER, extractPreservedSection } from '../util/PreservedSection';
 
-const MARKER = '<!-- AUTO-GENERATED: everything above this line is overwritten on refresh -->';
 const DEFAULT_NOTES = '## Notes\n_Your notes here survive dashboard refresh._';
 
 export async function refreshDashboard(
 	app: App,
 	state: PluginState,
-	worldPath: string
+	worldPath: string,
+	openAfterRefresh = true
 ): Promise<void> {
 
 	const world = state.worlds.find(w => w.path === worldPath);
@@ -29,11 +30,7 @@ export async function refreshDashboard(
 
 	if (existingDash instanceof TFile) {
 		const existingContent = await app.vault.read(existingDash);
-		const markerIndex = existingContent.indexOf(MARKER);
-		if (markerIndex !== -1) {
-			const afterMarker = existingContent.slice(markerIndex + MARKER.length).trim();
-			if (afterMarker.length > 0) preservedSection = afterMarker;
-		}
+		preservedSection = extractPreservedSection(existingContent, DEFAULT_NOTES);
 	}
 
 	// Read world meta from _index.md directly — cache may not be updated yet
@@ -123,7 +120,7 @@ ${subDashboards || '_No sub-dashboards yet._'}
 
 ${entitySections}
 
-${MARKER}
+${PRESERVED_SECTION_MARKER}
 
 ${preservedSection}`;
 
@@ -134,10 +131,13 @@ ${preservedSection}`;
 		await app.vault.create(dashPath, content);
 	}
 
-	// Open the dashboard
-	const dashFile = app.vault.getAbstractFileByPath(dashPath);
-	if (dashFile instanceof TFile) {
-		await app.workspace.getLeaf(true).openFile(dashFile);
+	// Open the dashboard — skipped for silent auto-refreshes (e.g. after
+	// editing an entity), so it doesn't steal focus from what's on screen
+	if (openAfterRefresh) {
+		const dashFile = app.vault.getAbstractFileByPath(dashPath);
+		if (dashFile instanceof TFile) {
+			await app.workspace.getLeaf(false).openFile(dashFile);
+		}
 	}
 
 	new Notice(`Dashboard refreshed for "${world.name}".`);

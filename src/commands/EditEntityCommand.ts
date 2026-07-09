@@ -1,7 +1,9 @@
-import { App, Notice, TFile, getAllTags } from 'obsidian';
-import { PluginState, WorldInfo, FieldDefinition } from '../types';
+import { App, Notice, TFile } from 'obsidian';
+import { PluginState, FieldDefinition } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
+import { buildEntityContent, buildLinkCandidates, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
+import { extractPreservedSection, PRESERVED_SECTION_MARKER } from '../util/PreservedSection';
 
 export async function editEntity(
 	app: App,
@@ -68,8 +70,13 @@ export async function editEntity(
 		return;
 	}
 
+	// Read fresh content right before rebuilding, in case the file changed
+	// externally while the edit modal was open
+	const currentContent = await app.vault.read(file);
+	const preservedSection = extractPreservedSection(currentContent, DEFAULT_ENTITY_NOTES);
+
 	// Build updated content
-	const content = buildEntityContent(fields, result.data, entityType, title);
+	const content = buildEntityContent(fields, result.data, entityType, title, preservedSection);
 
 	// Handle rename if name changed
 	if (file.basename !== title) {
@@ -82,11 +89,11 @@ export async function editEntity(
 		const renamedFile = app.vault.getAbstractFileByPath(newPath);
 		if (renamedFile instanceof TFile) {
 			await app.vault.modify(renamedFile, content);
-			await app.workspace.getLeaf(true).openFile(renamedFile);
+			await app.workspace.getLeaf(false).openFile(renamedFile);
 		}
 	} else {
 		await app.vault.modify(file, content);
-		await app.workspace.getLeaf(true).openFile(file);
+		await app.workspace.getLeaf(false).openFile(file);
 	}
 
 	new Notice(`${entityType} "${title}" updated.`);
@@ -94,7 +101,7 @@ export async function editEntity(
 	// Refresh dashboard if it exists
 	const dashPath = `${worldPath}/_dashboard.md`;
 	if (app.vault.getAbstractFileByPath(dashPath)) {
-		await refreshDashboard(app, state, worldPath);
+		await refreshDashboard(app, state, worldPath, false);
 	}
 }
 
@@ -109,10 +116,11 @@ async function buildPrefill(
 	const cache = app.metadataCache.getFileCache(file);
 	const frontmatter = cache?.frontmatter;
 	const content = await app.vault.read(file);
+	const generatedContent = content.split(PRESERVED_SECTION_MARKER)[0] ?? content;
 
 	for (const f of fields) {
 		if (f.display === 'section') {
-			const match = content.match(
+			const match = generatedContent.match(
 				new RegExp(`## ${f.label}\\n([\\s\\S]*?)(?=\\n## |$)`)
 			);
 			prefill[f.key] = match?.[1]?.trim() ?? '';
@@ -134,77 +142,4 @@ async function buildPrefill(
 	}
 
 	return prefill;
-}
-
-function buildLinkCandidates(
-	app: App,
-	world: WorldInfo,
-	fields: FieldDefinition[]
-): Record<string, string[]> {
-	const candidates: Record<string, string[]> = {};
-
-	for (const f of fields) {
-		if (f.type !== 'link' || !f.linkFolder) continue;
-
-		const folderPath = `${world.path}/${f.linkFolder}`;
-		const files = app.vault.getFiles().filter(file => {
-			if (!file.path.startsWith(folderPath + '/')) return false;
-			if (file.extension !== 'md') return false;
-			if (file.basename === '_index') return false;
-			const cache = app.metadataCache.getFileCache(file);
-			const tags = getAllTags(cache ?? {}) ?? [];
-			return !tags.includes('generic') && !tags.includes('#generic');
-		});
-
-		candidates[f.key] = files.map(file => file.basename);
-
-		const current = candidates[f.key];
-		if (current !== undefined && current.length === 0 && f.linkFallback) {
-			const fallbackPath = `${world.path}/${f.linkFallback}`;
-			const fallbackFiles = app.vault.getFiles().filter(file =>
-				file.path.startsWith(fallbackPath + '/') &&
-				file.extension === 'md' &&
-				file.basename !== '_index'
-			);
-			candidates[f.key] = fallbackFiles.map(file => file.basename);
-		}
-	}
-
-	return candidates;
-}
-
-function buildEntityContent(
-	fields: FieldDefinition[],
-	data: Record<string, string | null>,
-	entityType: string,
-	title: string
-): string {
-	const tag = entityType.toLowerCase();
-
-	const frontmatterProps = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `${f.key}: "${data[f.key] ?? ''}"`)
-		.join('\n');
-
-	const propertiesBlock = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `- **${f.label}:** ${data[f.key] ?? ''}`)
-		.join('\n');
-
-	const sectionsBlock = fields
-		.filter(f => f.display === 'section' && data[f.key])
-		.map(f => `\n## ${f.label}\n${data[f.key] ?? ''}`)
-		.join('\n');
-
-	return `---
-tags:
-  - ${tag}
-name: "${title}"
-${frontmatterProps}
----
-
-# ${title}
-
-${propertiesBlock}
-${sectionsBlock}`;
 }
