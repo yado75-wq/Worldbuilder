@@ -67,8 +67,9 @@ export class InputModal extends Modal {
 
 		btn.addEventListener('click', submit);
 
-		input.addEventListener('keydown', (e: KeyboardEvent) => {
-			if (e.key === 'Enter') submit();
+		this.scope.register([], 'Enter', () => {
+			submit();
+			return false;
 		});
 
 		window.setTimeout(() => input.focus(), 50);

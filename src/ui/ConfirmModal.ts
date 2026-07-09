@@ -25,6 +25,8 @@ export class ConfirmModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl } = this;
+		const openedAt = Date.now();
+		const ENTER_DEBOUNCE_MS = 300;
 
 		contentEl.createEl('p', {
 			text: this.prompt,
@@ -57,9 +59,19 @@ export class ConfirmModal extends Modal {
 			this.onConfirm(false);
 		});
 
-		contentEl.addEventListener('keydown', (e: KeyboardEvent) => {
-			if (e.key === 'Enter') { this.answered = true; this.close(); this.onConfirm(true); }
-			if (e.key === 'Escape') { this.answered = true; this.close(); this.onConfirm(false); }
+		this.scope.register([], 'Enter', () => {
+			if (Date.now() - openedAt < ENTER_DEBOUNCE_MS) return false;
+			this.answered = true;
+			this.close();
+			this.onConfirm(true);
+			return false;
+		});
+
+		this.scope.register([], 'Escape', () => {
+			this.answered = true;
+			this.close();
+			this.onConfirm(false);
+			return false;
 		});
 
 		window.setTimeout(() => confirmBtn.focus(), 50);
