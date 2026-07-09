@@ -29,14 +29,14 @@ export class InputModal extends Modal {
 
 		contentEl.createEl('p', {
 			text: this.prompt,
-			attr: { style: 'margin-bottom: 8px; font-weight: 500;' }
+			cls: 'wb-modal-prompt',
 		});
 
 		const input = contentEl.createEl('input', {
 			type: 'text',
+			cls: 'wb-modal-input',
 			attr: {
 				placeholder: this.placeholder,
-				style: 'width: 100%; padding: 6px; margin-bottom: 12px; background: var(--background-secondary); color: var(--text-normal); border: 1px solid var(--background-modifier-border); border-radius: 4px; box-sizing: border-box;'
 			}
 		});
 
@@ -45,15 +45,12 @@ export class InputModal extends Modal {
 		const errorEl = contentEl.createEl('p', {
 			text: 'A name is required.',
 			cls: 'wb-input-error',
-			attr: { style: 'color: var(--color-red); font-size: 0.85em; margin-bottom: 8px;' }
 		});
 		errorEl.addClass('wb-hidden');
 
 		const btn = contentEl.createEl('button', {
 			text: 'OK',
-			attr: {
-				style: 'width: 100%; padding: 8px; background: var(--interactive-accent); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer;'
-			}
+			cls: 'wb-modal-submit-btn',
 		});
 
 		const submit = (): void => {

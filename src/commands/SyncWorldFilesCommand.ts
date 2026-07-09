@@ -1,5 +1,6 @@
 import { App, Notice, TFile, TFolder, getAllTags } from 'obsidian';
 import { PluginState, FolderRule } from '../types';
+import { ConfirmModal } from '../ui/ConfirmModal';
 
 interface MoveCandidate {
 	file: TFile;
@@ -162,75 +163,7 @@ function askConfirm(
 	cancelLabel: string
 ): Promise<boolean> {
 	return new Promise((resolve) => {
-		const modal = new ConfirmModal(app, message, confirmLabel, cancelLabel, resolve);
+		const modal = new ConfirmModal(app, message, resolve, confirmLabel, cancelLabel, 'Sync world files');
 		modal.open();
 	});
-}
-
-// Inline confirm modal — avoids importing ConfirmModal which uses Yes/No labels
-import { Modal } from 'obsidian';
-
-class ConfirmModal extends Modal {
-	private message: string;
-	private confirmLabel: string;
-	private cancelLabel: string;
-	private onResult: (confirmed: boolean) => void;
-	private answered = false;
-
-	constructor(
-		app: App,
-		message: string,
-		confirmLabel: string,
-		cancelLabel: string,
-		onResult: (confirmed: boolean) => void
-	) {
-		super(app);
-		this.message = message;
-		this.confirmLabel = confirmLabel;
-		this.cancelLabel = cancelLabel;
-		this.onResult = onResult;
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		this.titleEl.setText('Sync world files');
-
-		contentEl.createEl('p', {
-			text: this.message,
-			attr: { style: 'white-space: pre-wrap; font-size: 0.9em;' }
-		});
-
-		const btnRow = contentEl.createDiv({
-			attr: { style: 'display: flex; gap: 8px; margin-top: 16px;' }
-		});
-
-		const confirmBtn = btnRow.createEl('button', {
-			text: this.confirmLabel,
-			attr: { style: 'flex: 1; padding: 8px; background: var(--interactive-accent); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer;' }
-		});
-
-		const cancelBtn = btnRow.createEl('button', {
-			text: this.cancelLabel,
-			attr: { style: 'flex: 1; padding: 8px; background: var(--background-secondary); color: var(--text-normal); border: 1px solid var(--background-modifier-border); border-radius: 4px; cursor: pointer;' }
-		});
-
-		confirmBtn.addEventListener('click', () => {
-			this.answered = true;
-			this.close();
-			this.onResult(true);
-		});
-
-		cancelBtn.addEventListener('click', () => {
-			this.answered = true;
-			this.close();
-			this.onResult(false);
-		});
-
-		window.setTimeout(() => confirmBtn.focus(), 50);
-	}
-
-	onClose(): void {
-		this.contentEl.empty();
-		if (!this.answered) this.onResult(false);
-	}
 }

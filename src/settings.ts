@@ -43,10 +43,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					.addButton(btn => btn
 						.setButtonText('Set as default')
 						.setDisabled(isDefault || !set.isValid)
-						.onClick(async () => {
-							this.plugin.settings.defaultTemplateSet = set.name;
-							await this.plugin.saveSettings();
-							this.display();
+						.onClick(() => {
+							void (async () => {
+								this.plugin.settings.defaultTemplateSet = set.name;
+								await this.plugin.saveSettings();
+								this.display();
+							})();
 						})
 					)
 					.addButton(btn => btn
@@ -57,8 +59,10 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					)
 					.addButton(btn => btn
 						.setButtonText('Assign to world')
-						.onClick(async () => {
-							await this.assignTemplateSetToWorld(set.name);
+						.onClick(() => {
+							void (async () => {
+								await this.assignTemplateSetToWorld(set.name);
+							})();
 						})
 					)
 					.addButton(btn => btn
@@ -183,7 +187,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 				const btn = modal.contentEl.createEl('button', {
 					text: label,
-					attr: { style: 'display: block; width: 100%; margin-bottom: 8px; padding: 8px; background: var(--background-secondary); border: 1px solid var(--background-modifier-border); border-radius: 4px; cursor: pointer; text-align: left;' }
+					cls: 'wb-world-picker-btn',
 				});
 				btn.addEventListener('click', () => {
 					if (resolved) return;

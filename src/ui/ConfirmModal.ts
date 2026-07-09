@@ -3,16 +3,24 @@ import { App, Modal } from 'obsidian';
 export class ConfirmModal extends Modal {
 	private prompt: string;
 	private onConfirm: (confirmed: boolean) => void;
+	private confirmLabel: string;
+	private cancelLabel: string;
 	private answered = false;
 
 	constructor(
 		app: App,
 		prompt: string,
 		onConfirm: (confirmed: boolean) => void,
+		confirmLabel = 'Yes',
+		cancelLabel = 'No',
+		title = '',
 	) {
 		super(app);
 		this.prompt = prompt;
 		this.onConfirm = onConfirm;
+		this.confirmLabel = confirmLabel;
+		this.cancelLabel = cancelLabel;
+		if (title) this.titleEl.setText(title);
 	}
 
 	onOpen(): void {
@@ -20,34 +28,30 @@ export class ConfirmModal extends Modal {
 
 		contentEl.createEl('p', {
 			text: this.prompt,
-			attr: { style: 'margin-bottom: 16px; font-weight: 500;' }
+			cls: 'wb-confirm-prompt',
 		});
 
 		const btnRow = contentEl.createDiv({
-			attr: { style: 'display: flex; gap: 8px;' }
+			cls: 'wb-confirm-btn-row',
 		});
 
-		const yesBtn = btnRow.createEl('button', {
-			text: 'Yes',
-			attr: {
-				style: 'flex: 1; padding: 8px; background: var(--interactive-accent); color: var(--text-on-accent); border: none; border-radius: 4px; cursor: pointer;'
-			}
+		const confirmBtn = btnRow.createEl('button', {
+			text: this.confirmLabel,
+			cls: 'wb-confirm-btn wb-confirm-btn-primary',
 		});
 
-		const noBtn = btnRow.createEl('button', {
-			text: 'No',
-			attr: {
-				style: 'flex: 1; padding: 8px; background: var(--background-secondary); color: var(--text-normal); border: 1px solid var(--background-modifier-border); border-radius: 4px; cursor: pointer;'
-			}
+		const cancelBtn = btnRow.createEl('button', {
+			text: this.cancelLabel,
+			cls: 'wb-confirm-btn wb-confirm-btn-secondary',
 		});
 
-		yesBtn.addEventListener('click', () => {
+		confirmBtn.addEventListener('click', () => {
 			this.answered = true;
 			this.close();
 			this.onConfirm(true);
 		});
 
-		noBtn.addEventListener('click', () => {
+		cancelBtn.addEventListener('click', () => {
 			this.answered = true;
 			this.close();
 			this.onConfirm(false);
@@ -58,7 +62,7 @@ export class ConfirmModal extends Modal {
 			if (e.key === 'Escape') { this.answered = true; this.close(); this.onConfirm(false); }
 		});
 
-		window.setTimeout(() => yesBtn.focus(), 50);
+		window.setTimeout(() => confirmBtn.focus(), 50);
 	}
 
 	onClose(): void {
@@ -67,3 +71,4 @@ export class ConfirmModal extends Modal {
 		if (!this.answered) this.onConfirm(false);
 	}
 }
+

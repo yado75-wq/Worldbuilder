@@ -9,3 +9,77 @@
 .wb-invalid {
 	color: var(--color-red);
 }
+
+.wb-world-picker-btn {
+	display: block;
+	width: 100%;
+	margin-bottom: 8px;
+	padding: 8px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	cursor: pointer;
+	text-align: left;
+}
+
+.wb-modal-prompt {
+	margin-bottom: 8px;
+	font-weight: 500;
+}
+
+.wb-modal-input {
+	width: 100%;
+	padding: 6px;
+	margin-bottom: 12px;
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	box-sizing: border-box;
+}
+
+.wb-input-error {
+	color: var(--color-red);
+	font-size: 0.85em;
+	margin-bottom: 8px;
+}
+
+.wb-modal-submit-btn {
+	width: 100%;
+	padding: 8px;
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.wb-confirm-prompt {
+	margin-bottom: 16px;
+	font-weight: 500;
+	white-space: pre-wrap;
+}
+
+.wb-confirm-btn-row {
+	display: flex;
+	gap: 8px;
+}
+
+.wb-confirm-btn {
+	flex: 1;
+	padding: 8px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.wb-confirm-btn-primary {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border: none;
+}
+
+.wb-confirm-btn-secondary {
+	background: var(--background-secondary);
+	color: var(--text-normal);
+	border: 1px solid var(--background-modifier-border);
+}

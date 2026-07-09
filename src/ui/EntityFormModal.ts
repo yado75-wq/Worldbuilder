@@ -112,7 +112,7 @@ export class EntityFormModal extends Modal {
 		// Error message for missing title
 		const errorEl = contentEl.createEl('p', {
 			text: 'Name is required.',
-			attr: { style: 'color: var(--color-red); font-size: 0.85em; margin-bottom: 8px;' }
+			cls: 'wb-input-error',
 		});
 		errorEl.addClass('wb-hidden');
 
@@ -126,7 +126,7 @@ export class EntityFormModal extends Modal {
 
 		// Enter to submit (not in textarea)
 		contentEl.addEventListener('keydown', (e: KeyboardEvent) => {
-			if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+			if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) {
 				this.submit(errorEl);
 			}
 		});
