@@ -1,4 +1,4 @@
-import { Notice, Plugin, TFolder, normalizePath } from 'obsidian';
+import { Notice, Plugin, TAbstractFile, TFolder, normalizePath } from 'obsidian';
 import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
@@ -92,7 +92,7 @@ export default class WorldBuilderPlugin extends Plugin {
 		}
 	}
 
-	private async handleDelete(file: { path: string; name: string }): Promise<void> {
+	private async handleDelete(file: TAbstractFile): Promise<void> {
 		const templatesRoot = `${this.settings.systemFolder}/${this.settings.templatesFolder}`;
 
 		// Check if a template set folder was deleted
