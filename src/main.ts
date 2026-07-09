@@ -97,7 +97,7 @@ export default class WorldBuilderPlugin extends Plugin {
 
 		// Check if a template set folder was deleted
 		if (file instanceof TFolder) {
-			const parentPath = (file as TFolder).parent?.path ?? '';
+			const parentPath = file.parent?.path ?? '';
 			if (parentPath === templatesRoot) {
 				new Notice(`Template set "${file.name}" was deleted.`);
 			}
