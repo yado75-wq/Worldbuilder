@@ -1,6 +1,7 @@
 import { App, Notice, TFile, getAllTags } from 'obsidian';
 import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
 import { PRESERVED_SECTION_MARKER, extractPreservedSection } from '../util/PreservedSection';
+import { findMissingMandatoryFields } from './shared/EntityCompleteness';
 
 const DEFAULT_NOTES = '## Notes\n_Your notes here survive dashboard refresh._';
 
@@ -97,6 +98,9 @@ export async function refreshDashboard(
 		})
 		.join('\n\n');
 
+	// Find entities missing mandatory fields, for the Needs attention section
+	const needsAttention = await buildNeedsAttentionSection(app, worldPath, templateSet);
+
 	// Assemble dashboard content
 	const now = new Date().toLocaleString();
 	const content =
@@ -114,6 +118,9 @@ ${metaProps || '_No meta defined yet. Use Edit world meta to add details._'}
 
 ## TODO
 ${todoBlock}
+
+## Needs attention
+${needsAttention}
 
 ## Sub-dashboards
 ${subDashboards || '_No sub-dashboards yet._'}
@@ -149,4 +156,49 @@ function findTemplateSet(state: PluginState, world: WorldInfo): TemplateSetInfo 
 	return state.templateSets.find(ts => ts.name === world.templateSet)
 		?? state.templateSets[0]
 		?? null;
+}
+
+async function buildNeedsAttentionSection(
+	app: App,
+	worldPath: string,
+	templateSet: TemplateSetInfo
+): Promise<string> {
+	const incomplete: string[] = [];
+
+	for (const rule of templateSet.folderRules) {
+		if (rule.targetFolder === '*') continue;
+
+		const fields = templateSet.fieldSets[rule.entityType];
+		if (!fields || fields.length === 0) continue;
+
+		const mandatoryFields = fields.filter(f => f.mandatory && f.display !== 'title');
+		if (mandatoryFields.length === 0) continue;
+
+		// Only read file content (needed for section-type fields) when this
+		// entity type actually has a mandatory section field to check
+		const needsContent = mandatoryFields.some(f => f.display === 'section');
+
+		const folderPath = `${worldPath}/${rule.targetFolder}`;
+		const entities = app.vault.getFiles().filter(f =>
+			f.path.startsWith(folderPath + '/') &&
+			f.extension === 'md' &&
+			f.basename !== '_index' &&
+			!getAllTags(app.metadataCache.getFileCache(f) ?? {})
+				?.some(t => t === '#generic' || t === 'generic')
+		);
+
+		for (const entity of entities) {
+			const frontmatter = app.metadataCache.getFileCache(entity)?.frontmatter;
+			const generatedContent = needsContent
+				? (await app.vault.read(entity)).split(PRESERVED_SECTION_MARKER)[0] ?? ''
+				: '';
+
+			const missing = findMissingMandatoryFields(mandatoryFields, frontmatter, generatedContent);
+			if (missing.length > 0) {
+				incomplete.push(`- [[${entity.path}|${entity.basename}]] — missing: ${missing.join(', ')}`);
+			}
+		}
+	}
+
+	return incomplete.length > 0 ? incomplete.join('\n') : '_Nothing outstanding._';
 }

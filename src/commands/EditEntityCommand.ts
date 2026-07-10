@@ -4,6 +4,7 @@ import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { buildEntityContent, buildLinkCandidates, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
 import { extractPreservedSection, PRESERVED_SECTION_MARKER } from '../util/PreservedSection';
+import { extractSectionContent } from '../util/sectionContent';
 
 export async function editEntity(
 	app: App,
@@ -120,10 +121,7 @@ async function buildPrefill(
 
 	for (const f of fields) {
 		if (f.display === 'section') {
-			const match = generatedContent.match(
-				new RegExp(`## ${f.label}\\n([\\s\\S]*?)(?=\\n## |$)`)
-			);
-			prefill[f.key] = match?.[1]?.trim() ?? '';
+			prefill[f.key] = extractSectionContent(generatedContent, f.label);
 		} else if (f.type === 'link') {
 			// Strip [[ ]] for display in dropdown
 			const val: unknown = frontmatter?.[f.key];
