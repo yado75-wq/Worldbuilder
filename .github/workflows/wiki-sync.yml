@@ -1,0 +1,25 @@
+name: Sync docs to wiki
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "docs/**"
+  workflow_dispatch: {}
+
+jobs:
+  sync-docs-to-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Sync docs to wiki
+        uses: newrelic/wiki-sync-action@main
+        with:
+          source: docs
+          destination: wiki
+          token: ${{ secrets.WIKI_SYNC_TOKEN }}
+          gitAuthorName: WorldBuilder Bot
+          gitAuthorEmail: actions@github.com
