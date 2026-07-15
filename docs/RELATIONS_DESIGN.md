@@ -88,9 +88,10 @@ two separate relation files, not one file with a change log. The old
 instance is never edited to record the change — its own `end` value already
 *is* the record that it ended.
 
-**Blank `end` on a relation instance means "still ongoing."** This is
+**An end resolving to `+∞` — the open-ended half-open case, §3 of
+`TIME_DESIGN.md` — on a relation instance means "still ongoing."** This is
 specific to relations (present-tense facts that can genuinely still be true)
-— it does **not** apply the same way to Events (`TIME_DESIGN.md` §5), which
+— it does **not** apply the same way to Events (`TIME_DESIGN.md` §7), which
 are logged as having happened, not as being currently in progress.
 
 ---
