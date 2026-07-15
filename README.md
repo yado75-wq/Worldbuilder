@@ -5,13 +5,14 @@ A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate 
 ## Features
 
 - **World management** — create worlds with templated folder structures, switch between active worlds, sync folders as your template evolves
-- **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu
+- **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu. Freeform notes added below the auto-generated content survive future edits, same protected-section behavior as the dashboard
 - **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
 - **Template set management** — create, clone, reset, assign to a world, and set a default template set from the plugin settings tab
-- **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, and a protected Notes section that survives refresh
+- **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, a `## Needs attention` section flagging entities missing mandatory fields, and a protected Notes section that survives refresh
 - **World meta** — structured world bible (genre, tone, themes, premise, conflict etc.) editable via form
 - **File sync** — move misplaced entity files to their correct folders based on their tags
 - **Context-aware menus** — right-click commands appear only where they make sense
+- **Ribbon icon** — hover to see the active world at a glance, click for a quick status menu and a shortcut into plugin settings
 
 ## How it works
 
@@ -80,6 +81,12 @@ npm install
 npm run dev
 ```
 
+Run the test suite (pure-logic unit tests, no Obsidian mocking) with:
+
+```bash
+npm test
+```
+
 Requires Node.js v18+.
 
 ## First run
@@ -104,10 +111,9 @@ On first load the plugin creates `_system/templates/defaults/` in your vault wit
 
 ## Roadmap
 
-- Timeline system (epoch entities, equipment lifespan, era-aware creation)
-- Sub-dashboards per entity type
-- Relationship wizard
-- Template set localization
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) — also published to the project
+[Wiki](../../wiki), kept in sync automatically. Not duplicated here, so
+there's exactly one place this ever needs updating.
 
 ## Requirements
 
