@@ -30,7 +30,7 @@ export function registerFileMenu(
 
 	if (isSystemButNotTemplate) return;
 
-	const context = resolveContext(file, state.worlds, state.templateSets, templatesRootPath);
+	const context = resolveContext(app, file, state.worlds, state.templateSets, templatesRootPath);
 
 	switch (context.type) {
 

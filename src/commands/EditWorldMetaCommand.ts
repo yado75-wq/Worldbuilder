@@ -144,20 +144,23 @@ function buildIndexContent(
 
 	const sectionsBlock = fields
 		.filter(f => f.display === 'section' && data[f.key])
-		.map(f => `\n## ${f.label}\n${data[f.key] ?? ''}`)
-		.join('\n');
+		.map(f => `## ${f.label}\n${data[f.key] ?? ''}`)
+		.join('\n\n');
 
-	return `---
-tags:
-  - world
-status: ${status}
-template_set: ${templateSet}
-name: "${worldName}"
-${frontmatterProps}
----
+	// Only chunks that actually have content contribute a blank-line
+	// separator — a fresh world with nothing filled in yet shouldn't leave
+	// stacked blank lines where the empty properties/sections blocks used
+	// to sit (same fix as EntityContentBuilder.ts's buildEntityContent).
+	const bodyChunks = [propertiesBlock, sectionsBlock].filter(chunk => chunk.length > 0);
 
-# ${worldName}
+	const frontmatter = [
+		'tags:',
+		'  - world',
+		`status: ${status}`,
+		`template_set: ${templateSet}`,
+		`name: "${worldName}"`,
+		...(frontmatterProps ? [frontmatterProps] : []),
+	].join('\n');
 
-${propertiesBlock}
-${sectionsBlock}`;
+	return [`---\n${frontmatter}\n---`, `# ${worldName}`, ...bodyChunks].join('\n\n');
 }

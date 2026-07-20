@@ -2,6 +2,13 @@ import { App, Notice, TFile, getAllTags } from 'obsidian';
 import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
 import { PRESERVED_SECTION_MARKER, extractPreservedSection } from '../util/PreservedSection';
 import { findMissingMandatoryFields } from './shared/EntityCompleteness';
+import {
+	findUnresolvedTimeframes,
+	formatUnresolvedTimeframeEntry,
+	TimeframeCheckTarget,
+} from './shared/TimeframeResolutionReport';
+import { TimeframeLookup } from '../time/TimeframeResolver';
+import { formatMetaLabel } from './shared/MetaLabel';
 
 const DEFAULT_NOTES = '## Notes\n_Your notes here survive dashboard refresh._';
 
@@ -41,19 +48,24 @@ export async function refreshDashboard(
 	const frontmatterMatch = indexContent.match(/^---\n([\s\S]*?)\n---/);
 	const frontmatterContent = frontmatterMatch?.[1] ?? '';
 	const skipKeys = ['tags', 'status', 'name', 'template_set', 'position'];
-	const metaProps = frontmatterContent.length > 0
+	const metaEntries = frontmatterContent.length > 0
 		? frontmatterContent
 			.split('\n')
 			.map(line => line.match(/^(\w+):\s*"?([^"]*)"?$/))
 			.filter((m): m is RegExpMatchArray => m !== null && !skipKeys.includes(m[1] ?? ''))
 			.filter(m => (m[2] ?? '').trim().length > 0)
-			.map(m => {
-				const key = m[1] ?? '';
-				const val = (m[2] ?? '').trim();
-				return `- **${key.charAt(0).toUpperCase() + key.slice(1)}:** ${val}`;
-			})
-			.join('\n')
-		: '';
+			.map(m => ({ key: m[1] ?? '', label: formatMetaLabel(m[1] ?? ''), value: (m[2] ?? '').trim() }))
+		: [];
+
+	// TIME_DESIGN.md §4: time_unit defaults to "years" world-wide when a
+	// world hasn't set one. Nothing is ever written to frontmatter for an
+	// unset value (an unconfigured world stays zero-setup, §4/§1), so the
+	// default is only ever shown here, never persisted.
+	if (!metaEntries.some(m => m.key === 'time_unit')) {
+		metaEntries.push({ key: 'time_unit', label: 'Time Unit', value: 'years _(default)_' });
+	}
+
+	const metaProps = metaEntries.map(m => `- **${m.label}:** ${m.value}`).join('\n');
 
 	// Extract TODO section from _index.md body
 	const todoMatch = indexContent.match(/## TODO\n([\s\S]*?)(?=\n## |$)/);
@@ -165,6 +177,10 @@ async function buildNeedsAttentionSection(
 ): Promise<string> {
 	const incomplete: string[] = [];
 
+	// Check 1: presence (TIME_DESIGN.md §1, §6) — is a mandatory field there
+	// at all. Unaffected by the resolution check below; a mandatory
+	// `timeframe` field with its key entirely absent is still reported here,
+	// via findMissingMandatoryFields's own `type === 'timeframe'` branch.
 	for (const rule of templateSet.folderRules) {
 		if (rule.targetFolder === '*') continue;
 
@@ -178,14 +194,7 @@ async function buildNeedsAttentionSection(
 		// entity type actually has a mandatory section field to check
 		const needsContent = mandatoryFields.some(f => f.display === 'section');
 
-		const folderPath = `${worldPath}/${rule.targetFolder}`;
-		const entities = app.vault.getFiles().filter(f =>
-			f.path.startsWith(folderPath + '/') &&
-			f.extension === 'md' &&
-			f.basename !== '_index' &&
-			!getAllTags(app.metadataCache.getFileCache(f) ?? {})
-				?.some(t => t === '#generic' || t === 'generic')
-		);
+		const entities = getEntityFiles(app, worldPath, rule.targetFolder);
 
 		for (const entity of entities) {
 			const frontmatter = app.metadataCache.getFileCache(entity)?.frontmatter;
@@ -200,5 +209,78 @@ async function buildNeedsAttentionSection(
 		}
 	}
 
+	// Check 2: resolution (TIME_DESIGN.md §6) — does a *present* timeframe
+	// value actually resolve. Distinct from check 1 above: a field can be
+	// fully present and still fail here (e.g. it anchors to a Milestone that
+	// itself has no timepoint). Runs across the whole template set, since an
+	// anchor chain can cross entity-type/folder boundaries, and reports
+	// failures with root causes sorted before their dependents (§6, §11).
+	const { lookup, targets } = buildTimeframeLookup(app, worldPath, templateSet);
+	const unresolved = findUnresolvedTimeframes(targets, lookup);
+	for (const entry of unresolved) {
+		incomplete.push(formatUnresolvedTimeframeEntry(entry));
+	}
+
 	return incomplete.length > 0 ? incomplete.join('\n') : '_Nothing outstanding._';
+}
+
+/** Entity files in `worldPath/targetFolder`, excluding `_index` and generic-tagged notes. */
+function getEntityFiles(app: App, worldPath: string, targetFolder: string): TFile[] {
+	const folderPath = `${worldPath}/${targetFolder}`;
+	return app.vault.getFiles().filter(f =>
+		f.path.startsWith(folderPath + '/') &&
+		f.extension === 'md' &&
+		f.basename !== '_index' &&
+		!getAllTags(app.metadataCache.getFileCache(f) ?? {})
+			?.some(t => t === '#generic' || t === 'generic')
+	);
+}
+
+/**
+ * Builds the `TimeframeLookup` (TimeframeResolver.ts) plus the list of
+ * check targets (entities with a *present* timeframe value) across the
+ * whole template set. Each entity type's timeframe field is whichever field
+ * in its field set has `type === 'timeframe'` — TIME_DESIGN.md's model is
+ * one canonical timeframe field per entity type (§1, §7), so the first
+ * match is authoritative.
+ *
+ * The ref used for lookups and as a resolution target is the entity's
+ * basename, matching how `[[Entity]]` links are written elsewhere against
+ * these files (e.g. the `[[${entity.path}|${entity.basename}]]` links built
+ * throughout this file) — the vault convention this project uses for
+ * wikilink targets.
+ */
+function buildTimeframeLookup(
+	app: App,
+	worldPath: string,
+	templateSet: TemplateSetInfo
+): { lookup: TimeframeLookup; targets: TimeframeCheckTarget[] } {
+	const rawByRef = new Map<string, string | undefined>();
+	const targets: TimeframeCheckTarget[] = [];
+
+	for (const rule of templateSet.folderRules) {
+		if (rule.targetFolder === '*') continue;
+
+		const fields = templateSet.fieldSets[rule.entityType];
+		const timeframeField = fields?.find(f => f.type === 'timeframe');
+		if (!timeframeField) continue;
+
+		const entities = getEntityFiles(app, worldPath, rule.targetFolder);
+
+		for (const entity of entities) {
+			const frontmatter = app.metadataCache.getFileCache(entity)?.frontmatter;
+			const raw: unknown = frontmatter?.[timeframeField.key];
+			const rawStr = typeof raw === 'string' ? raw : undefined;
+
+			const ref = entity.basename;
+			rawByRef.set(ref, rawStr);
+
+			if (rawStr !== undefined) {
+				targets.push({ ref, path: entity.path, basename: entity.basename, fieldLabel: timeframeField.label });
+			}
+		}
+	}
+
+	const lookup: TimeframeLookup = ref => rawByRef.get(ref);
+	return { lookup, targets };
 }

@@ -346,5 +346,18 @@ function buildFieldDefinition(
 		};
 	}
 
+	if (typeRaw === 'timeframe' || typeRaw.startsWith('timeframe:')) {
+		const spec = typeRaw.startsWith('timeframe:') ? typeRaw.slice(10) : '';
+		const parts = spec.split('>').map(s => s.trim());
+		const primary = parts[0];
+		const fallback = parts[1];
+
+		return {
+			key, label, mandatory, display,
+			type: 'timeframe',
+			...(primary ? { linkFolder: primary, linkFallback: fallback } : {}),
+		};
+	}
+	
 	return { key, label, mandatory, display, type: 'text' };
 }

@@ -83,3 +83,35 @@
 	color: var(--text-normal);
 	border: 1px solid var(--background-modifier-border);
 }
+
+.wb-timeframe-field {
+	margin-bottom: 12px;
+	padding: 8px;
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+}
+
+.wb-timeframe-title {
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.wb-timeframe-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.wb-timeframe-row-label {
+	flex: 0 0 auto;
+	width: 40px;
+	color: var(--text-muted);
+	font-size: 0.85em;
+}
+
+.wb-timeframe-row-setting {
+	flex: 1 1 auto;
+	border: none;
+	padding: 4px 0;
+}

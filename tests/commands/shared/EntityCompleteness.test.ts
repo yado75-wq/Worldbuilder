@@ -17,6 +17,12 @@ const nicknameField: FieldDefinition = {
 const historyField: FieldDefinition = {
 	key: 'history', label: 'History', mandatory: true, type: 'text', display: 'section',
 };
+const timeframeField: FieldDefinition = {
+	key: 'timeframe', label: 'Timeframe', mandatory: true, type: 'timeframe', display: 'property',
+};
+const optionalTimeframeField: FieldDefinition = {
+	key: 'duration', label: 'Duration', mandatory: false, type: 'timeframe', display: 'property',
+};
 
 describe('findMissingMandatoryFields', () => {
 	const fields = [titleField, roleField, factionField, nicknameField, historyField];
@@ -74,5 +80,44 @@ describe('findMissingMandatoryFields', () => {
 	it('handles undefined frontmatter gracefully', () => {
 		const missing = findMissingMandatoryFields(fields, undefined, '');
 		expect(missing).toContain('Role');
+	});
+});
+
+describe('findMissingMandatoryFields — timeframe fields (TIME_DESIGN.md §1, §6)', () => {
+	const fields = [titleField, timeframeField, optionalTimeframeField];
+
+	it('flags a mandatory timeframe field whose frontmatter key is entirely absent', () => {
+		const missing = findMissingMandatoryFields(fields, {}, '');
+		expect(missing).toContain('Timeframe');
+	});
+
+	it('flags a mandatory timeframe field when frontmatter is undefined', () => {
+		const missing = findMissingMandatoryFields(fields, undefined, '');
+		expect(missing).toContain('Timeframe');
+	});
+
+	it('does not flag a mandatory timeframe field once its key is present', () => {
+		const missing = findMissingMandatoryFields(fields, { timeframe: '(1200, 1250)' }, '');
+		expect(missing).not.toContain('Timeframe');
+	});
+
+	// Presence, not trimmed-string emptiness: this is deliberately unlike the
+	// plain-property branch. A malformed or unresolvable-but-present value is
+	// the resolution check's job (TimeframeResolutionReport.ts), not this one.
+	it('does not flag a present timeframe value even if it would fail to parse or resolve', () => {
+		const missing = findMissingMandatoryFields(fields, { timeframe: 'not a real value' }, '');
+		expect(missing).not.toContain('Timeframe');
+	});
+
+	it('never flags a non-mandatory timeframe field, present or absent', () => {
+		const missingWhenAbsent = findMissingMandatoryFields(fields, { timeframe: '(0, 0)' }, '');
+		expect(missingWhenAbsent).not.toContain('Duration');
+
+		const missingWhenPresent = findMissingMandatoryFields(
+			fields,
+			{ timeframe: '(0, 0)', duration: '(1, 2)' },
+			''
+		);
+		expect(missingWhenPresent).not.toContain('Duration');
 	});
 });

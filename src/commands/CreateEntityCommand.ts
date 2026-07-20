@@ -33,7 +33,7 @@ export async function createEntity(
 		return;
 	}
 
-	const linkCandidates = buildLinkCandidates(app, world, fields);
+	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet);
 
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;

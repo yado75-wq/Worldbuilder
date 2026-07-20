@@ -42,7 +42,7 @@ export async function editEntity(
 
 	// Build prefill from existing file
 	const prefill = await buildPrefill(app, file, fields);
-	const linkCandidates = buildLinkCandidates(app, world, fields);
+	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet);
 
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;

@@ -1,7 +1,8 @@
-import { TAbstractFile, TFile, TFolder } from 'obsidian';
+import { App, TAbstractFile, TFile, TFolder, getAllTags } from 'obsidian';
 import { MenuContext, WorldInfo, TemplateSetInfo } from '../types';
 
 export function resolveContext(
+	app: App,
 	file: TAbstractFile,
 	worlds: WorldInfo[],
 	templateSets: TemplateSetInfo[],
@@ -22,8 +23,10 @@ export function resolveContext(
 			if (world) return { type: 'index-file', world };
 		}
 
-		// Entity file — lives one level inside a known entity folder
-		const entityFileMatch = findEntityFile(file, worlds);
+		// Entity file — identified by its own tag, not by which folder it
+		// sits in (a file already knows what it is; the folder it happens
+		// to be in shouldn't gate whether it's editable).
+		const entityFileMatch = findEntityFile(app, file, worlds, templateSets);
 		if (entityFileMatch) return entityFileMatch;
 
 		return { type: 'unknown' };
@@ -95,26 +98,36 @@ function findEntityFolder(
 	return null;
 }
 
+/**
+ * Identifies an entity file by its own tag, matched against the world's
+ * template set's field sets — not by which folder it happens to sit in.
+ * A file tagged e.g. `event` is an Event regardless of whether it's inside
+ * the folder folder-rules.md maps to Event, a folder that only matches the
+ * `*` wildcard catch-all, or the world root itself. `generic` is excluded
+ * explicitly — a generic entity has nothing structured worth editing
+ * through this command.
+ */
 function findEntityFile(
+	app: App,
 	file: TFile,
-	worlds: WorldInfo[]
+	worlds: WorldInfo[],
+	templateSets: TemplateSetInfo[]
 ): MenuContext | null {
-	for (const world of worlds) {
-		if (!file.path.startsWith(world.path + '/')) continue;
-		const parentFolder = file.parent;
-		if (!parentFolder) continue;
-		if (parentFolder.parent?.path !== world.path) continue;
-		const rule = world.folderRules.find(
-			r => r.targetFolder === parentFolder.name
-		);
-		if (rule) {
-			return {
-				type: 'entity-file',
-				world,
-				entityType: rule.entityType,
-				file,
-			};
+	const world = worlds.find(w => file.path.startsWith(w.path + '/'));
+	if (!world) return null;
+
+	const templateSet = templateSets.find(ts => ts.name === world.templateSet) ?? templateSets[0];
+	if (!templateSet) return null;
+
+	const rawTags = getAllTags(app.metadataCache.getFileCache(file) ?? {}) ?? [];
+	const fileTags = new Set(rawTags.map(t => t.replace(/^#/, '').toLowerCase()));
+
+	for (const entityType of Object.keys(templateSet.fieldSets)) {
+		if (entityType.toLowerCase() === 'generic') continue;
+		if (fileTags.has(entityType.toLowerCase())) {
+			return { type: 'entity-file', world, entityType, file };
 		}
 	}
+
 	return null;
 }

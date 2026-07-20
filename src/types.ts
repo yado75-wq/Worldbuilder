@@ -57,7 +57,7 @@ export interface FieldDefinition {
 	linkFallback?: string;
 }
 
-export type FieldType = 'text' | 'link' | 'select';
+export type FieldType = 'text' | 'link' | 'select'| 'timeframe';
 export type DisplayType = 'title' | 'property' | 'section';
 
 // ── Folder Rules ──────────────────────────────────────────────────────────────

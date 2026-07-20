@@ -4,6 +4,8 @@
 - themes | Themes | optional | text | property
 - audience | Target Audience | optional | text | property
 - magic | Magic System | optional | text | property
+- time_unit | Time Unit | optional | text | property
+- time_zero | Time Zero | optional | text | property
 - premise | Premise / Hook | optional | text | section
 - conflict | Central Conflict | optional | text | section
 - avoid | Things to Avoid | optional | text | section
