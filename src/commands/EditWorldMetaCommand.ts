@@ -162,5 +162,5 @@ function buildIndexContent(
 		...(frontmatterProps ? [frontmatterProps] : []),
 	].join('\n');
 
-	return [`---\n${frontmatter}\n---`, `# ${worldName}`, ...bodyChunks].join('\n\n');
+	return [`---\n${frontmatter}\n---`, `# ${worldName}`, ...bodyChunks].join('\n\n').trimEnd() + '\n';
 }

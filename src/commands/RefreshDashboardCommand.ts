@@ -9,8 +9,7 @@ import {
 } from './shared/TimeframeResolutionReport';
 import { TimeframeLookup } from '../time/TimeframeResolver';
 import { formatMetaLabel } from './shared/MetaLabel';
-
-const DEFAULT_NOTES = '## Notes\n_Your notes here survive dashboard refresh._';
+import { buildDashboardContent, DEFAULT_DASHBOARD_NOTES, EntitySectionInput } from './shared/DashboardContentBuilder';
 
 export async function refreshDashboard(
 	app: App,
@@ -34,11 +33,11 @@ export async function refreshDashboard(
 	// Read existing dashboard to preserve notes section
 	const dashPath = `${worldPath}/_dashboard.md`;
 	const existingDash = app.vault.getAbstractFileByPath(dashPath);
-	let preservedSection = DEFAULT_NOTES;
+	let preservedSection = DEFAULT_DASHBOARD_NOTES;
 
 	if (existingDash instanceof TFile) {
 		const existingContent = await app.vault.read(existingDash);
-		preservedSection = extractPreservedSection(existingContent, DEFAULT_NOTES);
+		preservedSection = extractPreservedSection(existingContent, DEFAULT_DASHBOARD_NOTES);
 	}
 
 	// Read world meta from _index.md directly — cache may not be updated yet
@@ -84,13 +83,13 @@ export async function refreshDashboard(
 		.join('\n');
 
 	// Build entity sections from folder rules
-	const entitySections = templateSet.folderRules
+	const entitySections: EntitySectionInput[] = templateSet.folderRules
 		.filter(rule => rule.targetFolder !== '*')
 		.map(rule => {
 			const folderPath = `${worldPath}/${rule.targetFolder}`;
 			const folder = app.vault.getAbstractFileByPath(folderPath);
 			if (!(folder instanceof Object) || !('children' in folder)) {
-				return `## ${rule.targetFolder} (0)\n_No entries yet._`;
+				return { targetFolder: rule.targetFolder, count: 0, list: '_No entries yet._' };
 			}
 
 			const entities = app.vault.getFiles().filter(f =>
@@ -106,42 +105,26 @@ export async function refreshDashboard(
 				? entities.map(f => `- [[${f.path}|${f.basename}]]`).join('\n')
 				: '_No entries yet._';
 
-			return `## ${rule.targetFolder} (${count})\n${list}`;
-		})
-		.join('\n\n');
+			return { targetFolder: rule.targetFolder, count, list };
+		});
 
 	// Find entities missing mandatory fields, for the Needs attention section
 	const needsAttention = await buildNeedsAttentionSection(app, worldPath, templateSet);
 
 	// Assemble dashboard content
-	const now = new Date().toLocaleString();
-	const content =
-`---
-tags:
-  - dashboard
-world: "${world.name}"
----
-
-# ${world.name} — Dashboard
-_Last refreshed: ${now}_
-
-## World meta
-${metaProps || '_No meta defined yet. Use Edit world meta to add details._'}
-
-## TODO
-${todoBlock}
-
-## Needs attention
-${needsAttention}
-
-## Sub-dashboards
-${subDashboards || '_No sub-dashboards yet._'}
-
-${entitySections}
-
-${PRESERVED_SECTION_MARKER}
-
-${preservedSection}`;
+	const content = buildDashboardContent(
+		{
+			worldName: world.name,
+			refreshedAt: new Date().toLocaleString(),
+			metaProps,
+			todoBlock,
+			needsAttention,
+			subDashboards,
+			entitySections,
+			preservedSection,
+		},
+		PRESERVED_SECTION_MARKER
+	);
 
 	// Write or update dashboard file
 	if (existingDash instanceof TFile) {

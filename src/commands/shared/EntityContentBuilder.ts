@@ -5,7 +5,7 @@ import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
 // of EntityContent.ts (which also has buildLinkCandidates, needing `app`)
 // so these can be unit tested without mocking Obsidian.
 
-export const DEFAULT_ENTITY_NOTES = '## Notes\n_Your notes here survive entity refresh._';
+export const DEFAULT_ENTITY_NOTES = '## Notes\n\n_Your notes here survive entity refresh._';
 
 /**
  * A resolution-aware caller's best-effort read on a `timeframe` value, for
@@ -82,7 +82,7 @@ export function buildEntityContent(
 		...bodyChunks,
 		PRESERVED_SECTION_MARKER,
 		preservedSection,
-	].join('\n\n');
+	].join('\n\n').trimEnd() + '\n';
 }
 
 /**
@@ -158,15 +158,10 @@ export function buildMinimalEntityContent(
 	title: string,
 	preservedSection: string
 ): string {
-	return `---
-tags:
-  - ${entityType.toLowerCase()}
-name: "${title}"
----
-
-# ${title}
-
-${PRESERVED_SECTION_MARKER}
-
-${preservedSection}`;
+	return [
+		`---\ntags:\n  - ${entityType.toLowerCase()}\nname: "${title}"\n---`,
+		`# ${title}`,
+		PRESERVED_SECTION_MARKER,
+		preservedSection,
+	].join('\n\n').trimEnd() + '\n';
 }
