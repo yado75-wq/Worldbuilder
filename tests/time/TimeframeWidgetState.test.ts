@@ -3,6 +3,7 @@ import {
 	composeTimeframeValue,
 	decomposeTimeframeValue,
 	emptyTimeframeFieldInput,
+	extractAnchorName,
 	TimeframeFieldInput,
 } from '../../src/time/TimeframeWidgetState';
 
@@ -97,5 +98,32 @@ describe('decomposeTimeframeValue', () => {
 		const original = '(1200, 1250)';
 		const state = decomposeTimeframeValue(original);
 		expect(composeTimeframeValue(state)).toBe(original);
+	});
+});
+
+describe('extractAnchorName', () => {
+	it('pulls the bare name out of a triplet anchor', () => {
+		expect(extractAnchorName('(0, years, [[Founding]])')).toBe('Founding');
+	});
+
+	it('pulls the bare name out of a bare milestone reference', () => {
+		expect(extractAnchorName('[[Founding]]')).toBe('Founding');
+	});
+
+	it('returns empty for a plain number with no anchor', () => {
+		expect(extractAnchorName('1200')).toBe('');
+	});
+
+	it('returns empty for infinity', () => {
+		expect(extractAnchorName('∞')).toBe('');
+	});
+
+	it('returns empty for an empty or malformed string', () => {
+		expect(extractAnchorName('')).toBe('');
+		expect(extractAnchorName('not valid')).toBe('');
+	});
+
+	it('takes the first link when there happen to be multiple', () => {
+		expect(extractAnchorName('(0, years, [[A]]) also mentions [[B]]')).toBe('A');
 	});
 });

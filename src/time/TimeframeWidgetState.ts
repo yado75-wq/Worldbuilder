@@ -92,3 +92,16 @@ export function decomposeTimeframeValue(raw: string | null | undefined): Timefra
 function serializeTimepointForEditing(tp: Timepoint): string {
 	return serializeTimepoint(tp);
 }
+
+/**
+ * Pulls the first `[[Name]]` reference out of a raw timepoint string, for
+ * preselecting the anchor dropdown when reopening the edit form — e.g.
+ * `(0, years, [[Founding]])` → `'Founding'`. Returns `''` when there's no
+ * link in the text (a plain number, `∞`, or malformed text), matching
+ * `buildAnchorDropdown`'s "bare name, no brackets" convention for its
+ * `current` parameter.
+ */
+export function extractAnchorName(raw: string): string {
+	const match = raw.match(/\[\[([^\]]+)\]\]/);
+	return match?.[1] ?? '';
+}

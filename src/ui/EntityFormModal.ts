@@ -4,6 +4,7 @@ import { InputModal } from './InputModal';
 import {
 	composeTimeframeValue,
 	decomposeTimeframeValue,
+	extractAnchorName,
 	TimeframeFieldInput,
 } from '../time/TimeframeWidgetState';
 
@@ -257,6 +258,7 @@ export class EntityFormModal extends Modal {
 		rowEl.createSpan({ cls: 'wb-timeframe-row-label', text: label });
 
 		let textComponent: TextComponent | undefined;
+		const currentAnchor = extractAnchorName(initialValue);
 
 		new Setting(rowEl)
 			.setClass('wb-timeframe-row-setting')
@@ -267,7 +269,7 @@ export class EntityFormModal extends Modal {
 				text.inputEl.addClass('wb-full-width');
 				text.onChange(value => { onChange(value); });
 			})
-			.addDropdown(drop => this.buildAnchorDropdown(drop, field, candidates, '', link => {
+			.addDropdown(drop => this.buildAnchorDropdown(drop, field, candidates, currentAnchor, link => {
 				if (!link) return;
 				const template = `(0, , ${link})`;
 				textComponent?.setValue(template);

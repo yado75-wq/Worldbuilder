@@ -1,7 +1,8 @@
-import { App, Notice, getAllTags } from 'obsidian';
+import { App, Notice } from 'obsidian';
 import { PluginState, WorldInfo, FieldDefinition } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
+import { buildLinkCandidates } from './shared/EntityContent';
 
 export async function editWorldMeta(
 	app: App,
@@ -32,7 +33,7 @@ export async function editWorldMeta(
 	}
 
 	const prefill = await buildPrefill(app, world, fields);
-	const linkCandidates = buildLinkCandidates(app, world, fields);
+	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet);
 
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;
@@ -86,43 +87,6 @@ async function buildPrefill(
 	}
 
 	return prefill;
-}
-
-function buildLinkCandidates(
-	app: App,
-	world: WorldInfo,
-	fields: FieldDefinition[]
-): Record<string, string[]> {
-	const candidates: Record<string, string[]> = {};
-
-	for (const f of fields) {
-		if (f.type !== 'link' || !f.linkFolder) continue;
-
-		const folderPath = `${world.path}/${f.linkFolder}`;
-		const files = app.vault.getFiles().filter(file => {
-			if (!file.path.startsWith(folderPath + '/')) return false;
-			if (file.extension !== 'md') return false;
-			if (file.basename === '_index') return false;
-			const cache = app.metadataCache.getFileCache(file);
-			const tags = getAllTags(cache ?? {}) ?? [];
-			return !tags.includes('generic') && !tags.includes('#generic');
-		});
-
-		candidates[f.key] = files.map(file => file.basename);
-
-		const current = candidates[f.key];
-		if (current !== undefined && current.length === 0 && f.linkFallback) {
-			const fallbackPath = `${world.path}/${f.linkFallback}`;
-			const fallbackFiles = app.vault.getFiles().filter(file =>
-				file.path.startsWith(fallbackPath + '/') &&
-				file.extension === 'md' &&
-				file.basename !== '_index'
-			);
-			candidates[f.key] = fallbackFiles.map(file => file.basename);
-		}
-	}
-
-	return candidates;
 }
 
 function buildIndexContent(
