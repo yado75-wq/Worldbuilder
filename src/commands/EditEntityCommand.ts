@@ -1,10 +1,13 @@
 import { App, Notice, TFile } from 'obsidian';
-import { PluginState, FieldDefinition } from '../types';
+import { PluginState } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { buildEntityContent, buildLinkCandidates, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
-import { extractPreservedSection, PRESERVED_SECTION_MARKER } from '../util/PreservedSection';
-import { extractSectionContent } from '../util/sectionContent';
+import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookupBuilder';
+import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
+import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
+import { extractPreservedSection } from '../util/PreservedSection';
+import { buildFieldValues } from './shared/EntityPrefill';
 
 export async function editEntity(
 	app: App,
@@ -41,8 +44,23 @@ export async function editEntity(
 	}
 
 	// Build prefill from existing file
-	const prefill = await buildPrefill(app, file, fields);
-	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet);
+	const prefill = await buildFieldValues(app, file, fields);
+	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet, file.basename);
+	const worldTimeUnit = getWorldTimeUnit(app, world);
+
+	// A candidate anchor whose own stored value is a point (start === end,
+	// §3) doesn't need separate `:start`/`:end` options in the widget —
+	// they'd always resolve identically. Determined the same way
+	// TimeframeWidgetState.ts itself treats "point" (a widget-level
+	// convenience, not strict resolved equality, §3) rather than a second,
+	// slightly-different definition.
+	const { lookup } = buildTimeframeLookup(app, worldPath, templateSet);
+	const timeframePointCandidates: Record<string, string[]> = {};
+	for (const f of fields) {
+		if (f.type !== 'timeframe') continue;
+		timeframePointCandidates[f.key] = (linkCandidates[f.key] ?? [])
+			.filter(name => decomposeTimeframeValue(lookup(name)).point);
+	}
 
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;
@@ -51,6 +69,8 @@ export async function editEntity(
 			fields,
 			prefill,
 			linkCandidates,
+			worldTimeUnit,
+			timeframePointCandidates,
 			onSubmit: (r) => { submitted = true; resolve(r); },
 			onCancel: () => { if (!submitted) resolve(null); },
 		});
@@ -76,8 +96,25 @@ export async function editEntity(
 	const currentContent = await app.vault.read(file);
 	const preservedSection = extractPreservedSection(currentContent, DEFAULT_ENTITY_NOTES);
 
-	// Build updated content
-	const content = buildEntityContent(fields, result.data, entityType, title, preservedSection);
+	// Build updated content. As in CreateEntityCommand.ts, resolved values
+	// are computed against the whole template set's current vault state —
+	// this reads the fresh raw value for every entity except this one
+	// (still the pre-edit content on disk until we write below), which is
+	// why this entity's own about-to-be-saved value is threaded through
+	// resolveTimeframeFieldsForDisplay separately rather than relying on
+	// the lookup alone. `file.basename` (not `title`, which may be a
+	// pending rename) is used as `selfRef` — it's this entity's identity
+	// as it currently exists in the vault, matching both the lookup map's
+	// keys and whatever ref other entities' existing anchors still point
+	// at, so a cycle routed through this entity is actually caught. Reuses
+	// the `lookup` built earlier (for timeframePointCandidates) rather
+	// than re-scanning the vault — the small tradeoff is that it reflects
+	// vault state as of just before the modal opened, not just after it
+	// closed; negligible for a blocking modal dialog.
+	const timeframeResolutions = resolveTimeframeFieldsForDisplay(
+		fields, result.data, lookup, worldTimeUnit, file.basename
+	);
+	const content = buildEntityContent(fields, result.data, entityType, title, preservedSection, timeframeResolutions);
 
 	// Handle rename if name changed
 	if (file.basename !== title) {
@@ -104,40 +141,4 @@ export async function editEntity(
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, worldPath, false);
 	}
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function buildPrefill(
-	app: App,
-	file: TFile,
-	fields: FieldDefinition[]
-): Promise<Record<string, string>> {
-	const prefill: Record<string, string> = {};
-	const cache = app.metadataCache.getFileCache(file);
-	const frontmatter = cache?.frontmatter;
-	const content = await app.vault.read(file);
-	const generatedContent = content.split(PRESERVED_SECTION_MARKER)[0] ?? content;
-
-	for (const f of fields) {
-		if (f.display === 'section') {
-			prefill[f.key] = extractSectionContent(generatedContent, f.label);
-		} else if (f.type === 'link') {
-			// Strip [[ ]] for display in dropdown
-			const val: unknown = frontmatter?.[f.key];
-			const raw = typeof val === 'string' ? val : '';
-			prefill[f.key] = raw.replace(/^\[\[|\]\]$/g, '');
-		} else if (f.display === 'title') {
-			// Use frontmatter name if present, fall back to filename
-			const val: unknown = frontmatter?.['name'];
-			prefill[f.key] = typeof val === 'string' && val.trim()
-				? val.trim()
-				: file.basename;
-		} else {
-			const val: unknown = frontmatter?.[f.key];
-			prefill[f.key] = typeof val === 'string' ? val : '';
-		}
-	}
-
-	return prefill;
 }

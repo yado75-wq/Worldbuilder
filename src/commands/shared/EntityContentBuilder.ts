@@ -19,6 +19,16 @@ export interface TimeframeResolution {
 	ok: boolean;
 	/** Human-readable resolved value, set when `ok` is true. */
 	display?: string;
+	/**
+	 * The actual reason resolution failed (TimeframeResolver.ts's
+	 * `ResolutionError.message`) — e.g. a cycle's full chain, `A → B → A`.
+	 * Set when `ok` is false. Shown instead of a bare, unexplained
+	 * "<unresolved>" so a genuine problem (most urgently a cycle, which
+	 * TIME_DESIGN.md §6 already tracks the full chain for) is actually
+	 * visible where the entity's own content is read, not just buried in
+	 * the dashboard's Needs Attention section.
+	 */
+	message?: string;
 }
 
 export function buildEntityContent(
@@ -119,7 +129,9 @@ export function buildTimeframeSection(
 
 		if (resolution) {
 			lines.push(
-				resolution.ok ? `**Resolved:** ${resolution.display ?? ''}` : '**Resolved:** <unresolved>'
+				resolution.ok
+					? `**Resolved:** ${resolution.display ?? ''}`
+					: `**Resolved:** <unresolved>${resolution.message ? ` — ${resolution.message}` : ''}`
 			);
 		} else if (linkedEntities.length === 0) {
 			// No anchors involved, so this value is already absolute — it IS

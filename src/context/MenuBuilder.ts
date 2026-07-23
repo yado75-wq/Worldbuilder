@@ -9,6 +9,7 @@ import { refreshDashboard } from '../commands/RefreshDashboardCommand';
 import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 import { createEntity } from '../commands/CreateEntityCommand';
 import { editEntity } from '../commands/EditEntityCommand';
+import { refreshAllTimeframes } from '../commands/RefreshAllTimeframesCommand';
 
 export function registerFileMenu(
 	app: App,
@@ -90,6 +91,11 @@ export function registerFileMenu(
 				.setTitle('Sync world files')
 				.setIcon('arrow-right-left')
 				.onClick(() => { void syncWorldFiles(app, state, context.world.path); })
+			);
+			menu.addItem(item => item
+				.setTitle('Refresh all timeframes')
+				.setIcon('refresh-cw')
+				.onClick(() => { void refreshAllTimeframes(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Switch to this world')

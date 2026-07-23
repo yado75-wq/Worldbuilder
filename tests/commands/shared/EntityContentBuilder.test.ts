@@ -41,6 +41,15 @@ describe('buildTimeframeSection', () => {
 		expect(section).toContain('**Resolved:** <unresolved>');
 	});
 
+	it('appends the actual failure reason when supplied, instead of a bare unexplained placeholder', () => {
+		const section = buildTimeframeSection(
+			timeframeField,
+			'((0, years, [[Founding]]), ∞)',
+			{ ok: false, message: 'Cycle detected while resolving: ww 2 \u2192 ww 2' }
+		);
+		expect(section).toContain('**Resolved:** <unresolved> — Cycle detected while resolving: ww 2 \u2192 ww 2');
+	});
+
 	it('lists referenced entities on a plain (non-code) line so Obsidian actually links them', () => {
 		const section = buildTimeframeSection(
 			timeframeField,

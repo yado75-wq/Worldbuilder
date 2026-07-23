@@ -1,15 +1,11 @@
-import { App, Notice, TFile, getAllTags } from 'obsidian';
+import { App, Notice, TFile } from 'obsidian';
 import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
 import { PRESERVED_SECTION_MARKER, extractPreservedSection } from '../util/PreservedSection';
 import { findMissingMandatoryFields } from './shared/EntityCompleteness';
-import {
-	findUnresolvedTimeframes,
-	formatUnresolvedTimeframeEntry,
-	TimeframeCheckTarget,
-} from './shared/TimeframeResolutionReport';
-import { TimeframeLookup } from '../time/TimeframeResolver';
+import { findUnresolvedTimeframes, formatUnresolvedTimeframeEntry } from './shared/TimeframeResolutionReport';
 import { formatMetaLabel } from './shared/MetaLabel';
 import { buildDashboardContent, DEFAULT_DASHBOARD_NOTES, EntitySectionInput } from './shared/DashboardContentBuilder';
+import { buildTimeframeLookup, getEntityFiles } from './shared/TimeframeLookupBuilder';
 
 export async function refreshDashboard(
 	app: App,
@@ -92,13 +88,7 @@ export async function refreshDashboard(
 				return { targetFolder: rule.targetFolder, count: 0, list: '_No entries yet._' };
 			}
 
-			const entities = app.vault.getFiles().filter(f =>
-				f.path.startsWith(folderPath + '/') &&
-				f.extension === 'md' &&
-				f.basename !== '_index' &&
-				!getAllTags(app.metadataCache.getFileCache(f) ?? {})
-					?.some(t => t === '#generic' || t === 'generic')
-			);
+			const entities = getEntityFiles(app, worldPath, rule.targetFolder);
 
 			const count = entities.length;
 			const list = count > 0
@@ -205,65 +195,4 @@ async function buildNeedsAttentionSection(
 	}
 
 	return incomplete.length > 0 ? incomplete.join('\n') : '_Nothing outstanding._';
-}
-
-/** Entity files in `worldPath/targetFolder`, excluding `_index` and generic-tagged notes. */
-function getEntityFiles(app: App, worldPath: string, targetFolder: string): TFile[] {
-	const folderPath = `${worldPath}/${targetFolder}`;
-	return app.vault.getFiles().filter(f =>
-		f.path.startsWith(folderPath + '/') &&
-		f.extension === 'md' &&
-		f.basename !== '_index' &&
-		!getAllTags(app.metadataCache.getFileCache(f) ?? {})
-			?.some(t => t === '#generic' || t === 'generic')
-	);
-}
-
-/**
- * Builds the `TimeframeLookup` (TimeframeResolver.ts) plus the list of
- * check targets (entities with a *present* timeframe value) across the
- * whole template set. Each entity type's timeframe field is whichever field
- * in its field set has `type === 'timeframe'` — TIME_DESIGN.md's model is
- * one canonical timeframe field per entity type (§1, §7), so the first
- * match is authoritative.
- *
- * The ref used for lookups and as a resolution target is the entity's
- * basename, matching how `[[Entity]]` links are written elsewhere against
- * these files (e.g. the `[[${entity.path}|${entity.basename}]]` links built
- * throughout this file) — the vault convention this project uses for
- * wikilink targets.
- */
-function buildTimeframeLookup(
-	app: App,
-	worldPath: string,
-	templateSet: TemplateSetInfo
-): { lookup: TimeframeLookup; targets: TimeframeCheckTarget[] } {
-	const rawByRef = new Map<string, string | undefined>();
-	const targets: TimeframeCheckTarget[] = [];
-
-	for (const rule of templateSet.folderRules) {
-		if (rule.targetFolder === '*') continue;
-
-		const fields = templateSet.fieldSets[rule.entityType];
-		const timeframeField = fields?.find(f => f.type === 'timeframe');
-		if (!timeframeField) continue;
-
-		const entities = getEntityFiles(app, worldPath, rule.targetFolder);
-
-		for (const entity of entities) {
-			const frontmatter = app.metadataCache.getFileCache(entity)?.frontmatter;
-			const raw: unknown = frontmatter?.[timeframeField.key];
-			const rawStr = typeof raw === 'string' ? raw : undefined;
-
-			const ref = entity.basename;
-			rawByRef.set(ref, rawStr);
-
-			if (rawStr !== undefined) {
-				targets.push({ ref, path: entity.path, basename: entity.basename, fieldLabel: timeframeField.label });
-			}
-		}
-	}
-
-	const lookup: TimeframeLookup = ref => rawByRef.get(ref);
-	return { lookup, targets };
 }

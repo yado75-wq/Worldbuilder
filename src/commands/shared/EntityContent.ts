@@ -10,7 +10,8 @@ export function buildLinkCandidates(
 	app: App,
 	world: WorldInfo,
 	fields: FieldDefinition[],
-	templateSet: TemplateSetInfo
+	templateSet: TemplateSetInfo,
+	excludeBasename?: string
 ): Record<string, string[]> {
 	const candidates: Record<string, string[]> = {};
 
@@ -18,29 +19,30 @@ export function buildLinkCandidates(
 		if (f.type === 'link') {
 			if (!f.linkFolder) continue;
 
-			candidates[f.key] = collectEntityBasenames(app, `${world.path}/${f.linkFolder}`);
+			candidates[f.key] = collectEntityBasenames(app, `${world.path}/${f.linkFolder}`, excludeBasename);
 
 			if (candidates[f.key]?.length === 0 && f.linkFallback) {
-				candidates[f.key] = collectEntityBasenames(app, `${world.path}/${f.linkFallback}`);
+				candidates[f.key] = collectEntityBasenames(app, `${world.path}/${f.linkFallback}`, excludeBasename);
 			}
 			continue;
 		}
 
 		if (f.type === 'timeframe') {
-			candidates[f.key] = collectAnchorCandidates(app, world, templateSet);
+			candidates[f.key] = collectAnchorCandidates(app, world, templateSet, excludeBasename);
 		}
 	}
 
 	return candidates;
 }
 
-/** Real (non-generic, non-`_`-prefixed) entity files under `folderPath`, recursively. */
-function collectEntityBasenames(app: App, folderPath: string): string[] {
+/** Real (non-generic, non-`_`-prefixed) entity files under `folderPath`, recursively, excluding `excludeBasename` if given. */
+function collectEntityBasenames(app: App, folderPath: string, excludeBasename?: string): string[] {
 	return app.vault.getFiles()
 		.filter(file => {
 			if (!file.path.startsWith(folderPath + '/')) return false;
 			if (file.extension !== 'md') return false;
 			if (file.basename.startsWith('_')) return false; // _index, _dashboard, sub-dashboards
+			if (file.basename === excludeBasename) return false;
 			const cache = app.metadataCache.getFileCache(file);
 			const tags = getAllTags(cache ?? {}) ?? [];
 			return !tags.includes('generic') && !tags.includes('#generic');
@@ -59,8 +61,18 @@ function collectEntityBasenames(app: App, folderPath: string): string[] {
  * on each file, never on a hardcoded English word like "milestone". There
  * is no dedicated anchor folder — by design, permanently — so this scans
  * the whole world rather than any single `linkFolder`.
+ *
+ * `excludeBasename`, when editing an existing entity, removes that entity
+ * from its own candidate list — an entity anchoring to its own timepoint
+ * isn't meaningful (trivially either a no-op or a cycle, TimeframeResolver
+ * .ts's `cycle` case).
  */
-function collectAnchorCandidates(app: App, world: WorldInfo, templateSet: TemplateSetInfo): string[] {
+function collectAnchorCandidates(
+	app: App,
+	world: WorldInfo,
+	templateSet: TemplateSetInfo,
+	excludeBasename?: string
+): string[] {
 	const anchorTags = new Set(
 		Object.entries(templateSet.fieldSets)
 			.filter(([, typeFields]) => typeFields.some(tf => tf.type === 'timeframe'))
@@ -73,6 +85,7 @@ function collectAnchorCandidates(app: App, world: WorldInfo, templateSet: Templa
 			if (!file.path.startsWith(world.path + '/')) return false;
 			if (file.extension !== 'md') return false;
 			if (file.basename.startsWith('_')) return false;
+			if (file.basename === excludeBasename) return false;
 
 			const rawTags = getAllTags(app.metadataCache.getFileCache(file) ?? {}) ?? [];
 			const normalizedTags = rawTags.map(t => t.replace(/^#/, '').toLowerCase());

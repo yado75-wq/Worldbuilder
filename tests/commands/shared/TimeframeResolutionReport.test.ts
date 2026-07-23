@@ -7,7 +7,7 @@ import {
 import { TimeframeLookup } from '../../../src/time/TimeframeResolver';
 
 function target(ref: string, fieldLabel = 'Timeframe'): TimeframeCheckTarget {
-	return { ref, path: `Entities/${ref}.md`, basename: ref, fieldLabel };
+	return { ref, path: `Entities/${ref}.md`, basename: ref, fieldLabel, entityType: 'Event' };
 }
 
 describe('findUnresolvedTimeframes', () => {

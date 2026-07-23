@@ -14,6 +14,8 @@ export interface TimeframeCheckTarget {
 	basename: string;
 	/** Label of the timeframe field being checked (e.g. "Timeframe"). */
 	fieldLabel: string;
+	/** The entity's type (a `templateSet.fieldSets` key) — its full field set, for callers that need to rebuild its content. */
+	entityType: string;
 }
 
 export interface UnresolvedTimeframeEntry {

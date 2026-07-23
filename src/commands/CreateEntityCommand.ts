@@ -2,6 +2,9 @@ import { App, Notice, TFile } from 'obsidian';
 import { PluginState, WorldInfo, FieldDefinition, TemplateSetInfo } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { buildEntityContent, buildLinkCandidates, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
+import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookupBuilder';
+import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
+import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
 
 import { refreshDashboard } from './RefreshDashboardCommand';
 
@@ -34,6 +37,21 @@ export async function createEntity(
 	}
 
 	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet);
+	const worldTimeUnit = getWorldTimeUnit(app, world);
+
+	// A candidate anchor whose own stored value is a point (start === end,
+	// §3) doesn't need separate `:start`/`:end` options in the widget —
+	// they'd always resolve identically. Determined the same way
+	// TimeframeWidgetState.ts itself treats "point" (a widget-level
+	// convenience, not strict resolved equality, §3) rather than a second,
+	// slightly-different definition.
+	const { lookup } = buildTimeframeLookup(app, worldPath, templateSet);
+	const timeframePointCandidates: Record<string, string[]> = {};
+	for (const f of fields) {
+		if (f.type !== 'timeframe') continue;
+		timeframePointCandidates[f.key] = (linkCandidates[f.key] ?? [])
+			.filter(name => decomposeTimeframeValue(lookup(name)).point);
+	}
 
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;
@@ -42,6 +60,8 @@ export async function createEntity(
 			fields,
 			prefill: {},
 			linkCandidates,
+			worldTimeUnit,
+			timeframePointCandidates,
 			onSubmit: (r) => { submitted = true; resolve(r); },
 			onCancel: () => { if (!submitted) resolve(null); },
 			onCreateLink: async (field, name) => createLinkedEntity(app, state, world, templateSet, folderPath, field, name),
@@ -71,8 +91,17 @@ export async function createEntity(
 		return;
 	}
 
-	// Build file content
-	const content = buildEntityContent(fields, result.data, entityType, title, DEFAULT_ENTITY_NOTES);
+	// Build file content. Resolved values (§8's "Resolved:" line) are
+	// computed against the whole template set's current data — an anchor
+	// this entity points at may already exist even though this entity
+	// itself doesn't yet, so the lookup doesn't need this file to be on
+	// disk first. `title` is this entity's real ref even before it's
+	// written — no other entity in the vault can be using it yet, since
+	// the duplicate-path check above already ruled that out. Reuses the
+	// `lookup` built earlier (for timeframePointCandidates) rather than
+	// re-scanning the vault.
+	const timeframeResolutions = resolveTimeframeFieldsForDisplay(fields, result.data, lookup, worldTimeUnit, title);
+	const content = buildEntityContent(fields, result.data, entityType, title, DEFAULT_ENTITY_NOTES, timeframeResolutions);
 
 	await app.vault.create(targetPath, content);
 
