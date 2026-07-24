@@ -1,7 +1,8 @@
 # WorldBuilder — Relations Design
 
-Status: draft, deferred — lower priority than Time. Revisit once the Time
-model (`TIME_DESIGN.md`) is implemented, since §4 below depends on it.
+Status: draft, not yet started. Time (`TIME_DESIGN.md`), the one thing §4
+below depends on, is now shipped — this is no longer blocked, just not yet
+picked up.
 
 This document is the reference to build against once work resumes. Where
 something was explicitly deferred, it's listed under "Out of scope" so it
