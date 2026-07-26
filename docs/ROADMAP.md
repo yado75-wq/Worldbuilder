@@ -27,10 +27,7 @@ to the GitHub Wiki — edit it here, not there.
 
 ## In design (not yet implemented)
 
-- **Relations** — two-tier storage (frontmatter list vs. per-instance
-  files), relation-type schema, cardinality reporting. Drafted; see
-  `RELATIONS_DESIGN.md`. No longer blocked — Time (its one dependency, for
-  relation-instance duration via the `timeframe` field) is now shipped.
+Nothing currently.
 
 ## Deferred, not rejected
 
@@ -52,10 +49,26 @@ to the GitHub Wiki — edit it here, not there.
   already permits them; the widget restricts to whole numbers since there's
   no calendar to make a fraction meaningful.
 
-## Explicitly rejected
+## Considered and dropped
 
-Listed so these don't get silently re-proposed:
+Ideas that got a real look and didn't hold up — listed so they don't get
+silently re-proposed without anyone remembering why:
 
+- **Relations system** — a dedicated storage/schema/reporting layer for
+  relationships between entities (`RELATIONS_DESIGN.md`). Talked through in
+  detail and the case for building anything fell apart: a plain frontmatter
+  list of `[[links]]`, edited with Obsidian's own native property UI,
+  already covers the simple case for free. The cases that seemed to need
+  more than that — tracking *when* a relationship changed — turned out to
+  want a linked event or free text ("since the betrayal"), not our
+  `timeframe` machinery, which is built for objective dated history, not
+  relationship state. And several things that looked like two-sided
+  relations needing careful mirroring turned out to be one-sided opinions
+  (e.g. "considers a rival") with nothing to mirror at all. No residual
+  need left over once all of that was accounted for.
+- **Multi-value `link` fields** — the only real use case anyone could name
+  for this was Relations. With Relations dropped, there's no other pull for
+  it; not worth building speculatively.
 - **Auto-refreshing the dashboard on entity delete** — the existing manual
   Sync command already covers this; not worth the added complexity.
 - **Deep Obsidian Bases integration** for entity listings — researched;

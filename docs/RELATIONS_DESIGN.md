@@ -1,12 +1,24 @@
 # WorldBuilder — Relations Design
 
-Status: draft, not yet started. Time (`TIME_DESIGN.md`), the one thing §4
-below depends on, is now shipped — this is no longer blocked, just not yet
-picked up.
+Status: **considered and dropped, not being built.** Talked through in
+detail once Time shipped and unblocked it — the case for a dedicated
+Relations system didn't hold up. A plain frontmatter list of `[[links]]`,
+edited with Obsidian's own native property UI, already covers the simple
+case for free — no plugin code needed. The cases that seemed to need more
+than that (tracking *when* a relationship changed) turned out to want a
+linked event or free text ("since the betrayal"), not the `timeframe`
+machinery this document assumed in §4 — that's built for objective dated
+history, not relationship state, and forcing it onto relations just added
+friction without adding anything a user actually wanted. And several things
+that looked like two-sided relations needing careful mirroring (§5) turned
+out to be one-sided opinions (e.g. "considers a rival") with nothing to
+mirror at all.
 
-This document is the reference to build against once work resumes. Where
-something was explicitly deferred, it's listed under "Out of scope" so it
-doesn't get silently re-litigated or silently reintroduced by accident.
+The rest of this document is kept as-is below for context, not as a plan to
+resume — if this ever gets re-examined, it should start from why it was
+dropped, not from picking up where the draft left off.
+
+---
 
 Depends on: `TIME_DESIGN.md` — specifically the `timeframe` field type. This
 document does not redefine what a date value is; see that document for the

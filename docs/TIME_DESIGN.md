@@ -7,9 +7,10 @@ what was originally planned, that's called out explicitly (see §12) rather
 than silently rewritten over, so anyone who remembers the earlier plan isn't
 left wondering what happened to it.
 
-See also: `RELATIONS_DESIGN.md`, which depends on the `timeframe` field type
-defined here (relation instances use it to express duration / ongoing
-state). Time is fully implemented, so Relations is no longer blocked.
+See also: `RELATIONS_DESIGN.md` — Time was its one dependency (relation
+instances would have used `timeframe` for duration). Once Time shipped and
+that block was gone, Relations was actually considered and dropped as not
+worth building; see that document for why.
 
 ---
 
