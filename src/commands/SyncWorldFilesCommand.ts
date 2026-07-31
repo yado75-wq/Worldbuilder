@@ -32,7 +32,10 @@ export async function syncWorldFiles(
 	// Only rules with specific folders (not *)
 	const fixedRules = templateSet.folderRules.filter(r => r.targetFolder !== '*');
 
-	// Scan all md files in world, one level deep
+	// Scan the whole world, any depth — not just files sitting one level
+	// inside an existing subfolder. A correctly-tagged entity sitting
+	// directly in the world root, or nested more than one level deep, is
+	// exactly as real a candidate as one already inside a wrong subfolder.
 	const worldFolder = app.vault.getAbstractFileByPath(worldPath);
 	if (!(worldFolder instanceof TFolder)) {
 		new Notice('World folder not found.');
@@ -42,47 +45,44 @@ export async function syncWorldFiles(
 	const candidates: MoveCandidate[] = [];
 	const unrecognized: string[] = [];
 
-	// Check all files in all direct subfolders of the world
-	for (const child of worldFolder.children) {
-		if (!(child instanceof TFolder)) continue;
+	const worldFiles = app.vault.getFiles().filter(f =>
+		f.path.startsWith(worldPath + '/') &&
+		f.extension === 'md' &&
+		!f.basename.startsWith('_') // _index, _dashboard, sub-dashboards
+	);
 
-		for (const item of child.children) {
-			if (!(item instanceof TFile)) continue;
-			if (item.extension !== 'md') continue;
-			if (item.basename === '_index' || item.basename === '_dashboard') continue;
+	for (const item of worldFiles) {
+		const cache = app.metadataCache.getFileCache(item);
+		const tags = getAllTags(cache ?? {}) ?? [];
 
-			const cache = app.metadataCache.getFileCache(item);
-			const tags = getAllTags(cache ?? {}) ?? [];
+		// Normalize tags — remove # prefix
+		const normalizedTags = tags.map(t => t.replace('#', ''));
 
-			// Normalize tags — remove # prefix
-			const normalizedTags = tags.map(t => t.replace('#', ''));
+		// Skip generic files
+		if (normalizedTags.includes('generic')) continue;
 
-			// Skip generic files
-			if (normalizedTags.includes('generic')) continue;
+		// Find matching rule by tag
+		const matchingRule = findRuleByTag(fixedRules, normalizedTags);
 
-			// Find matching rule by tag
-			const matchingRule = findRuleByTag(fixedRules, normalizedTags);
-
-			if (!matchingRule) {
-				// No rule matches — unrecognized
-				if (normalizedTags.length > 0) {
-					unrecognized.push(item.path);
-				}
-				continue;
+		if (!matchingRule) {
+			// No rule matches — unrecognized
+			if (normalizedTags.length > 0) {
+				unrecognized.push(item.path);
 			}
-
-			const targetFolderPath = `${worldPath}/${matchingRule.targetFolder}`;
-
-			// Check if file is already in the correct folder
-			if (item.parent?.path === targetFolderPath) continue;
-
-			candidates.push({
-				file: item,
-				currentFolder: item.parent?.name ?? '?',
-				targetFolder: matchingRule.targetFolder,
-				reason: `tag "${normalizedTags[0]}" → ${matchingRule.targetFolder}`,
-			});
+			continue;
 		}
+
+		const targetFolderPath = `${worldPath}/${matchingRule.targetFolder}`;
+
+		// Check if file is already in the correct folder
+		if (item.parent?.path === targetFolderPath) continue;
+
+		candidates.push({
+			file: item,
+			currentFolder: item.parent?.name ?? '?',
+			targetFolder: matchingRule.targetFolder,
+			reason: `tag "${normalizedTags[0]}" → ${matchingRule.targetFolder}`,
+		});
 	}
 
 	if (candidates.length === 0) {

@@ -59,7 +59,7 @@ async function findWorlds(
 
 		const templateSetName = typeof rawTemplateSet === 'string'
 			? rawTemplateSet
-			: 'default';
+			: 'defaults';
 
 		// Find matching template set to carry folderRules and worldTemplate
 		const templateSet = templateSets.find(ts => ts.name === templateSetName)
