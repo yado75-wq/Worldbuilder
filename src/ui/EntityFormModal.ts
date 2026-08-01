@@ -255,8 +255,8 @@ export class EntityFormModal extends Modal {
 		const container = contentEl.createDiv({ cls: 'wb-timeframe-field' });
 		container.createDiv({ cls: 'wb-timeframe-title', text: name });
 
-		let intervalBlock: HTMLElement | undefined;
-		let inheritBlock: HTMLElement | undefined;
+		let intervalBlock: HTMLElement | undefined = undefined;
+		let inheritBlock: HTMLElement | undefined = undefined;
 
 		new Setting(container)
 			.setName('Same as another entity')

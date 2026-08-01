@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/require-await --
+ * These methods mirror the real Obsidian Vault / FileManager API which returns Promises.
+ * The implementations are synchronous because this is a lightweight in-memory fake;
+ * real async work will appear when actual tests exercise them.
+ */
 import { installObsidianDomExtensions } from './dom-setup';
 
 installObsidianDomExtensions();
@@ -55,7 +60,7 @@ export function resetFakeObsidian(): void {
 // ── Metadata / tags ──────────────────────────────────────────────────────
 
 export interface FrontMatterCache {
-	[key: string]: any;
+	[key: string]: unknown;
 }
 
 export interface TagCache {
@@ -306,12 +311,12 @@ export abstract class Modal {
 
 	constructor(app: App) {
 		this.app = app;
-		this.contentEl = globalThis.document.createElement('div');
-		this.titleEl = globalThis.document.createElement('div');
+		this.contentEl = document.createDiv();
+		this.titleEl = document.createDiv();
 	}
 
 	open(): void {
-		globalThis.document.body.appendChild(this.contentEl);
+		document.body.appendChild(this.contentEl);
 		this.onOpen();
 	}
 
@@ -323,3 +328,7 @@ export abstract class Modal {
 	abstract onOpen(): void;
 	onClose(): void {}
 }
+
+/* eslint-enable @typescript-eslint/require-await --
+* required pair of disable comment above to avoid eslint errors in this file
+*/

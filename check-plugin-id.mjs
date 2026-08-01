@@ -44,7 +44,7 @@ function validateFormat(id) {
 }
 
 async function fetchRegistry() {
-	const response = await fetch(REGISTRY_URL);
+	const response = await requestUR(REGISTRY_URL);	
 	if (!response.ok) {
 		throw new Error(`HTTP ${response.status} ${response.statusText}`);
 	}

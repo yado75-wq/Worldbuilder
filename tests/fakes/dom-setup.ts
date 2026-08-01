@@ -43,7 +43,13 @@ export function installObsidianDomExtensions(): void {
 	): HTMLElement {
 		const el = globalThis.document.createElement(tag);
 		applyInfo(el, o);
-		this.appendChild(el);
+
+		// Never append a normal element directly to the Document node
+		const parent = this.nodeType === Node.DOCUMENT_NODE
+			? (this as Document).body ?? this
+			: this;
+
+		parent.appendChild(el);
 		callback?.(el);
 		return el;
 	};

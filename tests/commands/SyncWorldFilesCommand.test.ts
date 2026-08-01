@@ -30,10 +30,20 @@ function buildState(app: App): { state: PluginState; world: WorldInfo; templateS
 		fieldSets: {},
 	};
 
-	const indexFile = vault.seedFile(`${WORLD_PATH}/_index.md`, '---\ntags:\n  - world\nname: "Michal"\n---\n') as unknown as TFile;
+	// seedFile returns our fake TFile. WorldInfo expects the real TFile from
+	// the obsidian package. The double cast bridges the two types intentionally
+	// for the test harness — the runtime objects are compatible.
+	const indexFile = vault.seedFile(
+		`${WORLD_PATH}/_index.md`,
+		'---\ntags:\n  - world\nname: "Michal"\n---\n'
+	) as unknown as TFile;
+
 	for (const rule of templateSet.folderRules) {
 		vault.seedFolder(`${WORLD_PATH}/${rule.targetFolder}`);
 	}
+
+	// Same situation: getAbstractFileByPath returns the fake TFolder,
+	// WorldInfo.folder is typed as the real TFolder.
 	const worldFolder = app.vault.getAbstractFileByPath(WORLD_PATH) as TFolder;
 
 	const world: WorldInfo = {
