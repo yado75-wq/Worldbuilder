@@ -1,4 +1,12 @@
-import { App, Modal, Notice, PluginSettingTab, Setting, SettingDefinitionItem } from 'obsidian';
+import {
+	App,
+	Modal,
+	Notice,
+	PluginSettingTab,
+	Setting,
+	SettingDefinitionItem,
+	SettingGroupItem,
+} from 'obsidian';
 import WorldBuilderPlugin from './main';
 import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './ui/InputModal';
@@ -11,21 +19,15 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	getSettingDefinitions() {
+	getSettingDefinitions(): SettingDefinitionItem[] {
 		const templateSets = this.plugin.state.templateSets;
 		const defaultSet = this.plugin.settings.defaultTemplateSet;
 		const activeWorld = this.plugin.state.activeWorld;
 
-		const definitions: SettingDefinitionItem[] = [
-			// Heading
-			{
-				name: 'Template sets',
-			},
-		];
+		const templateSetItems: SettingGroupItem[] = [];
 
-		// One definition per template set → each becomes its own row
 		if (templateSets.length === 0) {
-			definitions.push({
+			templateSetItems.push({
 				name: 'No template sets found',
 				desc: 'Reload the plugin to initialize default templates.',
 			});
@@ -40,7 +42,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					isDefault ? 'Default for new worlds.' : '',
 				].filter(Boolean).join(' ');
 
-				definitions.push({
+				templateSetItems.push({
 					name: `${statusIcon} ${set.name}${isDefault ? ' ★' : ''}`,
 					desc,
 					render: (setting: Setting) => {
@@ -49,102 +51,107 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								.setButtonText('Set as default')
 								.setDisabled(isDefault || !set.isValid)
 								.onClick(() => {
+									void (async () => {
+										this.plugin.settings.defaultTemplateSet = set.name;
+										await this.plugin.saveSettings();
+										this.update();
+									})();
+								})
+							)
+							.addButton(btn => btn
+								.setButtonText('Clone')
+								.onClick(() => this.cloneTemplateSet(set.name))
+							)
+							.addButton(btn => btn
+								.setButtonText('Assign to world')
+								.onClick(() => {
+									void this.assignTemplateSetToWorld(set.name);
+								})
+							)
+							.addButton(btn => btn
+								.setButtonText('Reset to defaults')
+								.setDestructive()
+								.onClick(() => {
+									void (async () => {
+										await resetTemplateSet(
+											this.app,
+											this.plugin.settings,
+											this.plugin.pluginDir,
+											set.name
+										);
+										await this.plugin.refreshState();
+										this.update();
+									})();
+								})
+							);
+
+						if (!set.isValid) {
+							setting.nameEl.addClass('wb-invalid');
+						}
+					},
+				});
+			}
+		}
+
+		// “New template set” button row
+		templateSetItems.push({
+			name: 'New template set',
+			desc: 'Create a new template set copied from plugin defaults.',
+			render: (setting: Setting) => {
+				setting.addButton(btn => btn
+					.setButtonText('Create')
+					.setCta()
+					.onClick(() => {
+						new InputModal(
+							this.app,
+							'Template set name',
+							'fantasy',
+							'',
+							(name) => {
 								void (async () => {
-									this.plugin.settings.defaultTemplateSet = set.name;
-									await this.plugin.saveSettings();
-									this.update();
-								})();
-							})
-						)
-						.addButton(btn => btn
-							.setButtonText('Clone')
-							.onClick(() => this.cloneTemplateSet(set.name))
-						)
-						.addButton(btn => btn
-							.setButtonText('Assign to world')
-							.onClick(() => {
-								void this.assignTemplateSetToWorld(set.name);
-							})
-						)
-						.addButton(btn => btn
-							.setButtonText('Reset to defaults')
-							.setDestructive()
-							.onClick(() => {
-								void (async () => {
+									const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${name}`;
+									if (this.app.vault.getAbstractFileByPath(path)) {
+										new Notice(`"${name}" already exists.`);
+										return;
+									}
+									await this.app.vault.createFolder(path);
 									await resetTemplateSet(
 										this.app,
 										this.plugin.settings,
 										this.plugin.pluginDir,
-										set.name
+										name
 									);
 									await this.plugin.refreshState();
 									this.update();
 								})();
-							})
-						);
+							},
+							() => {}
+						).open();
+					})
+				);
+			},
+		});
 
-					if (!set.isValid) {
-						setting.nameEl.addClass('wb-invalid');
-					}
-				},
-			});
-		}
+		return [
+			{
+				type: 'group',
+				heading: 'Template sets',
+				items: templateSetItems,
+			},
+			{
+				type: 'group',
+				heading: 'Active world',
+				items: [
+					{
+						name: activeWorld ? activeWorld.name : 'No active world',
+						desc: activeWorld
+							? `Template set: ${activeWorld.templateSet}`
+							: 'Create or switch to a world to get started.',
+					},
+				],
+			},
+		];
 	}
-
-	// New template set
-	definitions.push({
-		name: 'New template set',
-		desc: 'Create a new template set copied from plugin defaults.',
-		render: (setting: Setting) => {
-			setting.addButton(btn => btn
-				.setButtonText('Create')
-				.setCta()
-				.onClick(() => {
-					new InputModal(
-						this.app,
-						'Template set name',
-						'fantasy',
-						'',
-						(name) => {
-							void (async () => {
-								const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${name}`;
-								if (this.app.vault.getAbstractFileByPath(path)) {
-									new Notice(`"${name}" already exists.`);
-									return;
-								}
-								await this.app.vault.createFolder(path);
-								await resetTemplateSet(
-									this.app,
-									this.plugin.settings,
-									this.plugin.pluginDir,
-									name
-								);
-								await this.plugin.refreshState();
-								this.update();
-							})();
-						},
-						() => {}
-					).open();
-				})
-			);
-		},
-	});
-
-	// Active world section
-	definitions.push(
-		{ name: 'Active world' },
-		{
-			name: activeWorld ? activeWorld.name : 'No active world',
-			desc: activeWorld
-				? `Template set: ${activeWorld.templateSet}`
-				: 'Create or switch to a world to get started.',
-		}
-	);
-
-	return definitions;
-	}
-
-	// ── helpers (almost unchanged) ────────────────────────────────────────
 
 	private cloneTemplateSet(sourceName: string): void {
 		new InputModal(
@@ -165,7 +172,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultTemplateSet = name;
 					await this.plugin.saveSettings();
 					await this.plugin.refreshState();
-					this.update();                               // ← was this.display()
+					this.update();
 				})();
 			},
 			() => {}
@@ -218,13 +225,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		const updatedContent = updateTemplateSetFrontmatter(currentContent, templateSetName);
 		await this.app.vault.modify(world.indexFile, updatedContent);
 		await this.plugin.refreshState();
-		this.update();                                           // ← was this.display()
+		this.update();
 		new Notice(`Assigned "${templateSetName}" to "${world.name}".`);
 	}
 }
 
 function updateTemplateSetFrontmatter(content: string, templateSetName: string): string {
-	// ... keep exactly the same as before
 	const frontmatterPattern = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/;
 	const match = content.match(frontmatterPattern);
 
