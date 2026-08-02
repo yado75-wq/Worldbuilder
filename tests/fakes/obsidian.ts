@@ -329,6 +329,20 @@ export abstract class Modal {
 	onClose(): void {}
 }
 
+/**
+ * Test-only bridges between our in-memory fake objects and the real
+ * `obsidian` package types. Runtime objects are compatible; the cast
+ * exists only to satisfy TypeScript in the test harness.
+ * (Rule obsidianmd/no-tfile-tfolder-cast is disabled for tests/fakes/**.)
+ */
+export function asTFile(file: unknown): import('obsidian').TFile {
+	return file as import('obsidian').TFile;
+}
+
+export function asTFolder(folder: unknown): import('obsidian').TFolder {
+	return folder as import('obsidian').TFolder;
+}
+
 /* eslint-enable @typescript-eslint/require-await --
 * required pair of disable comment above to avoid eslint errors in this file
 */

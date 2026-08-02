@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { App, TFile, TFolder } from 'obsidian';
-import { FakeVault, resetFakeObsidian } from '../fakes/obsidian';
+import { App, TFile,  } from 'obsidian';
+import { FakeVault, resetFakeObsidian, FakeNoticeLog, asTFile,	asTFolder } from '../fakes/obsidian';
 import { syncWorldFiles } from '../../src/commands/SyncWorldFilesCommand';
 import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
 
@@ -30,21 +30,18 @@ function buildState(app: App): { state: PluginState; world: WorldInfo; templateS
 		fieldSets: {},
 	};
 
-	// seedFile returns our fake TFile. WorldInfo expects the real TFile from
-	// the obsidian package. The double cast bridges the two types intentionally
-	// for the test harness — the runtime objects are compatible.
-	const indexFile = vault.seedFile(
-		`${WORLD_PATH}/_index.md`,
-		'---\ntags:\n  - world\nname: "Michal"\n---\n'
-	) as unknown as TFile;
+	const indexFile = asTFile(
+		vault.seedFile(
+			`${WORLD_PATH}/_index.md`,
+			'---\ntags:\n  - world\nname: "Michal"\n---\n'
+		)
+	);
 
 	for (const rule of templateSet.folderRules) {
 		vault.seedFolder(`${WORLD_PATH}/${rule.targetFolder}`);
 	}
 
-	// Same situation: getAbstractFileByPath returns the fake TFolder,
-	// WorldInfo.folder is typed as the real TFolder.
-	const worldFolder = app.vault.getAbstractFileByPath(WORLD_PATH) as TFolder;
+	const worldFolder = asTFolder(app.vault.getAbstractFileByPath(WORLD_PATH)!);
 
 	const world: WorldInfo = {
 		name: 'Michal',
@@ -70,6 +67,36 @@ function characterFile(name: string): string {
 	return `---\ntags:\n  - character\nname: "${name}"\n---\n\n# ${name}\n`;
 }
 
+function factionFile(name: string): string {
+	return `---\ntags:\n  - faction\nname: "${name}"\n---\n\n# ${name}\n`;
+}
+
+function genericFile(name: string): string {
+	return `---\ntags:\n  - generic\nname: "${name}"\n---\n\n# ${name}\n`;
+}
+
+function untaggedFile(name: string): string {
+	return `---\nname: "${name}"\n---\n\n# ${name}\n`;
+}
+
+function unknownTagFile(name: string): string {
+	return `---\ntags:\n  - artifact\nname: "${name}"\n---\n\n# ${name}\n`;
+}
+
+/** Start the command and immediately confirm the modal. */
+async function runAndConfirm(app: App, state: PluginState): Promise<void> {
+	const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
+	document.querySelector<HTMLButtonElement>('.wb-confirm-btn-primary')?.click();
+	await resultPromise;
+}
+
+/** Start the command and immediately cancel the modal. */
+async function runAndCancel(app: App, state: PluginState): Promise<void> {
+	const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
+	document.querySelector<HTMLButtonElement>('.wb-confirm-btn-secondary')?.click();
+	await resultPromise;
+}
+
 describe('syncWorldFiles', () => {
 	let app: App;
 
@@ -77,6 +104,8 @@ describe('syncWorldFiles', () => {
 		app = new App();
 		resetFakeObsidian();
 	});
+
+	// ── Already covered behaviour ─────────────────────────────────────────
 
 	it('does not move a file already in its correct one-level-deep folder', async () => {
 		const vault = app.vault as unknown as FakeVault;
@@ -86,47 +115,36 @@ describe('syncWorldFiles', () => {
 		await syncWorldFiles(app, state, WORLD_PATH);
 
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
+		expect(FakeNoticeLog.some(m => m.includes('All files are in correct folders'))).toBe(true);
 	});
 
-	it('moves a misplaced but one-level-deep file to its correct folder (existing, already-working behavior)', async () => {
+	it('moves a misplaced but one-level-deep file to its correct folder', async () => {
 		const vault = app.vault as unknown as FakeVault;
-		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria')); // tagged character, sitting in Factions/
+		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		// syncWorldFiles runs synchronously up to `await askConfirm(...)` — the
-		// confirm modal's DOM already exists by the time this call returns a
-		// pending promise, so the button must be clicked before awaiting it,
-		// not after (awaiting first would deadlock: the command can't finish
-		// until the button is clicked, and the button can't be found until
-		// the command has started).
-		const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
-		document.querySelector<HTMLButtonElement>('.wb-confirm-btn-primary')?.click();
-		await resultPromise;
+		await runAndConfirm(app, state);
 
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeNull();
 	});
 
-	it('finds and moves a correctly-tagged entity sitting directly in the world root (previously undiscovered)', async () => {
+	it('finds and moves a correctly-tagged entity sitting directly in the world root', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		vault.seedFile(`${WORLD_PATH}/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
-		document.querySelector<HTMLButtonElement>('.wb-confirm-btn-primary')?.click();
-		await resultPromise;
+		await runAndConfirm(app, state);
 
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 	});
 
-	it('finds and moves a correctly-tagged entity nested more than one level deep (previously undiscovered)', async () => {
+	it('finds and moves a correctly-tagged entity nested more than one level deep', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		vault.seedFile(`${WORLD_PATH}/Time/Sub/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
-		document.querySelector<HTMLButtonElement>('.wb-confirm-btn-primary')?.click();
-		await resultPromise;
+		await runAndConfirm(app, state);
 
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 	});
@@ -136,10 +154,138 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
-		document.querySelector<HTMLButtonElement>('.wb-confirm-btn-secondary')?.click();
-		await resultPromise;
+		await runAndCancel(app, state);
 
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeInstanceOf(TFile);
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeNull();
+	});
+
+	// ── New cases ─────────────────────────────────────────────────────────
+
+	it('moves multiple misplaced files in one run', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
+		vault.seedFile(`${WORLD_PATH}/Characters/IronLeague.md`, factionFile('IronLeague'));
+		const { state } = buildState(app);
+
+		await runAndConfirm(app, state);
+
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/IronLeague.md`)).toBeInstanceOf(TFile);
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeNull();
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/IronLeague.md`)).toBeNull();
+	});
+
+	it('skips files tagged "generic"', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFile(`${WORLD_PATH}/Notes/Scratch.md`, genericFile('Scratch'));
+		const { state } = buildState(app);
+
+		await syncWorldFiles(app, state, WORLD_PATH);
+
+		// Still in original location
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Notes/Scratch.md`)).toBeInstanceOf(TFile);
+		expect(FakeNoticeLog.some(m => m.includes('All files are in correct folders'))).toBe(true);
+	});
+
+	it('skips files whose name starts with underscore', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		// Even if tagged as character, underscore-prefixed files are ignored
+		vault.seedFile(`${WORLD_PATH}/_draft.md`, characterFile('Draft'));
+		const { state } = buildState(app);
+
+		await syncWorldFiles(app, state, WORLD_PATH);
+
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/_draft.md`)).toBeInstanceOf(TFile);
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/_draft.md`)).toBeNull();
+	});
+
+	it('leaves unrecognized tagged files in place and reports them', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFile(`${WORLD_PATH}/Relics/Sword.md`, unknownTagFile('Sword'));
+		const { state } = buildState(app);
+
+		await syncWorldFiles(app, state, WORLD_PATH);
+
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Relics/Sword.md`)).toBeInstanceOf(TFile);
+		expect(FakeNoticeLog.some(m => m.includes('unrecognized'))).toBe(true);
+	});
+
+	it('does not move a file when the target folder already has a name conflict', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		// Correct location already occupied
+		vault.seedFile(`${WORLD_PATH}/Characters/Aria.md`, characterFile('Aria'));
+		// Misplaced duplicate
+		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
+		const { state } = buildState(app);
+
+		await runAndConfirm(app, state);
+
+		// Original stays, misplaced one is not moved (conflict)
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeInstanceOf(TFile);
+		expect(FakeNoticeLog.some(m => m.includes('Failed') || m.includes('conflict'))).toBe(true);
+	});
+
+		it('does not move a file when the target folder is missing', async () => {
+		// Build a minimal world that has the Character rule but no Characters/ folder
+		const app2 = new App();
+		const v = app2.vault as unknown as FakeVault;
+
+		v.seedFile(`${WORLD_PATH}/_index.md`, '---\ntags:\n  - world\nname: "Michal"\n---\n');
+		v.seedFile(`${WORLD_PATH}/Aria.md`, characterFile('Aria'));
+		// deliberately do NOT seed Characters/
+		
+		const worldFolder = asTFolder(app2.vault.getAbstractFileByPath(WORLD_PATH)!);
+		const indexFile = asTFile(app2.vault.getAbstractFileByPath(`${WORLD_PATH}/_index.md`)!);
+
+		const state2: PluginState = {
+			activeWorld: null,
+			worlds: [{
+				name: 'Michal',
+				path: WORLD_PATH,
+				folder: worldFolder,
+				indexFile,
+				status: 'active',
+				templateSet: 'defaults',
+				folderRules: [{ entityType: 'Character', targetFolder: 'Characters' }],
+				worldTemplate: [],
+			}],
+			templateSets: [{
+				name: 'defaults',
+				path: '_system/templates/defaults',
+				isValid: true,
+				issues: [],
+				folderRules: [{ entityType: 'Character', targetFolder: 'Characters' }],
+				worldTemplate: [],
+				fieldSets: {},
+			}],
+		};
+
+		await runAndConfirm(app2, state2);
+
+		// File stays in the root because the target folder does not exist
+		expect(app2.vault.getAbstractFileByPath(`${WORLD_PATH}/Aria.md`)).toBeInstanceOf(TFile);
+		expect(app2.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeNull();
+		expect(FakeNoticeLog.some(m => m.includes('Failed') || m.includes('missing'))).toBe(true);
+	});
+
+	it('shows a notice and does nothing when the world path is unknown', async () => {
+		const { state } = buildState(app);
+
+		await syncWorldFiles(app, state, 'DoesNotExist');
+
+		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+	});
+
+	it('ignores untagged markdown files', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFile(`${WORLD_PATH}/Notes/Readme.md`, untaggedFile('Readme'));
+		const { state } = buildState(app);
+
+		await syncWorldFiles(app, state, WORLD_PATH);
+
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Notes/Readme.md`)).toBeInstanceOf(TFile);
+		expect(FakeNoticeLog.some(m => m.includes('All files are in correct folders'))).toBe(true);
 	});
 });
