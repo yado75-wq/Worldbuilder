@@ -9,6 +9,7 @@ export default class WorldBuilderPlugin extends Plugin {
 	settings!: WorldBuilderSettings;
 	state!: PluginState;
 	private ribbonIconEl!: HTMLElement;
+	private settingTab!: WorldBuilderSettingTab;
 
 	async onload() {
 		await this.loadSettings();
@@ -19,7 +20,8 @@ export default class WorldBuilderPlugin extends Plugin {
 			templateSets: [],
 		};
 
-		this.addSettingTab(new WorldBuilderSettingTab(this.app, this));
+		this.settingTab = new WorldBuilderSettingTab(this.app, this);
+		this.addSettingTab(this.settingTab);
 
 		// Ribbon icon — shows active world on hover, status + settings link on click
 		this.ribbonIconEl = this.addRibbonIcon('globe', 'Worldbuilder', (evt) => {
@@ -98,6 +100,7 @@ export default class WorldBuilderPlugin extends Plugin {
 		}
 
 		this.updateRibbonTooltip();
+		this.settingTab?.update();
 	}
 
 	private updateRibbonTooltip(): void {
