@@ -10,6 +10,7 @@ export default class WorldBuilderPlugin extends Plugin {
 	state!: PluginState;
 	private ribbonIconEl!: HTMLElement;
 	private settingTab!: WorldBuilderSettingTab;
+	private activeWorldConflictNotified = false;
 
 	async onload() {
 		await this.loadSettings();
@@ -97,6 +98,19 @@ export default class WorldBuilderPlugin extends Plugin {
 			this.settings.defaultTemplateSet = fallback;
 			await this.saveSettings();
 			new Notice(`Default template set was removed. Switched to "${fallback}".`);
+		}
+
+		const activeCount = this.state.worlds.filter(w => w.status === 'active').length;
+		const conflict = this.state.worlds.length > 0 && activeCount !== 1;
+		if (conflict && !this.activeWorldConflictNotified) {
+			new Notice(
+				activeCount > 1
+					? 'Multiple worlds are marked active. Open Worldbuilder settings and use Set as active.'
+					: 'No active world. Open Worldbuilder settings and use Set as active.'
+			);
+			this.activeWorldConflictNotified = true;
+		} else if (!conflict) {
+			this.activeWorldConflictNotified = false;	
 		}
 
 		this.updateRibbonTooltip();

@@ -1,4 +1,4 @@
-import { App, Menu, MenuItem, TAbstractFile, TFolder } from 'obsidian';
+import { App, Menu, MenuItem, TAbstractFile, TFolder, Notice } from 'obsidian';
 import { PluginState, WorldBuilderSettings } from '../types';
 import { resolveContext } from './ContextResolver';
 import { newWorld } from '../commands/NewWorldCommand';
@@ -10,6 +10,19 @@ import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 import { createEntity } from '../commands/CreateEntityCommand';
 import { editEntity } from '../commands/EditEntityCommand';
 import { refreshAllTimeframes } from '../commands/RefreshAllTimeframesCommand';
+
+function hasActiveWorldConflict(state: PluginState): boolean {
+	if (state.worlds.length === 0) return false;
+	return state.worlds.filter(w => w.status === 'active').length !== 1;
+}
+
+function blockIfConflict(state: PluginState): boolean {
+	if (!hasActiveWorldConflict(state)) return false;
+	new Notice(
+		'Active world conflict: open worldbuilder settings and use set as active on one world.'
+	);
+	return true;
+}
 
 export function registerFileMenu(
 	app: App,
@@ -75,27 +88,27 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Edit world meta')
 				.setIcon('pencil')
-				.onClick(() => { void editWorldMeta(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void editWorldMeta(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Refresh dashboard')
 				.setIcon('layout-dashboard')
-				.onClick(() => { void refreshDashboard(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void refreshDashboard(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Sync world folders')
 				.setIcon('folder-sync')
-				.onClick(() => { void syncWorldFolders(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void syncWorldFolders(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Sync world files')
 				.setIcon('arrow-right-left')
-				.onClick(() => { void syncWorldFiles(app, state, context.world.path); })
+				.onClick(() => {if (!blockIfConflict(state)) void syncWorldFiles(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Refresh all timeframes')
 				.setIcon('refresh-cw')
-				.onClick(() => { void refreshAllTimeframes(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void refreshAllTimeframes(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Switch to this world')

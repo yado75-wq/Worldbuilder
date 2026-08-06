@@ -10,6 +10,7 @@ import {
 import WorldBuilderPlugin from './main';
 import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './ui/InputModal';
+import { setActiveWorld } from './commands/SwitchWorldCommand';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
 	plugin: WorldBuilderPlugin;
@@ -21,9 +22,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
 		const templateSets = this.plugin.state.templateSets;
-		const defaultSet = this.plugin.settings.defaultTemplateSet;
-		const activeWorld = this.plugin.state.activeWorld;
-
+		const defaultSet = this.plugin.settings.defaultTemplateSet;		
 		const templateSetItems: SettingGroupItem[] = [];
 
 		if (templateSets.length === 0) {
@@ -131,7 +130,56 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				);
 			},
 		});
+	const worlds = this.plugin.state.worlds;
+	const activeCount = worlds.filter(w => w.status === 'active').length;
+	const conflict = worlds.length > 0 && activeCount !== 1;
 
+	const worldItems: SettingGroupItem[] = [];
+
+	if (worlds.length === 0) {
+		worldItems.push({
+			name: 'No worlds',
+			desc: 'Create a world from the file explorer context menu.',
+		});
+	} else {
+		for (const world of worlds) {
+			const isActive = world.status === 'active';
+			const uniquelyActive = isActive && activeCount === 1;
+
+			let desc = `Template set: ${world.templateSet}`;
+			if (conflict && activeCount > 1 && isActive) {
+				desc += ' — Multiple active worlds; use Set as active to keep only this one.';
+			} else if (conflict && activeCount === 0) {
+				desc += ' — No active world; use Set as active.';
+			}
+
+			worldItems.push({
+				name: `${world.name}${isActive ? ' ★' : ''}`,
+				desc,
+				render: (setting: Setting) => {
+					setting.addButton(btn => btn
+						.setButtonText('Set as active')
+						.setDisabled(uniquelyActive)
+						.onClick(() => {
+							void (async () => {
+								const ok = await setActiveWorld(
+									this.app,
+									this.plugin.state,
+									world.path
+								);
+								if (!ok) return;
+								await this.plugin.refreshState();
+								this.update();
+							})();
+						})
+					);
+					if (conflict && isActive) {
+						setting.nameEl.addClass('wb-invalid');
+					}
+				},
+			});
+		}
+	}
 		return [
 			{
 				type: 'group',
@@ -140,15 +188,8 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			},
 			{
 				type: 'group',
-				heading: 'Active world',
-				items: [
-					{
-						name: activeWorld ? activeWorld.name : 'No active world',
-						desc: activeWorld
-							? `Template set: ${activeWorld.templateSet}`
-							: 'Create or switch to a world to get started.',
-					},
-				],
+				heading: conflict ? 'Active world ⚠' : 'Active world',
+				items: worldItems,
 			},
 		];
 	}
