@@ -147,9 +147,11 @@ function stripQuotes(v: string): string {
 export class FakeVault {
 	private files = new Map<string, StoredFile>();
 	private folders = new Map<string, TFolder>();
+	adapter: FakeDataAdapter;
 
 	constructor() {
 		this.ensureFolder('');
+		this.adapter = new FakeDataAdapter(this);
 	}
 
 	private ensureFolder(path: string): TFolder {
@@ -272,6 +274,51 @@ export class FakeWorkspace {
 	}
 }
 
+/**
+ * Minimal DataAdapter stand-in. `seedExternal` is for plugin-dir files
+ * (e.g. pluginDir/defaults/*.md) that are not vault notes.
+ */
+export class FakeDataAdapter {
+	private external = new Map<string, string>();
+
+	constructor(private vault: FakeVault) {}
+
+	/** Test helper — seed a file on the "disk" side (plugin defaults, etc.). */
+	seedExternal(path: string, content: string): void {
+		this.external.set(normalizePath(path), content);
+	}
+
+	async read(path: string): Promise<string> {
+		const p = normalizePath(path);
+		if (this.external.has(p)) return this.external.get(p) ?? '';
+		const fromVault = this.vault.contentAt(p);
+		if (fromVault !== undefined) return fromVault;
+		throw new Error(`ENOENT: ${path}`);
+	}
+
+	async write(path: string, data: string): Promise<void> {
+		const p = normalizePath(path);
+		this.external.set(p, data);
+		const existing = this.vault.getAbstractFileByPath(p);
+		if (existing instanceof TFile) {
+			await this.vault.modify(existing, data);
+		} else {
+			this.vault.seedFile(p, data);
+		}
+	}
+
+	async copy(src: string, dest: string): Promise<void> {
+		const content = await this.read(src);
+		const p = normalizePath(dest);
+		const existing = this.vault.getAbstractFileByPath(p);
+		if (existing instanceof TFile) {
+			await this.vault.modify(existing, content);
+		} else {
+			await this.vault.create(p, content);
+		}
+	}
+}
+
 export class App {
 	vault: FakeVault;
 	metadataCache: FakeMetadataCache;
@@ -341,6 +388,10 @@ export function asTFile(file: unknown): import('obsidian').TFile {
 
 export function asTFolder(folder: unknown): import('obsidian').TFolder {
 	return folder as import('obsidian').TFolder;
+}
+
+export function normalizePath(path: string): string {
+	return path.replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\//, '').replace(/\/$/, '');
 }
 
 /* eslint-enable @typescript-eslint/require-await --
