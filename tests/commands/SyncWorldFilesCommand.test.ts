@@ -83,17 +83,31 @@ function unknownTagFile(name: string): string {
 	return `---\ntags:\n  - artifact\nname: "${name}"\n---\n\n# ${name}\n`;
 }
 
-/** Start the command and immediately confirm the modal. */
+async function waitForSelector(selector: string, timeoutMs = 1000): Promise<Element> {
+	const start = Date.now();
+	for (;;) {
+		const el = document.querySelector(selector);
+		if (el) return el;
+		if (Date.now() - start > timeoutMs) {
+			throw new Error(`Timeout waiting for ${selector}`);
+		}
+		await new Promise(r => window.setTimeout(r, 0));
+	}
+}
+
+/** Start the command and confirm once the modal is in the DOM. */
 async function runAndConfirm(app: App, state: PluginState): Promise<void> {
 	const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
-	document.querySelector<HTMLButtonElement>('.wb-confirm-btn-primary')?.click();
+	const btn = await waitForSelector('.wb-confirm-btn-primary') as HTMLButtonElement;
+	btn.click();
 	await resultPromise;
 }
 
-/** Start the command and immediately cancel the modal. */
+/** Start the command and cancel once the modal is in the DOM. */
 async function runAndCancel(app: App, state: PluginState): Promise<void> {
 	const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
-	document.querySelector<HTMLButtonElement>('.wb-confirm-btn-secondary')?.click();
+	const btn = await waitForSelector('.wb-confirm-btn-secondary') as HTMLButtonElement;
+	btn.click();
 	await resultPromise;
 }
 

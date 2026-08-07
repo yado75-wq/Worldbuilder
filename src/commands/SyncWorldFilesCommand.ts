@@ -1,6 +1,7 @@
 import { App, Notice, TFile, TFolder, getAllTags } from 'obsidian';
 import { PluginState, FolderRule } from '../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
+import { syncWorldNameToFolder } from './shared/WorldIndex';
 
 interface MoveCandidate {
 	file: TFile;
@@ -29,6 +30,11 @@ export async function syncWorldFiles(
 		return;
 	}
 
+	const nameSynced = await syncWorldNameToFolder(app, world);
+	if (nameSynced) {
+		new Notice(`World display name set to folder name "${world.folder.name}".`);
+	}
+	
 	// Only rules with specific folders (not *)
 	const fixedRules = templateSet.folderRules.filter(r => r.targetFolder !== '*');
 

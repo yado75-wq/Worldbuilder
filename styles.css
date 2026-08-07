@@ -10,6 +10,10 @@
 	color: var(--color-red);
 }
 
+.wb-name-mismatch {
+	color: var(--color-red);
+}
+
 .wb-world-picker-btn {
 	display: block;
 	width: 100%;

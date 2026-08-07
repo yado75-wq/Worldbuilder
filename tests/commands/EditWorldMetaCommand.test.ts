@@ -233,7 +233,7 @@ describe('editWorldMeta', () => {
 			type: 'submit',
 			data: {
 				// name is not in the form fields (filtered), but if present must be ignored
-				name: 'HackedName',
+				name: 'TestWorld',
 				genre: 'Horror',
 				tone: 'Dark',
 				themes: null,
@@ -273,6 +273,7 @@ describe('editWorldMeta', () => {
 		modalBehavior = {
 			type: 'submit',
 			data: {
+				name: 'TestWorld',
 				genre: null,
 				tone: null,
 				themes: null,
@@ -310,6 +311,7 @@ describe('editWorldMeta', () => {
 		modalBehavior = {
 			type: 'submit',
 			data: {
+				name: 'TestWorld',
 				genre: null,
 				tone: null,
 				themes: null,
