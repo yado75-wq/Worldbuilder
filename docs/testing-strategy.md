@@ -112,6 +112,37 @@ See `docs/robustness-and-templates.md` (or vault copy).
 
 ---
 
+## Periodic review (ecosystem)
+
+Obsidian testing tools change quickly. **Do not** migrate off Vitest + project fakes for novelty.
+
+### Cadence
+
+- Light check **every 3–6 months**, or  
+- Before investing in a **new** E2E/shim stack, or  
+- When the same class of bug keeps slipping past unit tests into the manual checklist.
+
+### What to re-check
+
+| Area | Examples | Adopt only if… |
+| --- | --- | --- |
+| Real-app E2E | `wdio-obsidian-service`, `obsidian-e2e` | Clearly cuts *your* manual menu/settings work and can run in CI without constant breakage |
+| Shared API shims | `jest-environment-obsidian`, Obsimian | Your fakes are the bottleneck and the library is actively maintained |
+| Runner | Jest / Bun test vs Vitest | Measurable win; migration cost is justified |
+
+### Decision rule
+
+- **Default stays:** Vitest + `tests/fakes/obsidian.ts` + pure predicates + short manual guides.  
+- **Revisit E2E** when automation cannot express a failure mode you hit repeatedly by hand.  
+- Record any stack change in this file and in the relevant feature DoD.
+
+### Last reviewed
+
+- Date: 2026-08-08  
+- Notes: Vitest + custom fakes remain primary; E2E libraries watched only, not adopted.
+
+---
+
 ## Session handoff
 
 Any new session implementing product behaviour should:
