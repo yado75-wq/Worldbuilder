@@ -248,6 +248,23 @@ export class FakeVault {
 
 		this.files.set(to, stored);
 	}
+
+	/** Test helper — remove a file or folder from the in-memory vault. */
+	deletePath(path: string): void {
+		const stored = this.files.get(path);
+		if (stored) {
+			const parent = stored.file.parent;
+			if (parent) parent.children = parent.children.filter(c => c !== stored.file);
+			this.files.delete(path);
+			return;
+		}
+		const folder = this.folders.get(path === '/' ? '' : path);
+		if (folder) {
+			const parent = folder.parent;
+			if (parent) parent.children = parent.children.filter(c => c !== folder);
+			this.folders.delete(path === '/' ? '' : path);
+		}
+	}
 }
 
 export class FakeMetadataCache {
@@ -265,6 +282,10 @@ export class FakeFileManager {
 
 	async renameFile(file: TAbstractFile, newPath: string): Promise<void> {
 		this.vault.movePath(file.path, newPath);
+	}
+
+	async trashFile(file: TAbstractFile): Promise<void> {
+		this.vault.deletePath(file.path);
 	}
 }
 
