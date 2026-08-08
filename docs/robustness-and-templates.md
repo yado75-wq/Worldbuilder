@@ -224,3 +224,5 @@ Create/edit never open the modal when fields are empty. Submit requires title wh
 ## Session note
 
 Happy-path create-entity tests covered successful creation. Robustness focus is **honest discovery (menu)** first, then command safety nets and tests—not more field-type matrix tests unless a crash is found.
+
+Testing process: see `docs/testing-strategy.md`.
