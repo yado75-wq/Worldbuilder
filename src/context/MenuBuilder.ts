@@ -1,6 +1,7 @@
 import { App, Menu, MenuItem, TAbstractFile, TFolder, Notice } from 'obsidian';
-import { PluginState, WorldBuilderSettings } from '../types';
+import { PluginState, WorldBuilderSettings, WorldInfo } from '../types';
 import { resolveContext } from './ContextResolver';
+import { isEntityTypeUsable, resolveTemplateSetForWorld } from './EntityTypeUsable';
 import { newWorld } from '../commands/NewWorldCommand';
 import { switchToWorld } from '../commands/SwitchWorldCommand';
 import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
@@ -11,7 +12,7 @@ import { createEntity } from '../commands/CreateEntityCommand';
 import { editEntity } from '../commands/EditEntityCommand';
 import { refreshAllTimeframes } from '../commands/RefreshAllTimeframesCommand';
 
-function hasActiveWorldConflict(state: PluginState): boolean {
+export function hasActiveWorldConflict(state: PluginState): boolean {
 	if (state.worlds.length === 0) return false;
 	return state.worlds.filter(w => w.status === 'active').length !== 1;
 }
@@ -24,6 +25,10 @@ function blockIfConflict(state: PluginState): boolean {
 	return true;
 }
 
+function templateSetForWorld(state: PluginState, world: WorldInfo) {
+	return resolveTemplateSetForWorld(state.templateSets, world.templateSet);
+}
+
 export function registerFileMenu(
 	app: App,
 	menu: Menu,
@@ -33,8 +38,6 @@ export function registerFileMenu(
 	saveSettings: () => void
 ): void {
 
-	// Never show menu items on system folder or its children
-	// Exception: template set folders inside templates root ARE shown
 	const templatesRootPath = `${settings.systemFolder}/${settings.templatesFolder}`;
 	const isSystemButNotTemplate =
 		(file.path === settings.systemFolder ||
@@ -103,7 +106,7 @@ export function registerFileMenu(
 			menu.addItem(item => item
 				.setTitle('Sync world files')
 				.setIcon('arrow-right-left')
-				.onClick(() => {if (!blockIfConflict(state)) void syncWorldFiles(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void syncWorldFiles(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Refresh all timeframes')
@@ -117,11 +120,12 @@ export function registerFileMenu(
 				.onClick(() => { void switchToWorld(app, state, context.world.path); })
 			);
 
-			const worldWildcardTypes = getWildcardTypes(state, context.world.templateSet);
+			const worldWildcardTypes = getUsableWildcardTypes(state, context.world);
 			if (worldWildcardTypes.length > 0) {
 				menu.addSeparator();
 				addWildcardItems(menu, worldWildcardTypes, () => context.world.path,
 					(entityType, folderPath) => {
+						if (blockIfConflict(state)) return;
 						void createEntity(app, state, context.world.path, entityType, folderPath);
 					}
 				);
@@ -131,49 +135,60 @@ export function registerFileMenu(
 		}
 
 		case 'entity-folder': {
-			menu.addItem(item => item
-				.setTitle(`New ${context.entityType.toLowerCase()}`)
-				.setIcon('plus-circle')
-				.onClick(() => {
-					void createEntity(app, state, context.world.path, context.entityType, context.folder.path);
-				})
-			);
-			const entityWildcardTypes = getWildcardTypes(state, context.world.templateSet);
+			const ts = templateSetForWorld(state, context.world);
+			if (isEntityTypeUsable(ts, context.entityType)) {
+				menu.addItem(item => item
+					.setTitle(`New ${context.entityType.toLowerCase()}`)
+					.setIcon('plus-circle')
+					.onClick(() => {
+						if (blockIfConflict(state)) return;
+						void createEntity(app, state, context.world.path, context.entityType, context.folder.path);
+					})
+				);
+			}
+			const entityWildcardTypes = getUsableWildcardTypes(state, context.world);
 			addWildcardItems(menu, entityWildcardTypes, () => context.folder.path,
 				(entityType, folderPath) => {
+					if (blockIfConflict(state)) return;
 					void createEntity(app, state, context.world.path, entityType, folderPath);
 				}
 			);
 			break;
 		}
 
-		case 'entity-file':
-			menu.addItem(item => item
-				.setTitle(`Edit ${context.entityType.toLowerCase()}`)
-				.setIcon('pencil')
-				.onClick(() => {
-					void editEntity(app, state, context.world.path, context.entityType, context.file.path);
-				})
-			);
+		case 'entity-file': {
+			const ts = templateSetForWorld(state, context.world);
+			if (isEntityTypeUsable(ts, context.entityType)) {
+				menu.addItem(item => item
+					.setTitle(`Edit ${context.entityType.toLowerCase()}`)
+					.setIcon('pencil')
+					.onClick(() => {
+						if (blockIfConflict(state)) return;
+						void editEntity(app, state, context.world.path, context.entityType, context.file.path);
+					})
+				);
+			}
 			break;
+		}
 
 		case 'index-file':
 			menu.addItem(item => item
 				.setTitle('Edit world meta')
 				.setIcon('pencil')
-				.onClick(() => { void editWorldMeta(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void editWorldMeta(app, state, context.world.path); })
 			);
 			menu.addItem(item => item
 				.setTitle('Refresh dashboard')
 				.setIcon('layout-dashboard')
-				.onClick(() => { void refreshDashboard(app, state, context.world.path); })
+				.onClick(() => { if (!blockIfConflict(state)) void refreshDashboard(app, state, context.world.path); })
 			);
 			break;
 
 		case 'generic-folder': {
-			const genericWildcardTypes = getWildcardTypes(state, context.world.templateSet);
+			const genericWildcardTypes = getUsableWildcardTypes(state, context.world);
 			addWildcardItems(menu, genericWildcardTypes, () => context.folder.path,
 				(entityType, folderPath) => {
+					if (blockIfConflict(state)) return;
 					void createEntity(app, state, context.world.path, entityType, folderPath);
 				}
 			);
@@ -182,14 +197,13 @@ export function registerFileMenu(
 	}
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getWildcardTypes(state: PluginState, templateSetName: string): string[] {
-	const templateSet = state.templateSets.find(ts => ts.name === templateSetName)
-		?? state.templateSets[0];
-	return templateSet?.folderRules
+function getUsableWildcardTypes(state: PluginState, world: WorldInfo): string[] {
+	const templateSet = templateSetForWorld(state, world);
+	if (!templateSet) return [];
+	return templateSet.folderRules
 		.filter(r => r.targetFolder === '*')
-		.map(r => r.entityType) ?? [];
+		.map(r => r.entityType)
+		.filter(entityType => isEntityTypeUsable(templateSet, entityType));
 }
 
 function addWildcardItems(
