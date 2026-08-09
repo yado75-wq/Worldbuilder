@@ -178,7 +178,18 @@ describe('editEntity', () => {
 
 		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
 
-		expect(FakeNoticeLog.some(m => m.includes('No fields defined'))).toBe(true);
+		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+	});
+
+	it('exits when the field set has no title field', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		const state = buildState(app, { fields: NO_TITLE_FIELDS });
+		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, entityFile('Aria', 'Elf'));
+
+		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
+
+		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+		expect(vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`)).toContain('Elf');
 	});
 
 	it('exits when file is not found', async () => {
@@ -188,22 +199,7 @@ describe('editEntity', () => {
 
 		expect(FakeNoticeLog.some(m => m.includes('File not found'))).toBe(true);
 	});
-
-	it('exits when the field set has no title field', async () => {
-		const vault = app.vault as unknown as FakeVault;
-		const state = buildState(app, { fields: NO_TITLE_FIELDS });
-		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, entityFile('Aria', 'Elf'));
-		modalBehavior = {
-			type: 'submit',
-			data: { race: 'Orc' },
-		};
-
-		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
-
-		expect(FakeNoticeLog.some(m => m.includes('No title field defined'))).toBe(true);
-		expect(vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`)).toContain('Elf');
-	});
-
+	
 	// ── Modal outcomes ────────────────────────────────────────────────────
 
 	it('leaves file unchanged when the form is cancelled', async () => {

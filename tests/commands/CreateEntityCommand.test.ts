@@ -206,7 +206,21 @@ describe('createEntity', () => {
 
 		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
 
-		expect(FakeNoticeLog.some(m => m.includes('No fields defined'))).toBe(true);
+		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+	});
+
+	it('exits when entity type has fields but no title', async () => {
+		const state = buildState(app, {
+			entityType: 'Character',
+			folderName: 'Entities',
+			fields: [
+				{ key: 'race', label: 'Race', type: 'text', display: 'property', mandatory: false },
+			],
+		});
+
+		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+
+		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
 	});
 
 	// ── Modal outcomes (simple title + property) ──────────────────────────

@@ -8,6 +8,7 @@ import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
 import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
 import { extractPreservedSection } from '../util/PreservedSection';
 import { buildFieldValues } from './shared/EntityPrefill';
+import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 
 export async function editEntity(
 	app: App,
@@ -28,6 +29,11 @@ export async function editEntity(
 
 	if (!templateSet) {
 		new Notice('No template set found.');
+		return;
+	}
+
+	if (!isEntityTypeUsable(templateSet, entityType)) {
+		new Notice(`No usable fields defined for "${entityType}".`);
 		return;
 	}
 

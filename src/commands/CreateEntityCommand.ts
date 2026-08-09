@@ -5,7 +5,7 @@ import { buildEntityContent, buildLinkCandidates, buildMinimalEntityContent, DEF
 import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookupBuilder';
 import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
 import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
-
+import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 import { refreshDashboard } from './RefreshDashboardCommand';
 
 export async function createEntity(
@@ -27,6 +27,11 @@ export async function createEntity(
 
 	if (!templateSet) {
 		new Notice('No template set found.');
+		return;
+	}
+
+	if (!isEntityTypeUsable(templateSet, entityType)) {
+		new Notice(`No usable fields defined for "${entityType}".`);
 		return;
 	}
 

@@ -4,6 +4,7 @@ import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { buildLinkCandidates } from './shared/EntityContent';
 import { worldFolderName } from './shared/WorldIndex';
+import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 
 export async function editWorldMeta(
 	app: App,
@@ -27,6 +28,11 @@ export async function editWorldMeta(
 	const allFields = templateSet.fieldSets['WorldMeta'] ?? [];
 	if (allFields.length === 0) {
 		new Notice('WorldMeta_Fields.md not found or empty.');
+		return;
+	}
+
+	if (!isEntityTypeUsable(templateSet, 'WorldMeta')) {
+		new Notice('No usable world meta fields defined.');
 		return;
 	}
 
