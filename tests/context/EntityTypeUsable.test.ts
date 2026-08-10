@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FieldDefinition, TemplateSetInfo } from '../../src/types';
 import { isEntityTypeUsable,
+		 isPluginMenuSuppressedPath,
 		 resolveTemplateSetForWorld,
 		 listUsableWildcardTypes, 
 } from '../../src/context/EntityTypeUsable';
@@ -143,5 +144,30 @@ describe('listUsableWildcardTypes', () => {
 		const ts = set({ Quest: [title()] });
 		ts.folderRules = [{ entityType: 'Quest', targetFolder: '*' }];
 		expect(listUsableWildcardTypes(ts)).toEqual(['Quest']);
+	});
+});
+
+describe('isPluginMenuSuppressedPath', () => {
+	it('allows vault root and normal folders', () => {
+		expect(isPluginMenuSuppressedPath('/')).toBe(false);
+		expect(isPluginMenuSuppressedPath('MyWorld')).toBe(false);
+		expect(isPluginMenuSuppressedPath('MyWorld/Characters')).toBe(false);
+	});
+
+	it('suppresses underscore world and its subfolders', () => {
+		expect(isPluginMenuSuppressedPath('_Archived')).toBe(true);
+		expect(isPluginMenuSuppressedPath('_Archived/Chapter1')).toBe(true);
+	});
+
+	it('suppresses underscore subfolder inside a live world', () => {
+		expect(isPluginMenuSuppressedPath('MyWorld/_notes')).toBe(true);
+	});
+
+	it('suppresses entire _system tree including templates', () => {
+		expect(isPluginMenuSuppressedPath('_system')).toBe(true);
+		expect(isPluginMenuSuppressedPath('_system/other')).toBe(true);
+		expect(isPluginMenuSuppressedPath('_system/templates')).toBe(true);
+		expect(isPluginMenuSuppressedPath('_system/templates/defaults')).toBe(true);
+		expect(isPluginMenuSuppressedPath('_system/templates/defaults/nested')).toBe(true);
 	});
 });

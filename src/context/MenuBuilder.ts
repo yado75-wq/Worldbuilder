@@ -2,7 +2,8 @@ import { App, Menu, MenuItem, TAbstractFile, TFolder, Notice } from 'obsidian';
 import { PluginState, WorldBuilderSettings, WorldInfo } from '../types';
 import { resolveContext } from './ContextResolver';
 import { 
-	isEntityTypeUsable, 
+	isEntityTypeUsable,
+	isPluginMenuSuppressedPath, 
 	resolveTemplateSetForWorld,
 	listUsableWildcardTypes, 
 } from './EntityTypeUsable';
@@ -43,14 +44,11 @@ export function registerFileMenu(
 ): void {
 
 	const templatesRootPath = `${settings.systemFolder}/${settings.templatesFolder}`;
-	const isSystemButNotTemplate =
-		(file.path === settings.systemFolder ||
-		file.path.startsWith(settings.systemFolder + '/')) &&
-		!file.path.startsWith(templatesRootPath + '/') &&
-		file.path !== templatesRootPath;
-
-	if (isSystemButNotTemplate) return;
-
+	
+	if (isPluginMenuSuppressedPath(file.path)) {
+		return;
+	}
+	
 	const context = resolveContext(app, file, state.worlds, state.templateSets, templatesRootPath);
 
 	switch (context.type) {

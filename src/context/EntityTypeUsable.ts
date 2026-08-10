@@ -67,3 +67,14 @@ export function listUsableWildcardTypes(
 	}
 	return result;
 }
+
+/**
+ * Paths the file-tree menu must not decorate with plugin commands.
+ * Any folder segment starting with "_" is user domain (archive / private / system).
+ * Template UX lives in settings, not the file menu.
+ */
+export function isPluginMenuSuppressedPath(filePath: string): boolean {
+	const path = filePath === '/' ? '' : filePath.replace(/\\/g, '/');
+	const segments = path.split('/').filter(s => s.length > 0);
+	return segments.some(s => s.startsWith('_'));
+}

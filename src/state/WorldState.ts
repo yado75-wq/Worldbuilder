@@ -52,6 +52,9 @@ async function findWorlds(
 		const folder = file.parent;
 		if (!folder) continue;
 
+		// Leading "_" on the world folder → user domain (archived); ignore entirely.
+		if (folder.name.startsWith('_')) continue;
+		
 		// frontmatter is typed as { [key: string]: any } in Obsidian's API
 		const rawName: unknown = frontmatter['name'];
 		const rawStatus: unknown = frontmatter['status'];
