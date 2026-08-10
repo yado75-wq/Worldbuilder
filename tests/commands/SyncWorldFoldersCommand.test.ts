@@ -168,4 +168,21 @@ describe('syncWorldFolders', () => {
 			FakeNoticeLog.some(m => m.includes('Kept') || m.includes('No changes needed'))
 		).toBe(true);
 	});
+
+	it('does nothing when worldTemplate is empty (no create, no delete)', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		const state = buildState(app, {
+			worldTemplate: [],
+			seedTemplateFolders: false,
+		});
+		vault.seedFolder(`${WORLD_PATH}/OrphanEmpty`);
+
+		const trashSpy = vi.spyOn(app.fileManager, 'trashFile').mockResolvedValue();
+
+		await syncWorldFolders(app, state, WORLD_PATH);
+
+		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/OrphanEmpty`)).toBeInstanceOf(TFolder);
+		expect(trashSpy).not.toHaveBeenCalled();
+		expect(FakeNoticeLog.some(m => m.includes('World template is empty'))).toBe(true);
+	});
 });

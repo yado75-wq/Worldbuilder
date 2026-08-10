@@ -29,6 +29,12 @@ export async function syncWorldFolders(
 		return;
 	}
 
+	// Empty / missing world-template → do nothing (do not delete "extras")
+	if (templateSet.worldTemplate.length === 0) {
+		new Notice('World template is empty — no folder changes.');
+		return;
+	}
+
 	// Create missing folders
 	for (const sub of templateSet.worldTemplate) {
 		const folderPath = `${worldPath}/${sub}`;
