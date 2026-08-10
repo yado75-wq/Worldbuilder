@@ -221,6 +221,7 @@ describe('createEntity', () => {
 		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
 
 		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/Aria.md`)).toBeNull();
 	});
 
 	// ── Modal outcomes (simple title + property) ──────────────────────────
