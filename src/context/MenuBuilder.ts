@@ -1,7 +1,11 @@
 import { App, Menu, MenuItem, TAbstractFile, TFolder, Notice } from 'obsidian';
 import { PluginState, WorldBuilderSettings, WorldInfo } from '../types';
 import { resolveContext } from './ContextResolver';
-import { isEntityTypeUsable, resolveTemplateSetForWorld } from './EntityTypeUsable';
+import { 
+	isEntityTypeUsable, 
+	resolveTemplateSetForWorld,
+	listUsableWildcardTypes, 
+} from './EntityTypeUsable';
 import { newWorld } from '../commands/NewWorldCommand';
 import { switchToWorld } from '../commands/SwitchWorldCommand';
 import { syncWorldFolders } from '../commands/SyncWorldFoldersCommand';
@@ -199,11 +203,7 @@ export function registerFileMenu(
 
 function getUsableWildcardTypes(state: PluginState, world: WorldInfo): string[] {
 	const templateSet = templateSetForWorld(state, world);
-	if (!templateSet) return [];
-	return templateSet.folderRules
-		.filter(r => r.targetFolder === '*')
-		.map(r => r.entityType)
-		.filter(entityType => isEntityTypeUsable(templateSet, entityType));
+	return listUsableWildcardTypes(templateSet);
 }
 
 function addWildcardItems(

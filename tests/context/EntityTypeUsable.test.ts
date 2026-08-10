@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isEntityTypeUsable } from '../../src/context/EntityTypeUsable';
 import { FieldDefinition, TemplateSetInfo } from '../../src/types';
-import { resolveTemplateSetForWorld } from '../../src/context/EntityTypeUsable';
+import { isEntityTypeUsable,
+		 resolveTemplateSetForWorld,
+		 listUsableWildcardTypes, 
+} from '../../src/context/EntityTypeUsable';
 
 function set(fieldSets: Record<string, FieldDefinition[]>): TemplateSetInfo {
 	return {
@@ -78,5 +80,68 @@ describe('resolveTemplateSetForWorld', () => {
 
 	it('returns undefined when the list is empty', () => {
 		expect(resolveTemplateSetForWorld([], 'defaults')).toBeUndefined();
+	});
+});
+
+describe('listUsableWildcardTypes', () => {
+	it('returns empty when template set is missing', () => {
+		expect(listUsableWildcardTypes(undefined)).toEqual([]);
+		expect(listUsableWildcardTypes(null)).toEqual([]);
+	});
+
+	it('includes usable types not listed in folder-rules (auto *)', () => {
+		const ts = set({
+			Character: [title()],
+			Faction: [title()],
+		});
+		ts.folderRules = [];
+		expect(listUsableWildcardTypes(ts).sort()).toEqual(['Character', 'Faction'].sort());
+	});
+
+	it('includes explicit * rules when usable', () => {
+		const ts = set({ Quest: [title()] });
+		ts.folderRules = [{ entityType: 'Quest', targetFolder: '*' }];
+		expect(listUsableWildcardTypes(ts)).toEqual(['Quest']);
+	});
+
+	it('does not auto-* a type that has a concrete folder rule', () => {
+		const ts = set({
+			Character: [title()],
+			Quest: [title()],
+		});
+		ts.folderRules = [{ entityType: 'Character', targetFolder: 'Characters' }];
+		expect(listUsableWildcardTypes(ts)).toEqual(['Quest']);
+	});
+
+	it('omits unlisted types that are not usable', () => {
+		const ts = set({
+			Character: [title()],
+			Broken: [prop('x')],
+		});
+		ts.folderRules = [];
+		expect(listUsableWildcardTypes(ts)).toEqual(['Character']);
+	});
+
+	it('omits WorldMeta even when unlisted and usable', () => {
+		const ts = set({
+			Character: [title()],
+			WorldMeta: [title()],
+		});
+		ts.folderRules = [];
+		expect(listUsableWildcardTypes(ts)).toEqual(['Character']);
+	});
+
+	it('includes Generic when unlisted and usable', () => {
+		const ts = set({
+			Generic: [title()],
+		});
+		ts.folderRules = [];
+		expect(listUsableWildcardTypes(ts)).toEqual(['Generic']);
+	});
+
+	it('does not duplicate when type is both explicit * and would be unlisted', () => {
+		const ts = set({ Quest: [title()] });
+		ts.folderRules = [{ entityType: 'Quest', targetFolder: '*' }];
+		expect(listUsableWildcardTypes(ts)).toEqual(['Quest']);
 	});
 });
