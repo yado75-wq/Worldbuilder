@@ -158,7 +158,7 @@ describe('newWorld', () => {
 
 	it('exits when the resolved template set is invalid', async () => {
 		const state = buildState(app, {
-			templateSets: [validTemplateSet({ isValid: false, issues: [{ severity: 'error', message: 'broken' }] })],
+			templateSets: [validTemplateSet({ isValid: false, issues: [{ severity: 'error', kind: 'other', message: 'broken' }] })],
 		});
 
 		await newWorld(app, settings, state, '');
