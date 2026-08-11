@@ -41,10 +41,16 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			for (const set of templateSets) {
 				const statusIcon = set.isValid ? '✓' : '✗';
 				const isDefault = set.name === defaultSet;
+				
+				const warningCount = set.issues.filter(i => i.severity === 'warning').length;
+				const errorCount = set.issues.filter(i => i.severity === 'error').length;
+				const summaryParts: string[] = [];
+				if (errorCount) summaryParts.push(`${errorCount} error(s)`);
+				if (warningCount) summaryParts.push(`${warningCount} warning(s)`);
+				if (summaryParts.length === 0) summaryParts.push('Valid.');
+
 				const desc = [
-					set.isValid
-						? 'Valid.'
-						: `${set.issues.length} issue(s): ${set.issues.map(i => i.message).join(', ')}`,
+					summaryParts.join(', '),
 					isDefault ? 'Default for new worlds.' : '',
 				].filter(Boolean).join(' ');
 
@@ -91,8 +97,31 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								})
 							);
 
-						if (!set.isValid) {
-							setting.nameEl.addClass('wb-invalid');
+						if (set.issues.length > 0) {
+							const details = setting.settingEl.createEl('details', {
+								cls: 'wb-template-issues',
+							});
+							details.createEl('summary', {
+								text: `Show ${set.issues.length} issue(s)`,
+							});
+
+							const table = details.createEl('table', { cls: 'wb-issues-table' });
+							const head = table.createEl('tr');
+							for (const label of ['Sev', 'Kind', 'Where', 'Message']) {
+								head.createEl('th', { text: label });
+							}
+
+							for (const issue of set.issues) {
+								const row = table.createEl('tr');
+								row.createEl('td', { text: issue.severity });
+								row.createEl('td', { text: issue.kind });
+								const where =
+									issue.file && issue.line != null
+										? `${issue.file}:${issue.line}`
+										: issue.file ?? '—';
+								row.createEl('td', { text: where });
+								row.createEl('td', { text: issue.message });
+							}
 						}
 					},
 				});

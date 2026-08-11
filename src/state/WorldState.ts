@@ -3,12 +3,12 @@ import {
 	WorldBuilderSettings,
 	WorldInfo,
 	TemplateSetInfo,
-	FieldDefinition,
-	DisplayType,
-	FolderRule,
-	ValidationIssue,
 	PluginState,
 } from '../types';
+import {
+	parseFieldsWithIssues,
+	parseFolderRulesWithIssues,
+} from './parseTemplateLines';
 
 // ── Required files in every template set ─────────────────────────────────────
 
@@ -54,8 +54,7 @@ async function findWorlds(
 
 		// Leading "_" on the world folder → user domain (archived); ignore entirely.
 		if (folder.name.startsWith('_')) continue;
-		
-		// frontmatter is typed as { [key: string]: any } in Obsidian's API
+
 		const rawName: unknown = frontmatter['name'];
 		const rawStatus: unknown = frontmatter['status'];
 		const rawTemplateSet: unknown = frontmatter['template_set'];
@@ -64,7 +63,6 @@ async function findWorlds(
 			? rawTemplateSet
 			: 'defaults';
 
-		// Find matching template set to carry folderRules and worldTemplate
 		const templateSet = templateSets.find(ts => ts.name === templateSetName)
 			?? templateSets[0];
 
@@ -112,37 +110,37 @@ async function buildTemplateSetInfo(
 	app: App,
 	folder: TFolder
 ): Promise<TemplateSetInfo> {
-	const issues: ValidationIssue[] = [];
-	const folderRules: FolderRule[] = [];
+	const issues: TemplateSetInfo['issues'] = [];
+	const folderRules: TemplateSetInfo['folderRules'] = [];
 	const worldTemplate: string[] = [];
-	const fieldSets: Record<string, FieldDefinition[]> = {};
+	const fieldSets: TemplateSetInfo['fieldSets'] = {};
 
-	// Check required files exist
 	for (const required of REQUIRED_FILES) {
 		const file = app.vault.getAbstractFileByPath(`${folder.path}/${required}`);
 		if (!(file instanceof TFile)) {
 			issues.push({
 				severity: 'error',
+				kind: 'missing-file',
+				file: required,
 				message: `Missing required file: ${required}`,
 			});
 		}
 	}
 
-	// Parse folder-rules.md
 	const rulesFile = app.vault.getAbstractFileByPath(`${folder.path}/folder-rules.md`);
 	if (rulesFile instanceof TFile) {
 		const raw = await app.vault.read(rulesFile);
-		folderRules.push(...parseFolderRules(raw));
+		const parsed = parseFolderRulesWithIssues(raw, 'folder-rules.md');
+		folderRules.push(...parsed.rules);
+		issues.push(...parsed.issues);
 	}
 
-	// Parse world-template.md
 	const worldTemplateFile = app.vault.getAbstractFileByPath(`${folder.path}/world-template.md`);
 	if (worldTemplateFile instanceof TFile) {
 		const raw = await app.vault.read(worldTemplateFile);
 		worldTemplate.push(...parseLineList(raw));
 	}
 
-	// Parse all *_Fields.md files
 	const fieldFiles = folder.children.filter(
 		(f): f is TFile => f instanceof TFile && f.name.endsWith('_Fields.md')
 	);
@@ -150,32 +148,39 @@ async function buildTemplateSetInfo(
 	for (const file of fieldFiles) {
 		const typeName = file.name.replace('_Fields.md', '');
 		const raw = await app.vault.read(file);
-		fieldSets[typeName] = parseFields(raw);
+		const parsed = parseFieldsWithIssues(raw, file.name);
+		fieldSets[typeName] = parsed.fields;
+		issues.push(...parsed.issues);
 	}
 
-	// Internal consistency — every rule must have matching _Fields.md
 	for (const rule of folderRules) {
 		if (rule.targetFolder === '*') continue;
 		if (!(rule.entityType in fieldSets)) {
 			issues.push({
 				severity: 'error',
+				kind: 'missing-fields-for-rule',
+				file: 'folder-rules.md',
 				message: `folder-rules.md references "${rule.entityType}" but ${rule.entityType}_Fields.md is missing`,
 			});
 		}
 	}
 
-	// Every _Fields.md must have exactly one title field
 	for (const [typeName, fields] of Object.entries(fieldSets)) {
 		const titleCount = fields.filter(f => f.display === 'title').length;
+		const fieldsFile = `${typeName}_Fields.md`;
 		if (titleCount === 0) {
 			issues.push({
 				severity: 'error',
-				message: `${typeName}_Fields.md has no title field`,
+				kind: 'no-title',
+				file: fieldsFile,
+				message: `${fieldsFile} has no title field`,
 			});
 		} else if (titleCount > 1) {
 			issues.push({
 				severity: 'error',
-				message: `${typeName}_Fields.md has more than one title field`,
+				kind: 'multiple-title',
+				file: fieldsFile,
+				message: `${fieldsFile} has more than one title field`,
 			});
 		}
 	}
@@ -191,7 +196,7 @@ async function buildTemplateSetInfo(
 	};
 }
 
-// ── Parsers ───────────────────────────────────────────────────────────────────
+// ── Frontmatter helpers (world index only) ────────────────────────────────────
 
 async function readFrontmatter(app: App, file: TFile): Promise<Record<string, unknown>> {
 	const cache = app.metadataCache.getFileCache(file);
@@ -254,7 +259,10 @@ function parseFrontmatter(content: string): Record<string, unknown> {
 
 function stripQuotes(value: string): string {
 	const trimmed = value.trim();
-	if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+	if (
+		(trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+		(trimmed.startsWith("'") && trimmed.endsWith("'"))
+	) {
 		return trimmed.slice(1, -1);
 	}
 	return trimmed;
@@ -265,102 +273,4 @@ function parseLineList(raw: string): string[] {
 		.split('\n')
 		.map(line => line.replace(/^[-*]\s*/, '').trim())
 		.filter(line => line.length > 0);
-}
-
-function parseFolderRules(raw: string): FolderRule[] {
-	const rules: FolderRule[] = [];
-
-	for (const line of raw.split('\n')) {
-		const cleaned = line.replace(/^[-*]\s*/, '').trim();
-		if (!cleaned) continue;
-
-		const parts = cleaned.split('|').map(s => s.trim());
-		const entityType = parts[0];
-		const targetFolder = parts[1];
-
-		if (!entityType || !targetFolder) continue;
-
-		rules.push({ entityType, targetFolder });
-	}
-
-	return rules;
-}
-
-function parseFields(raw: string): FieldDefinition[] {
-	const fields: FieldDefinition[] = [];
-
-	for (const line of raw.split('\n')) {
-		const cleaned = line.replace(/^[-*]\s*/, '').trim();
-		if (!cleaned) continue;
-
-		const parts = cleaned.split('|').map(s => s.trim());
-		const key      = parts[0];
-		const label    = parts[1];
-		const mode     = parts[2];
-		const typeRaw  = parts[3];
-		const displayRaw = parts[4];
-
-		if (!key || !label || !mode || !typeRaw) continue;
-
-		const display = isDisplayType(displayRaw) ? displayRaw : 'property';
-		const field = buildFieldDefinition(key, label, mode, typeRaw, display);
-		fields.push(field);
-	}
-
-	return fields;
-}
-
-function isDisplayType(value: string | undefined): value is DisplayType {
-	return value === 'title' || value === 'property' || value === 'section';
-}
-
-function buildFieldDefinition(
-	key: string,
-	label: string,
-	mode: string,
-	typeRaw: string,
-	display: DisplayType
-): FieldDefinition {
-	const mandatory = mode.toLowerCase() === 'mandatory';
-
-	if (typeRaw.startsWith('select:')) {
-		return {
-			key, label, mandatory, display,
-			type: 'select',
-			options: typeRaw.slice(7).split(',').map(s => s.trim()),
-		};
-	}
-
-	if (typeRaw.startsWith('link:')) {
-		const spec = typeRaw.slice(5);
-		const parts = spec.split('>').map(s => s.trim());
-		const primary = parts[0];
-		const fallback = parts[1];
-
-		if (!primary) {
-			return { key, label, mandatory, display, type: 'text' };
-		}
-
-		return {
-			key, label, mandatory, display,
-			type: 'link',
-			linkFolder: primary,
-			linkFallback: fallback,
-		};
-	}
-
-	if (typeRaw === 'timeframe' || typeRaw.startsWith('timeframe:')) {
-		const spec = typeRaw.startsWith('timeframe:') ? typeRaw.slice(10) : '';
-		const parts = spec.split('>').map(s => s.trim());
-		const primary = parts[0];
-		const fallback = parts[1];
-
-		return {
-			key, label, mandatory, display,
-			type: 'timeframe',
-			...(primary ? { linkFolder: primary, linkFallback: fallback } : {}),
-		};
-	}
-	
-	return { key, label, mandatory, display, type: 'text' };
 }
