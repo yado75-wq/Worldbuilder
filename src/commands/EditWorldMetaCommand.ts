@@ -2,7 +2,7 @@ import { App, Notice, TFile } from 'obsidian';
 import { PluginState, WorldInfo, FieldDefinition } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
-import { buildLinkCandidates } from './shared/EntityContent';
+import { buildFieldCandidates } from './shared/EntityContent';
 import { worldFolderName } from './shared/WorldIndex';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 
@@ -46,7 +46,10 @@ export async function editWorldMeta(
 
 	const folderName = worldFolderName(world);
 	const prefill = await buildPrefill(app, world, fields, folderName);
-	const linkCandidates = buildLinkCandidates(app, world, fields, templateSet);
+	
+	const { linkGroups, timeframeAnchors } = buildFieldCandidates(
+		app, world, fields, templateSet
+	);
 
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;
@@ -54,7 +57,8 @@ export async function editWorldMeta(
 			title: `Edit world meta — ${folderName}`,
 			fields,
 			prefill,
-			linkCandidates,
+			linkCandidateGroups: linkGroups,
+			timeframeCandidates: timeframeAnchors,
 			onSubmit: (r) => { submitted = true; resolve(r); },
 			onCancel: () => { if (!submitted) resolve(null); },
 		});

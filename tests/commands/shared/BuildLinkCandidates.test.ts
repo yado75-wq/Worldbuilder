@@ -6,15 +6,15 @@ import {
 	asTFolder,
 	asTFile,
 } from '../../fakes/obsidian';
-import { buildLinkCandidates } from '../../../src/commands/shared/EntityContent';
+import { buildFieldCandidates } from '../../../src/commands/shared/EntityContent';
 import { FieldDefinition, TemplateSetInfo, WorldInfo } from '../../../src/types';
 
 const WORLD = 'TestWorld';
 
-function factionField(linkTypes: string[]): FieldDefinition {
+function linkField(key: string, linkTypes: string[]): FieldDefinition {
 	return {
-		key: 'faction',
-		label: 'Faction',
+		key,
+		label: key,
 		mandatory: false,
 		type: 'link',
 		display: 'property',
@@ -27,10 +27,7 @@ function factionField(linkTypes: string[]): FieldDefinition {
 function seedWorld(app: App): WorldInfo {
 	const vault = app.vault as unknown as FakeVault;
 	const indexFile = asTFile(
-		vault.seedFile(
-			`${WORLD}/_index.md`,
-			'---\ntags:\n  - world\n---\n'
-		)
+		vault.seedFile(`${WORLD}/_index.md`, '---\ntags:\n  - world\n---\n')
 	);
 	const folder = asTFolder(app.vault.getAbstractFileByPath(WORLD)!);
 	return {
@@ -55,7 +52,7 @@ const emptyTemplateSet: TemplateSetInfo = {
 	fieldSets: {},
 };
 
-describe('buildLinkCandidates (by entity type)', () => {
+describe('buildFieldCandidates link groups', () => {
 	let app: App;
 
 	beforeEach(() => {
@@ -63,70 +60,50 @@ describe('buildLinkCandidates (by entity type)', () => {
 		resetFakeObsidian();
 	});
 
-	it('lists notes tagged with the primary link type anywhere under the world', () => {
+	it('groups by chain order with sorted names', () => {
 		const vault = app.vault as unknown as FakeVault;
 		const world = seedWorld(app);
-		vault.seedFile(
-			`${WORLD}/Factions/Iron.md`,
-			'---\ntags:\n  - faction\nname: "Iron"\n---\n'
-		);
-		vault.seedFile(
-			`${WORLD}/Misc/Loose.md`,
-			'---\ntags:\n  - faction\nname: "Loose"\n---\n'
-		);
-		vault.seedFile(
-			`${WORLD}/Factions/Other.md`,
-			'---\ntags:\n  - location\nname: "Other"\n---\n'
+		vault.seedFile(`${WORLD}/Zeta.md`, '---\ntags:\n  - weapon\n---\n');
+		vault.seedFile(`${WORLD}/Alpha.md`, '---\ntags:\n  - weapon\n---\n');
+		vault.seedFile(`${WORLD}/Mail.md`, '---\ntags:\n  - armor\n---\n');
+
+		const { linkGroups } = buildFieldCandidates(
+			app, world, [linkField('gear', ['Weapon', 'Armor'])], emptyTemplateSet
 		);
 
-		const result = buildLinkCandidates(
-			app,
-			world,
-			[factionField(['Faction'])],
-			emptyTemplateSet
-		);
-
-		expect(result['faction']?.sort()).toEqual(['Iron', 'Loose'].sort());
+		expect(linkGroups['gear']).toEqual([
+			{ entityType: 'Weapon', names: ['Alpha', 'Zeta'] },
+			{ entityType: 'Armor', names: ['Mail'] },
+		]);
 	});
 
-	it('falls back to the second type when the primary type has no candidates', () => {
+	it('keeps empty groups for types with no notes', () => {
 		const vault = app.vault as unknown as FakeVault;
 		const world = seedWorld(app);
-		vault.seedFile(
-			`${WORLD}/Places/Town.md`,
-			'---\ntags:\n  - location\nname: "Town"\n---\n'
+		vault.seedFile(`${WORLD}/Mail.md`, '---\ntags:\n  - armor\n---\n');
+
+		const { linkGroups } = buildFieldCandidates(
+			app, world, [linkField('gear', ['Weapon', 'Armor'])], emptyTemplateSet
 		);
 
-		const result = buildLinkCandidates(
-			app,
-			world,
-			[factionField(['Faction', 'Location'])],
-			emptyTemplateSet
-		);
-
-		expect(result['faction']).toEqual(['Town']);
+		expect(linkGroups['gear']).toEqual([
+			{ entityType: 'Weapon', names: [] },
+			{ entityType: 'Armor', names: ['Mail'] },
+		]);
 	});
 
 	it('excludes the given basename', () => {
 		const vault = app.vault as unknown as FakeVault;
 		const world = seedWorld(app);
-		vault.seedFile(
-			`${WORLD}/Factions/Iron.md`,
-			'---\ntags:\n  - faction\n---\n'
-		);
-		vault.seedFile(
-			`${WORLD}/Factions/Steel.md`,
-			'---\ntags:\n  - faction\n---\n'
+		vault.seedFile(`${WORLD}/Iron.md`, '---\ntags:\n  - faction\n---\n');
+		vault.seedFile(`${WORLD}/Steel.md`, '---\ntags:\n  - faction\n---\n');
+
+		const { linkGroups } = buildFieldCandidates(
+			app, world, [linkField('faction', ['Faction'])], emptyTemplateSet, 'Iron'
 		);
 
-		const result = buildLinkCandidates(
-			app,
-			world,
-			[factionField(['Faction'])],
-			emptyTemplateSet,
-			'Iron'
-		);
-
-		expect(result['faction']).toEqual(['Steel']);
+		expect(linkGroups['faction']).toEqual([
+			{ entityType: 'Faction', names: ['Steel'] },
+		]);
 	});
 });

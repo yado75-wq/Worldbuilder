@@ -1,6 +1,7 @@
 import { App, DropdownComponent, Modal, Setting, TextComponent } from 'obsidian';
 import { FieldDefinition, FormResult } from '../types';
 import { InputModal } from './InputModal';
+import type { LinkCandidateGroup } from '../commands/shared/EntityContent';
 import {
 	composeTimeframeValue,
 	decomposeTimeframeValue,
@@ -12,22 +13,23 @@ export interface EntityFormModalOptions {
 	title: string;
 	fields: FieldDefinition[];
 	prefill: Record<string, string>;
-	linkCandidates: Record<string, string[]>;
+	linkCandidateGroups: Record<string, LinkCandidateGroup[]>;
+	timeframeCandidates: Record<string, string[]>;
 	onSubmit: (result: FormResult) => void;
 	onCancel: () => void;
 	onCreateLink?: (field: FieldDefinition, name: string) => Promise<string | null>;
-	/** The world's configured `time_unit` (§4), shown as a fixed label next to each timeframe offset. Defaults to 'years' — irrelevant for a form with no `timeframe` fields. */
 	worldTimeUnit?: string;
-	/**
-	 * Per timeframe field key, which of its anchor candidates are
-	 * themselves points (start === end) — those get a single unsuffixed
-	 * dropdown entry instead of separate `Entity:start`/`Entity:end`
-	 * options, since both would resolve identically. Omitted entirely (or
-	 * a candidate simply absent from the list) falls back to always
-	 * showing both — the safe default when the caller hasn't determined
-	 * point-status for some reason.
-	 */
 	timeframePointCandidates?: Record<string, string[]>;
+}
+
+function singleLinkType(field: FieldDefinition): string | undefined {
+	if (field.linkTypes && field.linkTypes.length === 1) {
+		return field.linkTypes[0];
+	}
+	if (field.linkTypes && field.linkTypes.length > 1) {
+		return undefined;
+	}
+	return field.linkFolder?.trim() || undefined;
 }
 
 export class EntityFormModal extends Modal {
@@ -42,16 +44,14 @@ export class EntityFormModal extends Modal {
 
 	onOpen(): void {
 		const { contentEl, options } = this;
-		const { title, fields, prefill, linkCandidates } = options;
+		const { title, fields, prefill } = options;
 
 		this.titleEl.setText(title);
 
-		// Initialize values from prefill
 		for (const f of fields) {
 			this.values[f.key] = prefill[f.key] ?? '';
 		}
 
-		// Build a Setting for each field
 		for (const f of fields) {
 			const isRequired = f.display === 'title';
 			const name = f.label + (isRequired ? ' *' : '');
@@ -68,16 +68,21 @@ export class EntityFormModal extends Modal {
 					});
 
 			} else if (f.type === 'link') {
-				const candidates = linkCandidates[f.key] ?? [];
+				const groups = options.linkCandidateGroups[f.key] ?? [];
 				const current = this.values[f.key]?.replace(/^\[\[|\]\]$/g, '') ?? '';
 				new Setting(contentEl)
 					.setName(name)
-					.addDropdown(drop => this.buildAnchorDropdown(drop, f, candidates, current, link => {
+					.addDropdown(drop => this.buildLinkDropdown(drop, f, groups, current, link => {
 						this.values[f.key] = link;
 					}));
 
 			} else if (f.type === 'timeframe') {
-				this.buildTimeframeField(contentEl, f, name, linkCandidates[f.key] ?? []);
+				this.buildTimeframeField(
+					contentEl,
+					f,
+					name,
+					options.timeframeCandidates[f.key] ?? []
+				);
 
 			} else if (f.display === 'section') {
 				new Setting(contentEl)
@@ -103,14 +108,12 @@ export class EntityFormModal extends Modal {
 			}
 		}
 
-		// Error message for missing title
 		const errorEl = contentEl.createEl('p', {
 			text: 'Name is required.',
 			cls: 'wb-input-error',
 		});
 		errorEl.addClass('wb-hidden');
 
-		// Submit button
 		new Setting(contentEl)
 			.addButton(btn => btn
 				.setButtonText('Save')
@@ -118,7 +121,6 @@ export class EntityFormModal extends Modal {
 				.onClick(() => { this.submit(errorEl); })
 			);
 
-		// Enter to submit (not in textarea)
 		contentEl.addEventListener('keydown', (e: KeyboardEvent) => {
 			if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) {
 				this.submit(errorEl);
@@ -127,18 +129,18 @@ export class EntityFormModal extends Modal {
 	}
 
 	onClose(): void {
-		const { contentEl } = this;
-		contentEl.empty();
+		this.contentEl.empty();
 		if (!this.submitted) this.options.onCancel();
 	}
 
 	private async createLinkValue(field: FieldDefinition): Promise<string | null> {
 		if (!this.options.onCreateLink) return null;
+		const typeLabel = singleLinkType(field) ?? 'item';
 
 		return new Promise((resolve) => {
 			new InputModal(
 				this.app,
-				`Name for new ${field.linkTypes?.[0] ?? field.linkFolder ?? 'item'}`,
+				`Name for new ${typeLabel}`,
 				'New item',
 				'',
 				(value: string) => {
@@ -155,46 +157,64 @@ export class EntityFormModal extends Modal {
 	}
 
 	/**
-	 * A `[[Link]]`-picking dropdown with hot-create support — shared by
-	 * `link` fields and the `timeframe` widget's anchor picker (§1: "reuse
-	 * the exact mechanism link fields already have... not a new creation
-	 * path"). `current` is a bare entity name (no `[[ ]]`), `''` if none.
-	 * `onSelect` receives `''` (cleared) or a `[[Name]]` link.
+	 * Link field dropdown: type headers (disabled), items or "empty" placeholder,
+	 * hot-create only when the field has exactly one link type.
 	 */
-	private buildAnchorDropdown(
+	private buildLinkDropdown(
 		drop: DropdownComponent,
 		field: FieldDefinition,
-		candidates: string[],
+		groups: LinkCandidateGroup[],
 		current: string,
-		onSelect: (link: string) => void,
-		extraOption?: { value: string; label: string }
+		onSelect: (link: string) => void
 	): void {
 		const UNDEFINED = '— None / not yet defined —';
 		const CREATE_VALUE = '__create__';
-		const createLabel = `Create new ${field.linkTypes?.[0] ?? field.linkFolder ?? 'item'}…`;
+		const headerValue = (entityType: string): string => `__header__:${entityType}`;
+		const emptyValue = (entityType: string): string => `__empty__:${entityType}`;
+
+		const typeForCreate = singleLinkType(field);
+		const showHeaders = groups.length > 1;
 
 		drop.addOption(UNDEFINED, UNDEFINED);
-		if (extraOption) {
-			drop.addOption(extraOption.value, extraOption.label);
+
+		const selectableNames: string[] = [];
+		for (const group of groups) {
+			if (showHeaders) {
+				const hv = headerValue(group.entityType);
+				drop.addOption(hv, `— ${group.entityType} —`);
+				const headerOpt = Array.from(drop.selectEl.options).find(o => o.value === hv);
+				if (headerOpt) headerOpt.disabled = true;
+			}
+
+			if (group.names.length === 0) {
+				// Only meaningful for multi-type chains (placeholder for future per-type create)
+				if (showHeaders) {
+					const ev = emptyValue(group.entityType);
+					drop.addOption(ev, 'empty');
+					const emptyOpt = Array.from(drop.selectEl.options).find(o => o.value === ev);
+					if (emptyOpt) emptyOpt.disabled = true;
+				}
+			} else {
+				for (const n of group.names) {
+					drop.addOption(n, n);
+					selectableNames.push(n);
+				}
+			}
 		}
-		for (const c of candidates) {
-			drop.addOption(c, c);
+
+		if (this.options.onCreateLink && typeForCreate) {
+			drop.addOption(CREATE_VALUE, `Create new ${typeForCreate}…`);
 		}
-		// Hot-create needs somewhere to put the new file (createLinkedEntity,
-		// CreateEntityCommand.ts, requires field.linkFolder) — without one,
-		// "Create new…" would just silently no-op. `timeframe` anchors have
-		// no linkFolder by design (any entity in the world can be an
-		// anchor), so this naturally never offers create for them; you can
-		// still reference a not-yet-created entity by typing `[[Name]]`
-		// directly, and the resolution check (§6) reports it gracefully.
-		if (this.options.onCreateLink && field.linkFolder) {
-			drop.addOption(CREATE_VALUE, createLabel);
-		}
-		const initial = current === extraOption?.value ? current : (candidates.includes(current) ? current : UNDEFINED);
+
+		const initial = selectableNames.includes(current) ? current : UNDEFINED;
 		drop.setValue(initial);
 
 		drop.onChange(value => {
 			void (async () => {
+				if (value.startsWith('__header__:') || value.startsWith('__empty__:')) {
+					drop.setValue(initial);
+					return;
+				}
 				if (value === CREATE_VALUE) {
 					const created = await this.createLinkValue(field);
 					if (created) {
@@ -207,29 +227,44 @@ export class EntityFormModal extends Modal {
 					}
 					return;
 				}
-				if (extraOption && value === extraOption.value) {
-					onSelect(extraOption.value);
-					return;
-				}
 				onSelect(value === UNDEFINED ? '' : `[[${value}]]`);
 			})();
 		});
 	}
 
-	/**
-	 * The `timeframe` field widget (TIME_DESIGN.md §1, §2): a top-level
-	 * "Same as another entity" toggle switches between the two shapes §2
-	 * actually supports —
-	 *   - `inherit`: this entity's whole interval is copied from another
-	 *     entity's (a bare `[[Entity]]` value), or
-	 *   - `interval`: a Start row, a "point in time" checkbox (default
-	 *     checked), and an End row shown only when unchecked.
-	 * Self-contained — no generic cross-field conditional system
-	 * (explicitly out of scope, §10). Recomputes the single serialized
-	 * frontmatter value (§2) into `this.values[f.key]` on every change, via
-	 * the pure `composeTimeframeValue` — the internal §2 storage syntax
-	 * itself is never shown in the UI.
-	 */
+	/** Timeframe anchors only — flat list, no hot-create. */
+	private buildAnchorDropdown(
+		drop: DropdownComponent,
+		_field: FieldDefinition,
+		candidates: string[],
+		current: string,
+		onSelect: (link: string) => void,
+		extraOption?: { value: string; label: string }
+	): void {
+		const UNDEFINED = '— None / not yet defined —';
+
+		drop.addOption(UNDEFINED, UNDEFINED);
+		if (extraOption) {
+			drop.addOption(extraOption.value, extraOption.label);
+		}
+		for (const c of candidates) {
+			drop.addOption(c, c);
+		}
+
+		const initial = current === extraOption?.value
+			? current
+			: (candidates.includes(current) ? current : UNDEFINED);
+		drop.setValue(initial);
+
+		drop.onChange(value => {
+			if (extraOption && value === extraOption.value) {
+				onSelect(extraOption.value);
+				return;
+			}
+			onSelect(value === UNDEFINED ? '' : `[[${value}]]`);
+		});
+	}
+
 	private buildTimeframeField(
 		contentEl: HTMLElement,
 		field: FieldDefinition,
@@ -240,10 +275,6 @@ export class EntityFormModal extends Modal {
 		const worldUnit = this.options.worldTimeUnit ?? 'years';
 		const pointCandidates = new Set(this.options.timeframePointCandidates?.[field.key] ?? []);
 
-		// Both sides unbounded (§1: "should not be possible to create") —
-		// reconciled here too, not just prevented going forward, since
-		// already-existing data saved before this rule could still have it.
-		// Kept arbitrary but deterministic: Start's -∞ wins, End is cleared.
 		if (state.start.unbounded && state.end.unbounded) {
 			state.end.unbounded = false;
 		}
@@ -275,8 +306,6 @@ export class EntityFormModal extends Modal {
 		intervalBlock.toggleClass('wb-hidden', state.mode === 'inherit');
 		inheritBlock.toggleClass('wb-hidden', state.mode !== 'inherit');
 
-		// Inherit mode: a single anchor picker — the entity whose whole
-		// interval (both ends) this one copies (§2's bare [[Entity]] form).
 		const inheritCurrent = state.inheritLink.replace(/^\[\[|\]\]$/g, '');
 		new Setting(inheritBlock)
 			.setName('Entity')
@@ -285,13 +314,6 @@ export class EntityFormModal extends Modal {
 				recompute();
 			}));
 
-		// Interval mode. Start's dropdown offers -∞ only while NOT in point
-		// mode (a single point can never be unbounded, §1) AND only while
-		// End isn't already unbounded (both sides unbounded at once spans
-		// all of time and says nothing, §1) — since both of those
-		// availabilities change dynamically, each row is fully rebuilt
-		// (not just re-styled) whenever the other side's unbounded state
-		// changes, or the point-in-time checkbox toggles.
 		const startRow = intervalBlock.createDiv({ cls: 'wb-timeframe-row' });
 		const endRow = intervalBlock.createDiv({ cls: 'wb-timeframe-row' });
 
@@ -321,7 +343,7 @@ export class EntityFormModal extends Modal {
 				toggle.setValue(state.point);
 				toggle.onChange(value => {
 					state.point = value;
-					if (value) state.start.unbounded = false; // a single point can never be unbounded
+					if (value) state.start.unbounded = false;
 					endRow.toggleClass('wb-hidden', value);
 					renderStartRow();
 					renderEndRow();
@@ -332,23 +354,6 @@ export class EntityFormModal extends Modal {
 		recompute();
 	}
 
-	/**
-	 * One Start/End row: a plain integer offset and a single dropdown that
-	 * lists each candidate anchor twice — `Entity:start` and `Entity:end`
-	 * — rather than picking an anchor and then a separate "use anchor's
-	 * end" toggle. `Entity:start` behaves exactly like a plain anchor pick
-	 * always has (offset stays editable, defaults to 0 — §2's arithmetic
-	 * triplet form). `Entity:end` is §2's `boundary` form: an *exact*
-	 * reference to the anchor's end with no offset of its own in the data
-	 * model at all, so the offset input disables itself whenever it's
-	 * selected. `allowUnbounded` additionally offers ∞/-∞ (per
-	 * `unboundedSign`) as a third, mutually-exclusive kind of entry — never
-	 * combined with an anchor, matching that infinity carries neither an
-	 * anchor nor an offset in the data model. `onBecameUnbounded` fires
-	 * whenever this row's own unbounded state changes (either direction) —
-	 * the caller (buildTimeframeField) uses it to rebuild the *other* row,
-	 * since Start and End can never both be unbounded at once (§1).
-	 */
 	private buildTimepointRow(
 		rowEl: HTMLElement,
 		candidates: string[],
@@ -368,9 +373,8 @@ export class EntityFormModal extends Modal {
 		const UNDEFINED = '— None / not yet defined —';
 		const UNBOUNDED_VALUE = unboundedSign === 1 ? '__unbounded_end__' : '__unbounded_start__';
 		const UNBOUNDED_LABEL = unboundedSign === 1 ? '∞ (unbounded)' : '-∞ (unbounded)';
-		const boundaryKey = (name: string, which: 'start' | 'end'): string => `${name}::${which}`;
+		const boundaryKey = (n: string, which: 'start' | 'end'): string => `${n}::${which}`;
 
-		/** Only notifies the other row when this row's unbounded state actually flips, not on every keystroke/selection. */
 		const setUnbounded = (value: boolean): void => {
 			const changed = point.unbounded !== value;
 			point.unbounded = value;
@@ -391,7 +395,7 @@ export class EntityFormModal extends Modal {
 				text.inputEl.addClass('wb-timeframe-offset-input');
 				text.onChange(value => {
 					point.offset = value;
-					if (value.trim()) setUnbounded(false); // typing an offset cancels unbounded
+					if (value.trim()) setUnbounded(false);
 					onChange();
 				});
 			})
@@ -400,10 +404,6 @@ export class EntityFormModal extends Modal {
 				if (allowUnbounded) drop.addOption(UNBOUNDED_VALUE, UNBOUNDED_LABEL);
 				for (const c of candidates) {
 					if (pointCandidates.has(c)) {
-						// A point (start === end, §3) — Entity:start and
-						// Entity:end would always resolve identically, so
-						// only one plain entry is offered. Internally still
-						// keyed as 'start' — same code path either way.
 						drop.addOption(boundaryKey(c, 'start'), c);
 					} else {
 						drop.addOption(boundaryKey(c, 'start'), `${c}:start`);
@@ -441,9 +441,9 @@ export class EntityFormModal extends Modal {
 						return;
 					}
 					const sep = value.lastIndexOf('::');
-					const name = value.slice(0, sep);
+					const n = value.slice(0, sep);
 					const which = value.slice(sep + 2);
-					point.anchor = `[[${name}]]`;
+					point.anchor = `[[${n}]]`;
 					point.useAnchorEnd = which === 'end';
 					if (which === 'end') {
 						point.offset = '';
