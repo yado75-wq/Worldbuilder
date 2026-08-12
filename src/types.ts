@@ -81,10 +81,12 @@ export interface FieldDefinition {
 	type: FieldType;
 	display: DisplayType;
 	options?: string[];
+	/**  folder-oriented; prefer linkTypes. Still set to linkTypes[0] for one release. */
 	linkFolder?: string;
 	linkFallback?: string;
+	/** Entity type names for link:Type1>Type2>… */
+	linkTypes?: string[];
 }
-
 export type FieldType = 'text' | 'link' | 'select' | 'timeframe';
 export type DisplayType = 'title' | 'property' | 'section';
 

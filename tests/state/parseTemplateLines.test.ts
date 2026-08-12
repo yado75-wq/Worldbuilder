@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	parseFieldsWithIssues,
 	parseFolderRulesWithIssues,
-} from '../../src/state/parseTemplateLines';
+} from '../../src/state/ParseTemplateLines';
 import { formatValidationIssue } from '../../src/types';
 
 describe('parseFieldsWithIssues', () => {
@@ -37,6 +37,27 @@ describe('parseFieldsWithIssues', () => {
 		expect(fields).toHaveLength(1);
 		expect(fields[0]?.label).toBe('Name');
 		expect(issues.some(i => i.kind === 'duplicate-field-key' && i.line === 2)).toBe(true);
+	});
+
+	it('parses link:Type into linkTypes and linkFolder compat', () => {
+		const { fields, issues } = parseFieldsWithIssues(
+			'faction | Faction | optional | link:Faction | property\n',
+			'Character_Fields.md'
+		);
+		expect(issues).toHaveLength(0);
+		expect(fields[0]?.type).toBe('link');
+		expect(fields[0]?.linkTypes).toEqual(['Faction']);
+		expect(fields[0]?.linkFolder).toBe('Faction');
+	});
+
+	it('parses link:Type1>Type2 into linkTypes chain', () => {
+		const { fields } = parseFieldsWithIssues(
+			'gear | Gear | optional | link:Weapon>Armor | property\n',
+			'Character_Fields.md'
+		);
+		expect(fields[0]?.linkTypes).toEqual(['Weapon', 'Armor']);
+		expect(fields[0]?.linkFolder).toBe('Weapon');
+		expect(fields[0]?.linkFallback).toBe('Armor');
 	});
 });
 

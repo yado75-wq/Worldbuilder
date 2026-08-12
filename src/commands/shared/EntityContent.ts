@@ -17,13 +17,15 @@ export function buildLinkCandidates(
 
 	for (const f of fields) {
 		if (f.type === 'link') {
-			if (!f.linkFolder) continue;
+			const types = linkEntityTypes(f);
+			if (types.length === 0) continue;
 
-			candidates[f.key] = collectEntityBasenames(app, `${world.path}/${f.linkFolder}`, excludeBasename);
-
-			if (candidates[f.key]?.length === 0 && f.linkFallback) {
-				candidates[f.key] = collectEntityBasenames(app, `${world.path}/${f.linkFallback}`, excludeBasename);
+			// Same control flow as before: primary type, then fallback type if empty
+			let names = collectBasenamesByEntityType(app, world, types[0]!, excludeBasename);
+			if (names.length === 0 && types[1]) {
+				names = collectBasenamesByEntityType(app, world, types[1], excludeBasename);
 			}
+			candidates[f.key] = names;
 			continue;
 		}
 
@@ -35,17 +37,34 @@ export function buildLinkCandidates(
 	return candidates;
 }
 
-/** Real (non-generic, non-`_`-prefixed) entity files under `folderPath`, recursively, excluding `excludeBasename` if given. */
-function collectEntityBasenames(app: App, folderPath: string, excludeBasename?: string): string[] {
+function linkEntityTypes(field: FieldDefinition): string[] {
+	if (field.linkTypes && field.linkTypes.length > 0) {
+		return field.linkTypes;
+	}
+	const legacy = [field.linkFolder, field.linkFallback]
+		.map(s => s?.trim())
+		.filter((s): s is string => !!s);
+	return legacy;
+}
+
+/** Notes under the world tagged with this entity type (type name → tag). */
+function collectBasenamesByEntityType(
+	app: App,
+	world: WorldInfo,
+	entityType: string,
+	excludeBasename?: string
+): string[] {
+	const tag = entityType.toLowerCase();
 	return app.vault.getFiles()
 		.filter(file => {
-			if (!file.path.startsWith(folderPath + '/')) return false;
+			if (!file.path.startsWith(world.path + '/')) return false;
 			if (file.extension !== 'md') return false;
-			if (file.basename.startsWith('_')) return false; // _index, _dashboard, sub-dashboards
+			if (file.basename.startsWith('_')) return false;
 			if (file.basename === excludeBasename) return false;
-			const cache = app.metadataCache.getFileCache(file);
-			const tags = getAllTags(cache ?? {}) ?? [];
-			return !tags.includes('generic') && !tags.includes('#generic');
+
+			const rawTags = getAllTags(app.metadataCache.getFileCache(file) ?? {}) ?? [];
+			const normalized = rawTags.map(t => t.replace(/^#/, '').toLowerCase());
+			return normalized.includes(tag);
 		})
 		.map(file => file.basename);
 }

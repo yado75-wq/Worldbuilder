@@ -9,6 +9,7 @@ import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
 import { extractPreservedSection } from '../util/PreservedSection';
 import { buildFieldValues } from './shared/EntityPrefill';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
+import { createLinkedEntity } from './shared/CreateLinkedEntity';
 
 export async function editEntity(
 	app: App,
@@ -71,15 +72,25 @@ export async function editEntity(
 	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
 		let submitted = false;
 		const modal = new EntityFormModal(app, {
-			title: `Edit ${entityType}: ${file.basename}`,
-			fields,
-			prefill,
-			linkCandidates,
-			worldTimeUnit,
-			timeframePointCandidates,
-			onSubmit: (r) => { submitted = true; resolve(r); },
-			onCancel: () => { if (!submitted) resolve(null); },
-		});
+					title: `Edit ${entityType}: ${file.basename}`,
+					fields,
+					prefill,
+					linkCandidates,
+					worldTimeUnit,
+					timeframePointCandidates,
+					onSubmit: (r) => { submitted = true; resolve(r); },
+					onCancel: () => { if (!submitted) resolve(null); },
+					onCreateLink: async (field, name) =>
+						createLinkedEntity(
+							app,
+							state,
+							world,
+							templateSet,
+							file.parent?.path ?? world.path,
+							field,
+							name
+						),
+				});
 		modal.open();
 	});
 

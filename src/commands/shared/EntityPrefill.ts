@@ -1,7 +1,7 @@
 import { App, TFile } from 'obsidian';
 import { FieldDefinition } from '../../types';
 import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
-import { extractSectionContent } from '../../util/sectionContent';
+import { extractSectionContent } from '../../util/SectionContent';
 
 /**
  * Reads an existing entity file's current field values back out, keyed by

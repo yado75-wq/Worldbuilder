@@ -138,7 +138,7 @@ export class EntityFormModal extends Modal {
 		return new Promise((resolve) => {
 			new InputModal(
 				this.app,
-				`Name for new ${field.linkFolder ?? 'item'}`,
+				`Name for new ${field.linkTypes?.[0] ?? field.linkFolder ?? 'item'}`,
 				'New item',
 				'',
 				(value: string) => {
@@ -171,7 +171,7 @@ export class EntityFormModal extends Modal {
 	): void {
 		const UNDEFINED = '— None / not yet defined —';
 		const CREATE_VALUE = '__create__';
-		const createLabel = `Create new ${field.linkFolder ?? 'item'}…`;
+		const createLabel = `Create new ${field.linkTypes?.[0] ?? field.linkFolder ?? 'item'}…`;
 
 		drop.addOption(UNDEFINED, UNDEFINED);
 		if (extraOption) {

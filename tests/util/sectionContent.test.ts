@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeRegExp, extractSectionContent } from '../../src/util/sectionContent';
+import { escapeRegExp, extractSectionContent } from '../../src/util/SectionContent';
 
 describe('escapeRegExp', () => {
 	it('escapes regex metacharacters', () => {

@@ -8,7 +8,7 @@ import {
 import {
 	parseFieldsWithIssues,
 	parseFolderRulesWithIssues,
-} from './parseTemplateLines';
+} from './ParseTemplateLines';
 
 // ── Required files in every template set ─────────────────────────────────────
 

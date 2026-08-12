@@ -1,5 +1,5 @@
 import { FieldDefinition } from '../../types';
-import { extractSectionContent } from '../../util/sectionContent';
+import { extractSectionContent } from '../../util/SectionContent';
 
 /**
  * Returns the labels of mandatory (non-title) fields that are empty for an

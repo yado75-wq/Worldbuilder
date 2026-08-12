@@ -41,9 +41,8 @@ function buildFieldDefinition(
 
 	if (typeRaw.startsWith('link:')) {
 		const spec = typeRaw.slice(5);
-		const parts = spec.split('>').map(s => s.trim()).filter(Boolean);
-		const primary = parts[0];
-		if (!primary) {
+		const linkTypes = spec.split('>').map(s => s.trim()).filter(Boolean);
+		if (linkTypes.length === 0) {
 			return { key, label, mandatory, display, type: 'text' };
 		}
 		return {
@@ -52,8 +51,10 @@ function buildFieldDefinition(
 			mandatory,
 			display,
 			type: 'link',
-			linkFolder: primary,
-			linkFallback: parts[1],
+			linkTypes,
+			// Compat for UI/hot-create that still reads linkFolder
+			linkFolder: linkTypes[0],
+			linkFallback: linkTypes[1],
 		};
 	}
 

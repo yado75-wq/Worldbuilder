@@ -1,0 +1,172 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { App, TFile } from 'obsidian';
+import {
+	FakeVault,
+	FakeNoticeLog,
+	resetFakeObsidian,
+	asTFile,
+	asTFolder,
+} from '../../fakes/obsidian';
+import { createLinkedEntity } from '../../../src/commands/shared/CreateLinkedEntity';
+import { FieldDefinition, PluginState, TemplateSetInfo, WorldInfo } from '../../../src/types';
+
+vi.mock('../../../src/commands/RefreshDashboardCommand', () => ({
+	refreshDashboard: vi.fn(async () => {}),
+}));
+
+const WORLD = 'TestWorld';
+const CHAR_FOLDER = `${WORLD}/Characters`;
+
+function linkField(entityType: string): FieldDefinition {
+	return {
+		key: 'faction',
+		label: 'Faction',
+		mandatory: false,
+		type: 'link',
+		display: 'property',
+		linkTypes: [entityType],
+		linkFolder: entityType,
+	};
+}
+
+function buildState(
+	app: App,
+	folderRules: TemplateSetInfo['folderRules'],
+	fieldSets: TemplateSetInfo['fieldSets'] = {}
+): { state: PluginState; world: WorldInfo; templateSet: TemplateSetInfo } {
+	const vault = app.vault as unknown as FakeVault;
+	const indexFile = asTFile(
+		vault.seedFile(`${WORLD}/_index.md`, '---\ntags:\n  - world\n---\n')
+	);
+	vault.seedFolder(CHAR_FOLDER);
+
+	const templateSet: TemplateSetInfo = {
+		name: 'defaults',
+		path: '_system/templates/defaults',
+		isValid: true,
+		issues: [],
+		folderRules,
+		worldTemplate: [],
+		fieldSets,
+	};
+
+	const world: WorldInfo = {
+		name: 'TestWorld',
+		path: WORLD,
+		folder: asTFolder(app.vault.getAbstractFileByPath(WORLD)!),
+		indexFile,
+		status: 'active',
+		templateSet: 'defaults',
+		folderRules,
+		worldTemplate: [],
+	};
+
+	return {
+		state: { activeWorld: world, worlds: [world], templateSets: [templateSet] },
+		world,
+		templateSet,
+	};
+}
+
+describe('createLinkedEntity', () => {
+	let app: App;
+
+	beforeEach(() => {
+		app = new App();
+		resetFakeObsidian();
+	});
+
+	it('places the file under the concrete folder rule for the type', async () => {
+		const { state, world, templateSet } = buildState(app, [
+			{ entityType: 'Faction', targetFolder: 'Factions' },
+		]);
+
+		const link = await createLinkedEntity(
+			app,
+			state,
+			world,
+			templateSet,
+			CHAR_FOLDER,
+			linkField('Faction'),
+			'Iron League'
+		);
+
+		expect(link).toBe('[[Iron League]]');
+		const path = `${WORLD}/Factions/Iron League.md`;
+		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
+		expect(FakeNoticeLog.some(m => m.includes('Faction') && m.includes('created'))).toBe(true);
+	});
+
+	it('places the file in the current entity folder when the type has no concrete rule', async () => {
+		const { state, world, templateSet } = buildState(app, [
+			{ entityType: 'Faction', targetFolder: '*' },
+		]);
+
+		await createLinkedEntity(
+			app,
+			state,
+			world,
+			templateSet,
+			CHAR_FOLDER,
+			linkField('Faction'),
+			'Solo'
+		);
+
+		expect(app.vault.getAbstractFileByPath(`${CHAR_FOLDER}/Solo.md`)).toBeInstanceOf(TFile);
+	});
+
+	it('places the file in the current entity folder when the type is unlisted', async () => {
+		const { state, world, templateSet } = buildState(app, []);
+
+		await createLinkedEntity(
+			app,
+			state,
+			world,
+			templateSet,
+			CHAR_FOLDER,
+			linkField('Faction'),
+			'Unlisted'
+		);
+
+		expect(app.vault.getAbstractFileByPath(`${CHAR_FOLDER}/Unlisted.md`)).toBeInstanceOf(TFile);
+	});
+
+	it('does not overwrite an existing file', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		const { state, world, templateSet } = buildState(app, [
+			{ entityType: 'Faction', targetFolder: 'Factions' },
+		]);
+		vault.seedFile(`${WORLD}/Factions/Iron.md`, 'ORIGINAL\n');
+
+		const link = await createLinkedEntity(
+			app,
+			state,
+			world,
+			templateSet,
+			CHAR_FOLDER,
+			linkField('Faction'),
+			'Iron'
+		);
+
+		expect(link).toBeNull();
+		expect(vault.contentAt(`${WORLD}/Factions/Iron.md`)).toContain('ORIGINAL');
+		expect(FakeNoticeLog.some(m => m.includes('already exists'))).toBe(true);
+	});
+
+	it('returns null when the field has no link type', async () => {
+		const { state, world, templateSet } = buildState(app, []);
+		const field: FieldDefinition = {
+			key: 'x',
+			label: 'X',
+			mandatory: false,
+			type: 'link',
+			display: 'property',
+		};
+
+		const link = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, field, 'Nope'
+		);
+
+		expect(link).toBeNull();
+	});
+});
