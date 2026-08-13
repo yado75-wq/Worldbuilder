@@ -59,6 +59,56 @@ describe('parseFieldsWithIssues', () => {
 		expect(fields[0]?.linkFolder).toBe('Weapon');
 		expect(fields[0]?.linkFallback).toBe('Armor');
 	});
+
+		it('parses select with quoted options', () => {
+		const { fields, issues } = parseFieldsWithIssues(
+			'element | Element | optional | select:"Fire","Ice","Storm" | property\n',
+			'Character_Fields.md'
+		);
+		expect(issues).toHaveLength(0);
+		expect(fields[0]?.type).toBe('select');
+		expect(fields[0]?.options).toEqual(['Fire', 'Ice', 'Storm']);
+	});
+
+	it('warns when select options are not quoted', () => {
+		const { fields, issues } = parseFieldsWithIssues(
+			'element | Element | optional | select:Fire,Ice | property\n',
+			'Character_Fields.md'
+		);
+		expect(fields[0]?.type).toBe('select');
+		expect(fields[0]?.options).toEqual([]);
+		expect(issues.some(i => i.message.includes('quoted list'))).toBe(true);
+	});
+
+	it('parses multiselect:text with quoted options', () => {
+		const { fields, issues } = parseFieldsWithIssues(
+			'traits | Traits | optional | multiselect:text:"Brave","Cunning" | property\n',
+			'Character_Fields.md'
+		);
+		expect(issues).toHaveLength(0);
+		expect(fields[0]?.type).toBe('multiselect');
+		expect(fields[0]?.multiKind).toBe('text');
+		expect(fields[0]?.options).toEqual(['Brave', 'Cunning']);
+	});
+
+	it('parses multiselect:link type chain', () => {
+		const { fields, issues } = parseFieldsWithIssues(
+			'gear | Gear | optional | multiselect:link:Weapon>Armor | property\n',
+			'Character_Fields.md'
+		);
+		expect(issues).toHaveLength(0);
+		expect(fields[0]?.type).toBe('multiselect');
+		expect(fields[0]?.multiKind).toBe('link');
+		expect(fields[0]?.linkTypes).toEqual(['Weapon', 'Armor']);
+	});
+
+	it('warns on multiselect:timeframe', () => {
+		const { issues } = parseFieldsWithIssues(
+			't | T | optional | multiselect:timeframe:Foo | property\n',
+			'X_Fields.md'
+		);
+		expect(issues.some(i => i.message.includes('timeframe'))).toBe(true);
+	});
 });
 
 describe('parseFolderRulesWithIssues', () => {

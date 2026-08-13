@@ -86,8 +86,10 @@ export interface FieldDefinition {
 	linkFallback?: string;
 	/** Entity type names for link:Type1>Type2>… */
 	linkTypes?: string[];
+	/** For type === 'multiselect': fixed strings vs entity links. */
+	multiKind?: 'text' | 'link';
 }
-export type FieldType = 'text' | 'link' | 'select' | 'timeframe';
+export type FieldType = 'text' | 'link' | 'select' | 'timeframe' | 'multiselect';
 export type DisplayType = 'title' | 'property' | 'section';
 
 // ── Folder Rules ──────────────────────────────────────────────────────────────

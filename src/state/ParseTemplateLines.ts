@@ -19,6 +19,30 @@ function isDisplayType(value: string | undefined): value is DisplayType {
 	return value === 'title' || value === 'property' || value === 'section';
 }
 
+/**
+ * Parse "Fire","Ice","Storm" (optional spaces). Returns null if not a valid quoted list.
+ */
+function parseQuotedStringList(raw: string): string[] | null {
+	const s = raw.trim();
+	if (!s) return [];
+	const options: string[] = [];
+	const re = /"((?:\\.|[^"\\])*)"/g;
+	let match: RegExpExecArray | null;
+	let lastEnd = 0;
+	while ((match = re.exec(s)) !== null) {
+		const between = s.slice(lastEnd, match.index).trim();
+		if (between !== '' && between !== ',') {
+			return null;
+		}
+		options.push((match[1] ?? '').replace(/\\"/g, '"'));
+		lastEnd = match.index + match[0].length;
+	}
+	if (options.length === 0) return null;
+	const tail = s.slice(lastEnd).trim();
+	if (tail !== '' && tail !== ',') return null;
+	return options;
+}
+
 function buildFieldDefinition(
 	key: string,
 	label: string,
@@ -27,21 +51,70 @@ function buildFieldDefinition(
 	display: DisplayType
 ): FieldDefinition {
 	const mandatory = mode.toLowerCase() === 'mandatory';
+	const trimmed = typeRaw.trim();
 
-	if (typeRaw.startsWith('select:')) {
+	if (trimmed.toLowerCase().startsWith('select:')) {
+		const payload = trimmed.slice(trimmed.indexOf(':') + 1);
+		const options = parseQuotedStringList(payload);
 		return {
 			key,
 			label,
 			mandatory,
 			display,
 			type: 'select',
-			options: typeRaw.slice(7).split(',').map(s => s.trim()).filter(Boolean),
+			options: options ?? [],
 		};
 	}
 
-	if (typeRaw.startsWith('link:')) {
-		const spec = typeRaw.slice(5);
-		const linkTypes = spec.split('>').map(s => s.trim()).filter(Boolean);
+	if (trimmed.toLowerCase().startsWith('multiselect:')) {
+		const after = trimmed.slice(trimmed.indexOf(':') + 1);
+		const kindSep = after.indexOf(':');
+		const kind = (kindSep === -1 ? after : after.slice(0, kindSep)).trim().toLowerCase();
+		const payload = kindSep === -1 ? '' : after.slice(kindSep + 1).trim();
+
+		if (kind === 'text') {
+			const options = parseQuotedStringList(payload);
+			return {
+				key,
+				label,
+				mandatory,
+				display,
+				type: 'multiselect',
+				multiKind: 'text',
+				options: options ?? [],
+			};
+		}
+
+		if (kind === 'link') {
+			const linkTypes = payload.split('>').map(p => p.trim()).filter(Boolean);
+			return {
+				key,
+				label,
+				mandatory,
+				display,
+				type: 'multiselect',
+				multiKind: 'link',
+				linkTypes,
+				linkFolder: linkTypes[0],
+				linkFallback: linkTypes[1],
+			};
+		}
+
+		// Unknown / timeframe / etc. — still emit a multiselect shell; issues added in vocabulary
+		return {
+			key,
+			label,
+			mandatory,
+			display,
+			type: 'multiselect',
+			multiKind: 'text',
+			options: [],
+		};
+	}
+
+	if (trimmed.toLowerCase().startsWith('link:')) {
+		const spec = trimmed.slice(trimmed.indexOf(':') + 1);
+		const linkTypes = spec.split('>').map(p => p.trim()).filter(Boolean);
 		if (linkTypes.length === 0) {
 			return { key, label, mandatory, display, type: 'text' };
 		}
@@ -52,15 +125,16 @@ function buildFieldDefinition(
 			display,
 			type: 'link',
 			linkTypes,
-			// Compat for UI/hot-create that still reads linkFolder
 			linkFolder: linkTypes[0],
 			linkFallback: linkTypes[1],
 		};
 	}
 
-	if (typeRaw === 'timeframe' || typeRaw.startsWith('timeframe:')) {
-		const spec = typeRaw.startsWith('timeframe:') ? typeRaw.slice(10) : '';
-		const parts = spec.split('>').map(s => s.trim()).filter(Boolean);
+	if (trimmed === 'timeframe' || trimmed.toLowerCase().startsWith('timeframe:')) {
+		const spec = trimmed.toLowerCase().startsWith('timeframe:')
+			? trimmed.slice(trimmed.indexOf(':') + 1)
+			: '';
+		const parts = spec.split('>').map(p => p.trim()).filter(Boolean);
 		const primary = parts[0];
 		const fallback = parts[1];
 		return {
@@ -131,7 +205,117 @@ export function parseFieldsWithIssues(raw: string, fileName: string): ParseField
 
 const MODES = new Set(['mandatory', 'optional']);
 const DISPLAYS = new Set(['title', 'property', 'section']);
-const TYPE_BASES = new Set(['text', 'number', 'select', 'link', 'timeframe']);
+const TYPE_BASES = new Set(['text', 'number', 'select', 'link', 'timeframe', 'multiselect']);
+
+function vocabularyIssues(
+	fileName: string,
+	lineNo: number,
+	mode: string,
+	typeRaw: string,
+	displayRaw: string | undefined
+): ValidationIssue[] {
+	const issues: ValidationIssue[] = [];
+	const trimmed = typeRaw.trim();
+
+	if (!MODES.has(mode.toLowerCase())) {
+		issues.push({
+			severity: 'warning',
+			kind: 'malformed-line',
+			file: fileName,
+			line: lineNo,
+			message: `Unknown mode "${mode}" (use mandatory or optional).`,
+		});
+	}
+
+	const base = typeBase(trimmed);
+	if (!TYPE_BASES.has(base)) {
+		issues.push({
+			severity: 'warning',
+			kind: 'malformed-line',
+			file: fileName,
+			line: lineNo,
+			message: `Unknown type "${typeRaw}" (use text, number, select:…, link:…, multiselect:…, timeframe).`,
+		});
+	}
+
+	if (displayRaw && displayRaw.trim() && !DISPLAYS.has(displayRaw.toLowerCase())) {
+		issues.push({
+			severity: 'warning',
+			kind: 'malformed-line',
+			file: fileName,
+			line: lineNo,
+			message: `Unknown display "${displayRaw}" (use title, property, section).`,
+		});
+	}
+
+	if (base === 'select') {
+		const payload = trimmed.slice(trimmed.indexOf(':') + 1);
+		if (parseQuotedStringList(payload) === null) {
+			issues.push({
+				severity: 'warning',
+				kind: 'malformed-line',
+				file: fileName,
+				line: lineNo,
+				message: 'select: options must be a quoted list, e.g. select:"Fire","Ice".',
+			});
+		}
+	}
+
+	if (base === 'multiselect') {
+		const after = trimmed.slice(trimmed.indexOf(':') + 1);
+		const kindSep = after.indexOf(':');
+		const kind = (kindSep === -1 ? after : after.slice(0, kindSep)).trim().toLowerCase();
+		const payload = kindSep === -1 ? '' : after.slice(kindSep + 1).trim();
+
+		if (kind === 'timeframe' || kind.startsWith('timeframe')) {
+			issues.push({
+				severity: 'warning',
+				kind: 'malformed-line',
+				file: fileName,
+				line: lineNo,
+				message: 'multiselect does not support timeframe (use a single timeframe field).',
+			});
+		} else if (kind === 'text') {
+			if (parseQuotedStringList(payload) === null) {
+				issues.push({
+					severity: 'warning',
+					kind: 'malformed-line',
+					file: fileName,
+					line: lineNo,
+					message: 'multiselect:text: options must be a quoted list, e.g. multiselect:text:"A","B".',
+				});
+			}
+		} else if (kind === 'link') {
+			if (!payload.split('>').map(p => p.trim()).filter(Boolean).length) {
+				issues.push({
+					severity: 'warning',
+					kind: 'malformed-line',
+					file: fileName,
+					line: lineNo,
+					message: 'multiselect:link: needs a type chain, e.g. multiselect:link:Weapon>Armor.',
+				});
+			}
+		} else if (kind !== '') {
+			issues.push({
+				severity: 'warning',
+				kind: 'malformed-line',
+				file: fileName,
+				line: lineNo,
+				message: `Unknown multiselect kind "${kind}" (use text or link).`,
+			});
+		} else {
+			issues.push({
+				severity: 'warning',
+				kind: 'malformed-line',
+				file: fileName,
+				line: lineNo,
+				message: 'multiselect requires a kind: multiselect:text:… or multiselect:link:….',
+			});
+		}
+	}
+
+	return issues;
+}
 
 /**
  * Parse folder-rules.md. Malformed lines and duplicate entityType / targetFolder (non-*) → warnings.
@@ -202,46 +386,3 @@ function typeBase(typeRaw: string): string {
 	return colon === -1 ? t : t.slice(0, colon);
 }
 
-/** Vocabulary checks for one field line. Does not decide whether to keep the field. */
-function vocabularyIssues(
-	fileName: string,
-	lineNo: number,
-	mode: string,
-	typeRaw: string,
-	displayRaw: string | undefined
-): ValidationIssue[] {
-	const issues: ValidationIssue[] = [];
-
-	if (!MODES.has(mode.toLowerCase())) {
-		issues.push({
-			severity: 'warning',
-			kind: 'malformed-line',
-			file: fileName,
-			line: lineNo,
-			message: `Unknown mode "${mode}" (use mandatory or optional).`,
-		});
-	}
-
-	const base = typeBase(typeRaw);
-	if (!TYPE_BASES.has(base)) {
-		issues.push({
-			severity: 'warning',
-			kind: 'malformed-line',
-			file: fileName,
-			line: lineNo,
-			message: `Unknown type "${typeRaw}" (use text, number, select:…, link:…, timeframe).`,
-		});
-	}
-
-	if (displayRaw && displayRaw.trim() && !DISPLAYS.has(displayRaw.toLowerCase())) {
-		issues.push({
-			severity: 'warning',
-			kind: 'malformed-line',
-			file: fileName,
-			line: lineNo,
-			message: `Unknown display "${displayRaw}" (use title, property, section).`,
-		});
-	}
-
-	return issues;
-}
