@@ -13,6 +13,7 @@ A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate 
 - **File sync** — move misplaced entity files to their correct folders based on their tags
 - **Context-aware menus** — right-click commands appear only where they make sense
 - **Ribbon icon** — hover to see the active world at a glance, click for a quick status menu and a shortcut into plugin settings
+- **Multi-value fields** — optional `multiselect` types for fixed strings or multiple entity links (picker modal)
 
 ## How it works
 
@@ -41,8 +42,27 @@ Each `_Fields.md` file defines one field per line:
 
 | Column | Values |
 | ------ | ------ |
-| `type` | `text` \| `link:FolderName` \| `link:Primary>Fallback` \| `select:A,B,C` |
+| `type` | `See Field types below` |
 | `display` | `title` \| `property` \| `section` |
+
+#### Field Types
+
+| Type | Example | Behaviour |
+| ---- | ------- | --------- |
+| text | text | Free text |
+| select | select:"Active","Inactive" | Single choice; options must be quoted |
+| link | link:Faction | Link to one entity of that type |
+| link (chain) | link:Weapon>Armor | Candidates from each type in order (grouped in the UI) |
+| multiselect:text | multiselect:text:"Fire","Ice","Storm" | Several fixed strings; empty list allowed |
+| multiselect:link | multiselect:link:Weapon>Armor | Several entity links via picker modal; order follows the candidate list; no hot-create |
+| timeframe | timeframe | Interval / point / inherit; not valid inside multiselect |
+
+Notes:
+
+- Links and multiselect:link target entity types, not folder names (folder placement still comes from folder-rules.md).
+- Hot-create is available only for single link: fields with exactly one type.
+- Multiselect values are stored as a YAML list in frontmatter and shown as nested bullets under the property in the note body.
+- Invalid or unknown type tokens are reported in Settings → template issues (file, line, message).
 
 ### Folder rules format
 
@@ -50,7 +70,9 @@ Each `_Fields.md` file defines one field per line:
 - EntityType | TargetFolder
 ```
 
-Use `*` as target folder to allow placement anywhere (e.g. `Generic | *`).
+Use `*` as target folder to allow placement anywhere (e.g. Generic | *).
+Entity types not listed in folder rules are treated as `*` (creatable anywhere).
+Worlds or folders whose names start with _ are ignored by the plugin (archive / system).
 
 ## Right-click commands
 
@@ -63,12 +85,14 @@ Use `*` as target folder to allow placement anywhere (e.g. `Generic | *`).
 | Entity file | Edit `<entity type>` |
 | `_index.md` | Edit world meta, Refresh dashboard |
 
+Menus stay honest: entity types only appear when their field set is usable (non-empty, has a title field).
+
 ## Installation
 
 ### Manual install
 
 1. Download the latest `worldbuilder.zip` from the GitHub release page
-2. Extract it into your vault at `.obsidian/plugins/WorldBuilder/`
+2. Extract it into your vault at `.obsidian/plugins/world-builder-tools/`
 3. Ensure the plugin folder contains `main.js`, `manifest.json`, `styles.css` (if present), and the `defaults/` directory
 4. Enable the plugin in Obsidian settings → Community plugins
 
@@ -117,5 +141,5 @@ there's exactly one place this ever needs updating.
 
 ## Requirements
 
-- Obsidian v1.6.6 or later
+- Obsidian v1.13.0 or later (check 'manifest.json' for the exact minimum)
 - Desktop only (Windows, macOS, Linux)
