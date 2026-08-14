@@ -1,5 +1,15 @@
 import { FieldDefinition } from '../../types';
 import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
+import {
+	formatMultiselectFrontmatterLine,
+	formatMultiselectPropertyBullet,
+} from './MultiselectValues';
+
+function hasFieldValue(value: string | string[] | null | undefined): boolean {
+	if (value == null) return false;
+	if (Array.isArray(value)) return value.length > 0;
+	return value.trim().length > 0;
+}
 
 // Pure string builders — no Obsidian API dependency. Deliberately split out
 // of EntityContent.ts (which also has buildLinkCandidates, needing `app`)
@@ -33,7 +43,7 @@ export interface TimeframeResolution {
 
 export function buildEntityContent(
 	fields: FieldDefinition[],
-	data: Record<string, string | null>,
+	data: Record<string, string | string[] | null>,
 	entityType: string,
 	title: string,
 	preservedSection: string,
@@ -41,23 +51,43 @@ export function buildEntityContent(
 ): string {
 	const tag = entityType.toLowerCase();
 
-	const frontmatterProps = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `${f.key}: "${data[f.key] ?? ''}"`)
-		.join('\n');
+	const frontmatterPropChunks: string[] = [];
+	for (const f of fields) {
+		if (f.display !== 'property') continue;
+		const raw = data[f.key];
+		if (!hasFieldValue(raw)) continue;
+
+		if (f.type === 'multiselect' && Array.isArray(raw)) {
+			const block = formatMultiselectFrontmatterLine(f.key, raw);
+			if (block) frontmatterPropChunks.push(block);
+		} else {
+			frontmatterPropChunks.push(`${f.key}: "${String(raw ?? '').replace(/"/g, '\\"')}"`);
+		}
+	}
+	const frontmatterProps = frontmatterPropChunks.join('\n');
 
 	// A `timeframe` field's raw value is excluded here — its generated
 	// section below (§8) is what makes it referenceable, and repeating the
 	// raw stored expression in this plain bullet list too would just
 	// duplicate that, not add anything.
 	const propertiesBlock = fields
-		.filter(f => f.display === 'property' && f.type !== 'timeframe' && data[f.key])
-		.map(f => `- **${f.label}:** ${data[f.key] ?? ''}`)
+		.filter(f => f.display === 'property' && f.type !== 'timeframe' && hasFieldValue(data[f.key]))
+		.map(f => {
+			const raw = data[f.key];
+			if (f.type === 'multiselect' && Array.isArray(raw)) {
+				return formatMultiselectPropertyBullet(f.label, raw);
+			}
+			return `- **${f.label}:** ${typeof raw === 'string' ? raw : ''}`;
+		})
 		.join('\n');
 
 	const sectionsBlock = fields
-		.filter(f => f.display === 'section' && data[f.key])
-		.map(f => `## ${f.label}\n${data[f.key] ?? ''}`)
+		.filter(f => f.display === 'section' && hasFieldValue(data[f.key]) && !Array.isArray(data[f.key]))
+		.map(f => {
+			const raw = data[f.key];
+			const text = typeof raw === 'string' ? raw : '';
+			return `## ${f.label}\n${text}`;
+		})
 		.join('\n\n');
 
 	// §8: a `timeframe` field's section is generated unconditionally,
@@ -68,7 +98,11 @@ export function buildEntityContent(
 	// linkable via its own generated section the moment it exists.
 	const timeframeSectionsBlock = fields
 		.filter(f => f.type === 'timeframe')
-		.map(f => buildTimeframeSection(f, data[f.key], timeframeResolutions?.[f.key]))
+		.map(f => {
+			const raw = data[f.key];
+			const text = typeof raw === 'string' ? raw : null;
+			return buildTimeframeSection(f, text, timeframeResolutions?.[f.key]);
+		})
 		.join('\n\n');
 
 	// Only chunks that actually have content contribute a blank-line

@@ -30,7 +30,7 @@ import { TimeframeResolution } from './EntityContentBuilder';
  */
 export function resolveTimeframeFieldsForDisplay(
 	fields: FieldDefinition[],
-	data: Record<string, string | null>,
+	data: Record<string, string | string[] | null>,
 	lookup: TimeframeLookup,
 	worldTimeUnit: string,
 	selfRef: string
@@ -41,7 +41,8 @@ export function resolveTimeframeFieldsForDisplay(
 		if (f.type !== 'timeframe') continue;
 
 		const raw = data[f.key];
-		if (!raw) continue;
+		// Multiselect (and other non-string) values are never timeframe expressions
+		if (typeof raw !== 'string' || !raw.trim()) continue;
 
 		const selfLookup: TimeframeLookup = ref => (ref === selfRef ? raw : lookup(ref));
 

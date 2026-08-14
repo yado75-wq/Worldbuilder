@@ -2,6 +2,7 @@ import { App, TFile } from 'obsidian';
 import { FieldDefinition } from '../../types';
 import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
 import { extractSectionContent } from '../../util/SectionContent';
+import { parseStoredMultiselect } from './MultiselectValues';
 
 /**
  * Reads an existing entity file's current field values back out, keyed by
@@ -27,6 +28,12 @@ export async function buildFieldValues(
 	for (const f of fields) {
 		if (f.display === 'section') {
 			values[f.key] = extractSectionContent(generatedContent, f.label);
+		} else if (f.type === 'multiselect') {
+			const list = parseStoredMultiselect(frontmatter?.[f.key]);
+			// Form keeps multiselect as JSON in a string prefill slot only if modal expects string —
+			// we pass parallel: keep Record<string, string> by JSON.stringify for modal init,
+			// OR change prefill type. Prefer JSON in string for minimal modal prefill typing:
+			values[f.key] = JSON.stringify(list);
 		} else if (f.type === 'link') {
 			// Strip [[ ]] for display in dropdown
 			const val: unknown = frontmatter?.[f.key];

@@ -150,4 +150,21 @@ describe('buildEntityContent — timeframe fields (§8)', () => {
 		);
 		expect(content).not.toMatch(/\n\n\n/);
 	});
+
+	it('writes multiselect as a yaml list in frontmatter and bullets', () => {
+		const gear: FieldDefinition = {
+			key: 'gear', label: 'Gear', mandatory: false,
+			type: 'multiselect', multiKind: 'link', display: 'property',
+			linkTypes: ['Weapon'],
+		};
+		const content = buildEntityContent(
+			[nameField, gear],
+			{ name: 'Hero', gear: ['[[Axe]]', '[[Mail]]'] },
+			'Character',
+			'Hero',
+			''
+		);
+		expect(content).toContain('gear:\n  - "[[Axe]]"\n  - "[[Mail]]"');
+		expect(content).toContain('- **Gear:**\n  - [[Axe]]\n  - [[Mail]]');
+	});
 });

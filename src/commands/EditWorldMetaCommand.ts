@@ -1,10 +1,14 @@
 import { App, Notice, TFile } from 'obsidian';
-import { PluginState, WorldInfo, FieldDefinition } from '../types';
+import { PluginState, WorldInfo, FieldDefinition, FormResult } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { buildFieldCandidates } from './shared/EntityContent';
 import { worldFolderName } from './shared/WorldIndex';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
+import {
+	formatMultiselectFrontmatterLine,
+	formatMultiselectPropertyBullet,
+} from './shared/MultiselectValues';
 
 export async function editWorldMeta(
 	app: App,
@@ -36,7 +40,6 @@ export async function editWorldMeta(
 		return;
 	}
 
-	// Include title (name) — prefilled from folder name; saving may rename the folder
 	const fields = allFields;
 	const titleField = fields.find(f => f.display === 'title');
 	if (!titleField) {
@@ -46,12 +49,12 @@ export async function editWorldMeta(
 
 	const folderName = worldFolderName(world);
 	const prefill = await buildPrefill(app, world, fields, folderName);
-	
+
 	const { linkGroups, timeframeAnchors } = buildFieldCandidates(
 		app, world, fields, templateSet
 	);
 
-	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
+	const result = await new Promise<FormResult | null>((resolve) => {
 		let submitted = false;
 		const modal = new EntityFormModal(app, {
 			title: `Edit world meta — ${folderName}`,
@@ -67,7 +70,8 @@ export async function editWorldMeta(
 
 	if (!result) return;
 
-	const newName = result.data[titleField.key]?.trim() ?? '';
+	const rawName = result.data[titleField.key];
+	const newName = typeof rawName === 'string' ? rawName.trim() : '';
 	if (!newName) {
 		new Notice('Name is required.');
 		return;
@@ -97,7 +101,6 @@ export async function editWorldMeta(
 		indexFile = renamedIndex;
 	}
 
-	// Meta fields exclude title for property/section blocks; name comes from newName
 	const metaFields = fields.filter(f => f.display !== 'title');
 	const newContent = buildIndexContent(
 		metaFields,
@@ -111,7 +114,6 @@ export async function editWorldMeta(
 
 	const dashPath = `${effectivePath}/_dashboard.md`;
 	if (app.vault.getAbstractFileByPath(dashPath)) {
-		// state may still hold old path until refreshState; pass effective path
 		const refreshedState = {
 			...state,
 			worlds: state.worlds.map(w =>
@@ -145,6 +147,17 @@ async function buildPrefill(
 				new RegExp(`## ${f.label}\\n([\\s\\S]*?)(?=\\n## |$)`)
 			);
 			prefill[f.key] = match?.[1]?.trim() ?? '';
+		} else if (f.type === 'multiselect') {
+			const val: unknown = frontmatter?.[f.key];
+			if (Array.isArray(val)) {
+				prefill[f.key] = JSON.stringify(
+					val.map(v => (typeof v === 'string' ? v : String(v))).filter(Boolean)
+				);
+			} else if (typeof val === 'string' && val.trim()) {
+				prefill[f.key] = JSON.stringify([val]);
+			} else {
+				prefill[f.key] = '[]';
+			}
 		} else {
 			const val: unknown = frontmatter?.[f.key];
 			prefill[f.key] = typeof val === 'string' ? val : '';
@@ -154,26 +167,50 @@ async function buildPrefill(
 	return prefill;
 }
 
+function hasValue(v: string | string[] | null | undefined): boolean {
+	if (v == null) return false;
+	if (Array.isArray(v)) return v.length > 0;
+	return v.trim().length > 0;
+}
+
 function buildIndexContent(
 	fields: FieldDefinition[],
-	data: Record<string, string | null>,
+	data: Record<string, string | string[] | null>,
 	worldName: string,
 	status: string,
 	templateSet: string
 ): string {
-	const frontmatterProps = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `${f.key}: "${data[f.key] ?? ''}"`)
-		.join('\n');
+	const frontmatterPropChunks: string[] = [];
+	for (const f of fields) {
+		if (f.display !== 'property') continue;
+		const raw = data[f.key];
+		if (!hasValue(raw)) continue;
+		if (f.type === 'multiselect' && Array.isArray(raw)) {
+			const block = formatMultiselectFrontmatterLine(f.key, raw);
+			if (block) frontmatterPropChunks.push(block);
+		} else if (typeof raw === 'string') {
+			frontmatterPropChunks.push(`${f.key}: "${raw.replace(/"/g, '\\"')}"`);
+		}
+	}
+	const frontmatterProps = frontmatterPropChunks.join('\n');
 
 	const propertiesBlock = fields
-		.filter(f => f.display === 'property' && data[f.key])
-		.map(f => `- **${f.label}:** ${data[f.key] ?? ''}`)
+		.filter(f => f.display === 'property' && hasValue(data[f.key]))
+		.map(f => {
+			const raw = data[f.key];
+			if (f.type === 'multiselect' && Array.isArray(raw)) {
+				return formatMultiselectPropertyBullet(f.label, raw);
+			}
+			return `- **${f.label}:** ${typeof raw === 'string' ? raw : ''}`;
+		})
 		.join('\n');
 
 	const sectionsBlock = fields
-		.filter(f => f.display === 'section' && data[f.key])
-		.map(f => `## ${f.label}\n${data[f.key] ?? ''}`)
+		.filter(f => f.display === 'section' && hasValue(data[f.key]) && !Array.isArray(data[f.key]))
+		.map(f => {
+			const raw = data[f.key];
+			return `## ${f.label}\n${typeof raw === 'string' ? raw : ''}`;
+		})
 		.join('\n\n');
 
 	const bodyChunks = [propertiesBlock, sectionsBlock].filter(chunk => chunk.length > 0);

@@ -1,6 +1,7 @@
 import { App, DropdownComponent, Modal, Setting, TextComponent } from 'obsidian';
 import { FieldDefinition, FormResult } from '../types';
 import { InputModal } from './InputModal';
+import { MultiselectPickerModal } from './MultiselectPickerModal';
 import type { LinkCandidateGroup } from '../commands/shared/EntityContent';
 import {
 	composeTimeframeValue,
@@ -67,12 +68,15 @@ export class EntityFormModal extends Modal {
 						drop.onChange(value => { this.values[f.key] = value; });
 					});
 
+			} else if (f.type === 'multiselect') {
+				this.buildMultiselectField(contentEl, f, name, options.linkCandidateGroups[f.key] ?? []);
+
 			} else if (f.type === 'link') {
 				const groups = options.linkCandidateGroups[f.key] ?? [];
 				const current = this.values[f.key]?.replace(/^\[\[|\]\]$/g, '') ?? '';
 				new Setting(contentEl)
 					.setName(name)
-					.addDropdown(drop => this.buildLinkDropdown(drop, f, groups, current, link => {
+					.addDropdown(drop => this.buildLinkDropdown(drop, f, groups, current, (link: string) => {
 						this.values[f.key] = link;
 					}));
 
@@ -133,6 +137,67 @@ export class EntityFormModal extends Modal {
 		if (!this.submitted) this.options.onCancel();
 	}
 
+	private buildMultiselectField(
+		contentEl: HTMLElement,
+		field: FieldDefinition,
+		name: string,
+		linkGroups: LinkCandidateGroup[]
+	): void {
+		const sourceOrder =
+			field.multiKind === 'link'
+				? linkGroups.flatMap(g => g.names.map(n => `[[${n}]]`))
+				: (field.options ?? []);
+
+		const parseCurrent = (): string[] => {
+			try {
+				const parsed = JSON.parse(this.values[field.key] || '[]') as unknown;
+				return Array.isArray(parsed)
+					? parsed.filter((x): x is string => typeof x === 'string')
+					: [];
+			} catch {
+				return [];
+			}
+		};
+
+		const summaryText = (values: string[]): string => {
+			const labels = sourceOrder
+				.filter(v => values.includes(v))
+				.map(v => v.replace(/^\[\[|\]\]$/g, ''));
+			// extras not in source
+			for (const v of values) {
+				if (!sourceOrder.includes(v)) {
+					labels.push(v.replace(/^\[\[|\]\]$/g, ''));
+				}
+			}
+			return labels.length > 0 ? labels.join(', ') : '— None —';
+		};
+
+		if (!this.values[field.key]) {
+			this.values[field.key] = JSON.stringify(parseCurrent());
+		}
+
+		const setting = new Setting(contentEl).setName(name);
+		const summaryEl = setting.controlEl.createDiv({ cls: 'wb-multiselect-summary' });
+		summaryEl.setText(summaryText(parseCurrent()));
+
+		setting.addButton(btn => btn
+			.setButtonText('Choose…')
+			.onClick(() => {
+				new MultiselectPickerModal(this.app, {
+					title: name,
+					field,
+					linkGroups,
+					initial: parseCurrent(),
+					onApply: (selected) => {
+						this.values[field.key] = JSON.stringify(selected);
+						summaryEl.setText(summaryText(selected));
+					},
+					onCancel: () => { /* keep previous */ },
+				}).open();
+			})
+		);
+	}
+
 	private async createLinkValue(field: FieldDefinition): Promise<string | null> {
 		if (!this.options.onCreateLink) return null;
 		const typeLabel = singleLinkType(field) ?? 'item';
@@ -156,10 +221,6 @@ export class EntityFormModal extends Modal {
 		});
 	}
 
-	/**
-	 * Link field dropdown: type headers (disabled), items or "empty" placeholder,
-	 * hot-create only when the field has exactly one link type.
-	 */
 	private buildLinkDropdown(
 		drop: DropdownComponent,
 		field: FieldDefinition,
@@ -187,10 +248,9 @@ export class EntityFormModal extends Modal {
 			}
 
 			if (group.names.length === 0) {
-				// Only meaningful for multi-type chains (placeholder for future per-type create)
 				if (showHeaders) {
 					const ev = emptyValue(group.entityType);
-					drop.addOption(ev, 'empty');
+					drop.addOption(ev, 'Empty');
 					const emptyOpt = Array.from(drop.selectEl.options).find(o => o.value === ev);
 					if (emptyOpt) emptyOpt.disabled = true;
 				}
@@ -232,7 +292,6 @@ export class EntityFormModal extends Modal {
 		});
 	}
 
-	/** Timeframe anchors only — flat list, no hot-create. */
 	private buildAnchorDropdown(
 		drop: DropdownComponent,
 		_field: FieldDefinition,
@@ -475,10 +534,22 @@ export class EntityFormModal extends Modal {
 		this.submitted = true;
 		this.close();
 
-		const data: Record<string, string | null> = {};
+		const data: Record<string, string | string[] | null> = {};
 		for (const f of this.options.fields) {
-			const val = this.values[f.key]?.trim() ?? '';
-			data[f.key] = val || null;
+			if (f.type === 'multiselect') {
+				try {
+					const parsed = JSON.parse(this.values[f.key] || '[]') as unknown;
+					const list = Array.isArray(parsed)
+						? parsed.filter((x): x is string => typeof x === 'string')
+						: [];
+					data[f.key] = list.length > 0 ? list : null;
+				} catch {
+					data[f.key] = null;
+				}
+			} else {
+				const val = this.values[f.key]?.trim() ?? '';
+				data[f.key] = val || null;
+			}
 		}
 
 		this.options.onSubmit({ data });

@@ -111,9 +111,8 @@ export interface EntityInfo {
 // ── Forms ─────────────────────────────────────────────────────────────────────
 
 export interface FormResult {
-	data: Record<string, string | null>;
+	data: Record<string, string | string[] | null>;
 }
-
 // ── Context Menu ──────────────────────────────────────────────────────────────
 
 export type MenuContext =

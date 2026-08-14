@@ -25,7 +25,7 @@ export function buildFieldCandidates(
 	const timeframeAnchors: Record<string, string[]> = {};
 
 	for (const f of fields) {
-		if (f.type === 'link') {
+		if (f.type === 'link' || (f.type === 'multiselect' && f.multiKind === 'link')) {
 			const types = linkEntityTypes(f);
 			if (types.length === 0) continue;
 

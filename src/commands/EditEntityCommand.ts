@@ -1,5 +1,5 @@
 import { App, Notice, TFile } from 'obsidian';
-import { PluginState } from '../types';
+import { PluginState, FormResult } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import {
@@ -68,7 +68,7 @@ export async function editEntity(
 			.filter(name => decomposeTimeframeValue(lookup(name)).point);
 	}
 
-	const result = await new Promise<{ data: Record<string, string | null> } | null>((resolve) => {
+	const result = await new Promise<FormResult | null>((resolve) => {
 		let submitted = false;
 		const modal = new EntityFormModal(app, {
 			title: `Edit ${entityType}: ${file.basename}`,
@@ -102,7 +102,8 @@ export async function editEntity(
 		return;
 	}
 
-	const title = result.data[titleField.key]?.trim();
+	const rawTitle = result.data[titleField.key];
+	const title = typeof rawTitle === 'string' ? rawTitle.trim() : '';
 	if (!title) {
 		new Notice('Name is required.');
 		return;
