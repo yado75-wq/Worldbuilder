@@ -12,6 +12,7 @@ import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { createLinkedEntity } from './shared/CreateLinkedEntity';
+import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 
 export async function createEntity(
 	app: App,
@@ -20,7 +21,8 @@ export async function createEntity(
 	entityType: string,
 	folderPath: string
 ): Promise<void> {
-
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');

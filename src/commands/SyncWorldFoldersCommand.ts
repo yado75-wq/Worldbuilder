@@ -1,5 +1,6 @@
 import { App, Notice, TFolder } from 'obsidian';
 import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
+import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 
 export async function syncWorldFolders(
 	app: App,
@@ -7,6 +8,8 @@ export async function syncWorldFolders(
 	worldPath: string
 ): Promise<void> {
 
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');

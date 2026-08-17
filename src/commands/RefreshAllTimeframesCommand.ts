@@ -7,6 +7,7 @@ import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
 import { buildFieldValues } from './shared/EntityPrefill';
 import { extractPreservedSection } from '../util/PreservedSection';
 import { refreshDashboard } from './RefreshDashboardCommand';
+import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 
 interface RefreshCandidate {
 	file: TFile;
@@ -40,6 +41,8 @@ export async function refreshAllTimeframes(
 	worldPath: string
 ): Promise<void> {
 
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');

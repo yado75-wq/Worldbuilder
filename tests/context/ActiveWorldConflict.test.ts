@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasActiveWorldConflict } from '../../src/context/MenuBuilder';
+import { hasActiveWorldConflict } from '../../src/context/ActiveWorld';
 import { PluginState, WorldInfo } from '../../src/types';
 
 function world(path: string, status: 'active' | 'inactive'): WorldInfo {

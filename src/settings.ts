@@ -18,6 +18,7 @@ import { refreshDashboard } from './commands/RefreshDashboardCommand';
 import { syncWorldFiles } from './commands/SyncWorldFilesCommand';
 import { syncWorldFolders } from './commands/SyncWorldFoldersCommand';
 import { refreshAllTimeframes } from './commands/RefreshAllTimeframesCommand';
+import { hasActiveWorldConflict } from './context/ActiveWorld';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
 	plugin: WorldBuilderPlugin;
@@ -217,6 +218,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 						setting.addButton(btn => btn
 							.setButtonText('Actions')
+							.setDisabled(hasActiveWorldConflict(this.plugin.state))
 							.onClick((evt: MouseEvent) => {
 								const menu = new Menu();
 								const path = world.path;

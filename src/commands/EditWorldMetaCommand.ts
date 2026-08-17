@@ -9,12 +9,15 @@ import {
 	formatMultiselectFrontmatterLine,
 	formatMultiselectPropertyBullet,
 } from './shared/MultiselectValues';
+import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 
 export async function editWorldMeta(
 	app: App,
 	state: PluginState,
 	worldPath: string
 ): Promise<void> {
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');

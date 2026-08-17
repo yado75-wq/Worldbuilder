@@ -1,5 +1,6 @@
-import { App, Menu, MenuItem, TAbstractFile, TFolder, Notice } from 'obsidian';
+import { App, Menu, MenuItem, TAbstractFile, TFolder } from 'obsidian';
 import { PluginState, WorldBuilderSettings, WorldInfo } from '../types';
+import { hasActiveWorldConflict } from './ActiveWorld';
 import { resolveContext } from './ContextResolver';
 import { 
 	isEntityTypeUsable,
@@ -16,19 +17,6 @@ import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 import { createEntity } from '../commands/CreateEntityCommand';
 import { editEntity } from '../commands/EditEntityCommand';
 import { refreshAllTimeframes } from '../commands/RefreshAllTimeframesCommand';
-
-export function hasActiveWorldConflict(state: PluginState): boolean {
-	if (state.worlds.length === 0) return false;
-	return state.worlds.filter(w => w.status === 'active').length !== 1;
-}
-
-function blockIfConflict(state: PluginState): boolean {
-	if (!hasActiveWorldConflict(state)) return false;
-	new Notice(
-		'Active world conflict: open worldbuilder settings and use set as active on one world.'
-	);
-	return true;
-}
 
 function templateSetForWorld(state: PluginState, world: WorldInfo) {
 	return resolveTemplateSetForWorld(state.templateSets, world.templateSet);
@@ -88,49 +76,53 @@ export function registerFileMenu(
 		}
 
 		case 'world-root': {
-			const isActive = context.world.status === 'active';
+			const conflict = hasActiveWorldConflict(state);
+			const uniquelyActive =	context.world.status === 'active' && !conflict;
 			menu.addSeparator();
-			menu.addItem(item => item
-				.setTitle('Edit world meta')
-				.setIcon('pencil')
-				.onClick(() => { if (!blockIfConflict(state)) void editWorldMeta(app, state, context.world.path); })
-			);
-			menu.addItem(item => item
-				.setTitle('Refresh dashboard')
-				.setIcon('layout-dashboard')
-				.onClick(() => { if (!blockIfConflict(state)) void refreshDashboard(app, state, context.world.path); })
-			);
-			menu.addItem(item => item
-				.setTitle('Sync world folders')
-				.setIcon('folder-sync')
-				.onClick(() => { if (!blockIfConflict(state)) void syncWorldFolders(app, state, context.world.path); })
-			);
-			menu.addItem(item => item
-				.setTitle('Sync world files')
-				.setIcon('arrow-right-left')
-				.onClick(() => { if (!blockIfConflict(state)) void syncWorldFiles(app, state, context.world.path); })
-			);
-			menu.addItem(item => item
-				.setTitle('Refresh all timeframes')
-				.setIcon('refresh-cw')
-				.onClick(() => { if (!blockIfConflict(state)) void refreshAllTimeframes(app, state, context.world.path); })
-			);
+			if (!conflict) {
+				menu.addItem(item => item
+					.setTitle('Edit world meta')
+					.setIcon('pencil')
+					.onClick(() => { void editWorldMeta(app, state, context.world.path); })
+				);
+				menu.addItem(item => item
+					.setTitle('Refresh dashboard')
+					.setIcon('layout-dashboard')
+					.onClick(() => { void refreshDashboard(app, state, context.world.path); })
+				);
+				menu.addItem(item => item
+					.setTitle('Sync world folders')
+					.setIcon('folder-sync')
+					.onClick(() => { void syncWorldFolders(app, state, context.world.path); })
+				);
+				menu.addItem(item => item
+					.setTitle('Sync world files')
+					.setIcon('arrow-right-left')
+					.onClick(() => { void syncWorldFiles(app, state, context.world.path); })
+				);
+				menu.addItem(item => item
+					.setTitle('Refresh all timeframes')
+					.setIcon('refresh-cw')
+					.onClick(() => { void refreshAllTimeframes(app, state, context.world.path); })
+				);
+			}
 			menu.addItem(item => item
 				.setTitle('Switch to this world')
 				.setIcon('check')
-				.setDisabled(isActive)
+				.setDisabled(uniquelyActive)
 				.onClick(() => { void switchToWorld(app, state, context.world.path); })
 			);
 
-			const worldWildcardTypes = getUsableWildcardTypes(state, context.world);
-			if (worldWildcardTypes.length > 0) {
-				menu.addSeparator();
-				addWildcardItems(menu, worldWildcardTypes, () => context.world.path,
-					(entityType, folderPath) => {
-						if (blockIfConflict(state)) return;
-						void createEntity(app, state, context.world.path, entityType, folderPath);
-					}
-				);
+			if(!conflict){
+				const worldWildcardTypes = getUsableWildcardTypes(state, context.world);
+				if (worldWildcardTypes.length > 0) {
+					menu.addSeparator();
+					addWildcardItems(menu, worldWildcardTypes, () => context.world.path,
+						(entityType, folderPath) => {							
+							void createEntity(app, state, context.world.path, entityType, folderPath);
+						}
+					);
+				}
 			}
 			menu.addSeparator();
 			break;
@@ -138,34 +130,34 @@ export function registerFileMenu(
 
 		case 'entity-folder': {
 			const ts = templateSetForWorld(state, context.world);
-			if (isEntityTypeUsable(ts, context.entityType)) {
+			if (!hasActiveWorldConflict(state) && isEntityTypeUsable(ts, context.entityType)) {
 				menu.addItem(item => item
 					.setTitle(`New ${context.entityType.toLowerCase()}`)
 					.setIcon('plus-circle')
-					.onClick(() => {
-						if (blockIfConflict(state)) return;
+					.onClick(() => {						
 						void createEntity(app, state, context.world.path, context.entityType, context.folder.path);
 					})
 				);
 			}
-			const entityWildcardTypes = getUsableWildcardTypes(state, context.world);
-			addWildcardItems(menu, entityWildcardTypes, () => context.folder.path,
-				(entityType, folderPath) => {
-					if (blockIfConflict(state)) return;
-					void createEntity(app, state, context.world.path, entityType, folderPath);
-				}
-			);
+			if(!hasActiveWorldConflict(state)){
+				const entityWildcardTypes = getUsableWildcardTypes(state, context.world);
+				addWildcardItems(menu, entityWildcardTypes, () => context.folder.path,
+								(entityType, folderPath) => {									
+									void createEntity(app, state, context.world.path, entityType, folderPath);
+								}
+							);
+			}
+			
 			break;
 		}
 
 		case 'entity-file': {
 			const ts = templateSetForWorld(state, context.world);
-			if (isEntityTypeUsable(ts, context.entityType)) {
+			if (!hasActiveWorldConflict(state) && isEntityTypeUsable(ts, context.entityType)) {
 				menu.addItem(item => item
 					.setTitle(`Edit ${context.entityType.toLowerCase()}`)
 					.setIcon('pencil')
-					.onClick(() => {
-						if (blockIfConflict(state)) return;
+					.onClick(() => {						
 						void editEntity(app, state, context.world.path, context.entityType, context.file.path);
 					})
 				);
@@ -174,26 +166,29 @@ export function registerFileMenu(
 		}
 
 		case 'index-file':
-			menu.addItem(item => item
-				.setTitle('Edit world meta')
-				.setIcon('pencil')
-				.onClick(() => { if (!blockIfConflict(state)) void editWorldMeta(app, state, context.world.path); })
-			);
-			menu.addItem(item => item
-				.setTitle('Refresh dashboard')
-				.setIcon('layout-dashboard')
-				.onClick(() => { if (!blockIfConflict(state)) void refreshDashboard(app, state, context.world.path); })
-			);
+			if (!hasActiveWorldConflict(state)) {
+				menu.addItem(item => item
+					.setTitle('Edit world meta')
+					.setIcon('pencil')
+					.onClick(() => { void editWorldMeta(app, state, context.world.path); })
+				);
+				menu.addItem(item => item
+					.setTitle('Refresh dashboard')
+					.setIcon('layout-dashboard')
+					.onClick(() => { void refreshDashboard(app, state, context.world.path); })
+				);
+			}
 			break;
 
 		case 'generic-folder': {
-			const genericWildcardTypes = getUsableWildcardTypes(state, context.world);
-			addWildcardItems(menu, genericWildcardTypes, () => context.folder.path,
-				(entityType, folderPath) => {
-					if (blockIfConflict(state)) return;
-					void createEntity(app, state, context.world.path, entityType, folderPath);
-				}
-			);
+			if (!hasActiveWorldConflict(state)) {
+				const genericWildcardTypes = getUsableWildcardTypes(state, context.world);
+				addWildcardItems(menu, genericWildcardTypes, () => context.folder.path,
+					(entityType, folderPath) => {						
+						void createEntity(app, state, context.world.path, entityType, folderPath);
+					}
+				);
+			}
 			break;
 		}
 	}

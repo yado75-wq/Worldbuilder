@@ -6,6 +6,7 @@ import { findUnresolvedTimeframes, formatUnresolvedTimeframeEntry } from './shar
 import { formatMetaLabel } from './shared/MetaLabel';
 import { buildDashboardContent, DEFAULT_DASHBOARD_NOTES, EntitySectionInput } from './shared/DashboardContentBuilder';
 import { buildTimeframeLookup, getEntityFiles } from './shared/TimeframeLookupBuilder';
+import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 
 export async function refreshDashboard(
 	app: App,
@@ -14,6 +15,8 @@ export async function refreshDashboard(
 	openAfterRefresh = true
 ): Promise<void> {
 
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');

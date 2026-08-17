@@ -2,6 +2,7 @@ import { App, Notice, TFile, TFolder, getAllTags } from 'obsidian';
 import { PluginState, FolderRule } from '../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { syncWorldNameToFolder } from './shared/WorldIndex';
+import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 
 interface MoveCandidate {
 	file: TFile;
@@ -16,6 +17,8 @@ export async function syncWorldFiles(
 	worldPath: string
 ): Promise<void> {
 
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');
