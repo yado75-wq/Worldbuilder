@@ -6,7 +6,7 @@ A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate 
 
 THIS PROJECT WAS CREATED USING AI - Claude and Grok.
 
-These two failed so many times that it made me reconsider my view of project managers.
+These two failed so many times that it made me reconsider my view of project managers. But the sole purpose of this project is to make me learn how to use an AI.
 
 ---
 
