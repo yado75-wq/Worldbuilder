@@ -1,6 +1,14 @@
 # WorldBuilder Tools for Obsidian
 
-A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate the core functionality of tools like World Anvil and Chronicler — directly inside your vault, with no external dependencies.
+A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate the core functionality of World building tools like Chronicler — directly inside your vault, with no external dependencies.  Plugin does not enable any presentation functionality which other applications have and Obsidian does not. The core philosophy is that the user can complicate his life as much as he wants, we will hand him the tools to do it. Everything is based on Entities and Rules. User doesn't have to create folders via command, it's just easier if the user already knows the structure. User can add folder rules later when the structure is clear and there is a command to move entities to specified folders to keep vault clean. We try to add `Hot create` functionality to menus so the workflow would be as smooth as possible.
+
+---
+
+THIS PROJECT WAS CREATED USING AI - Claude and Grok.
+
+These two failed so many times that it made me reconsider my view of project managers.
+
+---
 
 ## Features
 
