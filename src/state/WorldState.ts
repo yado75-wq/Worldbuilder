@@ -133,12 +133,32 @@ async function buildTemplateSetInfo(
 		const parsed = parseFolderRulesWithIssues(raw, 'folder-rules.md');
 		folderRules.push(...parsed.rules);
 		issues.push(...parsed.issues);
+
+		if (folderRules.length === 0) {
+			issues.push({
+				severity: 'info',
+				kind: 'empty-folder-rules',
+				file: 'folder-rules.md',
+				message:
+					'folder-rules.md has no rules; entity folders will not be suggested from rules (types still use * placement where applicable).',
+			});
+		}
 	}
 
 	const worldTemplateFile = app.vault.getAbstractFileByPath(`${folder.path}/world-template.md`);
 	if (worldTemplateFile instanceof TFile) {
 		const raw = await app.vault.read(worldTemplateFile);
 		worldTemplate.push(...parseLineList(raw));
+
+		if (worldTemplate.length === 0) {
+			issues.push({
+				severity: 'info',
+				kind: 'empty-world-template',
+				file: 'world-template.md',
+				message:
+					'world-template.md has no folders; new worlds will not get a default subfolder tree.',
+			});
+		}
 	}
 
 	const fieldFiles = folder.children.filter(

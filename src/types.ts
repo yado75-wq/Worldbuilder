@@ -48,10 +48,11 @@ export type ValidationIssueKind =
 	| 'duplicate-folder-rule'
 	| 'malformed-line'
 	| 'unknown-link-type'
+	| 'empty-folder-rules'
+	| 'empty-world-template'
 	| 'other';
-
 export interface ValidationIssue {
-	severity: 'error' | 'warning';
+	severity: 'error' | 'warning' | 'info';
 	kind: ValidationIssueKind;
 	message: string;
 	/** Template-set-relative file name, e.g. Character_Fields.md */

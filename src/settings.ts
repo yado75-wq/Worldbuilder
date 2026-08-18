@@ -42,19 +42,38 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			for (const set of templateSets) {
 				const statusIcon = set.isValid ? '✓' : '✗';
 				const isDefault = set.name === defaultSet;
-				
-				const warningCount = set.issues.filter(i => i.severity === 'warning').length;
+								
 				const errorCount = set.issues.filter(i => i.severity === 'error').length;
-				const summaryParts: string[] = [];
-				if (errorCount) summaryParts.push(`${errorCount} error(s)`);
-				if (warningCount) summaryParts.push(`${warningCount} warning(s)`);
-				if (summaryParts.length === 0) summaryParts.push('Valid.');
+				const warningCount = set.issues.filter(i => i.severity === 'warning').length;
+				
+				const lines: string[] = [];
 
-				const desc = [
-					summaryParts.join(', '),
-					isDefault ? 'Default for new worlds.' : '',
-				].filter(Boolean).join(' ');
+				if (isDefault) {
+					lines.push('Default for new worlds.');
+				}
 
+				if (errorCount > 0) {
+					lines.push(`${errorCount} error(s)`);
+				}
+				if (warningCount > 0) {
+					lines.push(`${warningCount} warning(s)`);
+				}
+
+				if (errorCount === 0 && warningCount === 0) {
+					lines.push('Valid.');
+				}
+
+				let issuesSummary: string;
+				if (errorCount > 0 && warningCount > 0) {
+					issuesSummary = `Show ${errorCount} error(s), ${warningCount} warning(s)`;
+				} else if (errorCount > 0) {
+					issuesSummary = `Show ${errorCount} error(s)`;
+				} else if (warningCount > 0) {
+					issuesSummary = `Show ${warningCount} warning(s)`;
+				} else {
+					issuesSummary = 'Show notes';
+				}
+				const desc = lines.join('·');
 				templateSetItems.push({
 					name: `${statusIcon} ${set.name}${isDefault ? ' ★' : ''}`,
 					desc,
@@ -99,11 +118,14 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							);
 
 						if (set.issues.length > 0) {
+							setting.settingEl.querySelectorAll('.wb-template-issues').forEach(el => el.remove());
+
 							const details = setting.settingEl.createEl('details', {
 								cls: 'wb-template-issues',
 							});
+							
 							details.createEl('summary', {
-								text: `Show ${set.issues.length} issue(s)`,
+								text: issuesSummary,
 							});
 
 							const table = details.createEl('table', { cls: 'wb-issues-table' });
