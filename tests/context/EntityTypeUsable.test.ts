@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FieldDefinition, TemplateSetInfo } from '../../src/types';
 import { isEntityTypeUsable,
-		 isPluginMenuSuppressedPath,
-		 resolveTemplateSetForWorld,
+		 isPluginMenuSuppressedPath,		 
 		 listUsableWildcardTypes, 
 } from '../../src/context/EntityTypeUsable';
 
@@ -62,25 +61,6 @@ describe('isEntityTypeUsable', () => {
 		});
 		expect(isEntityTypeUsable(ts, 'Character')).toBe(true);
 		expect(isEntityTypeUsable(ts, 'Faction')).toBe(false);
-	});
-});
-
-describe('resolveTemplateSetForWorld', () => {
-	const a = set({ Character: [title()] });
-	a.name = 'alpha';
-	const b = set({ Character: [title()] });
-	b.name = 'beta';
-
-	it('returns the set matching the world name', () => {
-		expect(resolveTemplateSetForWorld([a, b], 'beta')).toBe(b);
-	});
-
-	it('falls back to the first set when name is unknown', () => {
-		expect(resolveTemplateSetForWorld([a, b], 'missing')).toBe(a);
-	});
-
-	it('returns undefined when the list is empty', () => {
-		expect(resolveTemplateSetForWorld([], 'defaults')).toBeUndefined();
 	});
 });
 

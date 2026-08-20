@@ -4,8 +4,7 @@ import { hasActiveWorldConflict } from './ActiveWorld';
 import { resolveContext } from './ContextResolver';
 import { 
 	isEntityTypeUsable,
-	isPluginMenuSuppressedPath, 
-	resolveTemplateSetForWorld,
+	isPluginMenuSuppressedPath, 	
 	listUsableWildcardTypes, 
 } from './EntityTypeUsable';
 import { newWorld } from '../commands/NewWorldCommand';
@@ -17,9 +16,11 @@ import { editWorldMeta } from '../commands/EditWorldMetaCommand';
 import { createEntity } from '../commands/CreateEntityCommand';
 import { editEntity } from '../commands/EditEntityCommand';
 import { refreshAllTimeframes } from '../commands/RefreshAllTimeframesCommand';
+import { resolveTemplateSetByName } from './TemplateSetResolve';
 
 function templateSetForWorld(state: PluginState, world: WorldInfo) {
-	return resolveTemplateSetForWorld(state.templateSets, world.templateSet);
+	const r = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	return r.ok ? r.set : undefined;
 }
 
 export function registerFileMenu(

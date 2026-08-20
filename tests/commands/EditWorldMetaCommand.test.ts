@@ -175,11 +175,17 @@ describe('editWorldMeta', () => {
 
 	it('exits when world is not found', async () => {
 		const state = buildState(app);
-
+		
 		await editWorldMeta(app, state, 'MissingWorld');
 
 		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
 	});
+	
+	/* it('exits when world is not found', async () => {
+		const state = buildState(app);
+		const result = await editWorldMeta(app, state, 'non-existent-world-path');
+		expect(result).toBeUndefined(); // Assuming the function returns null or undefined when the world is not found
+	}); */
 
 	it('exits when no template set is available', async () => {
 		const state = buildState(app, { templateSets: [] });
@@ -187,7 +193,7 @@ describe('editWorldMeta', () => {
 
 		await editWorldMeta(app, state, WORLD_PATH);
 
-		expect(FakeNoticeLog.some(m => m.includes('No template set found'))).toBe(true);
+		expect(FakeNoticeLog.some(m => m.includes('No template sets found. Restore or create one under the templates folder (or reload the plugin).'))).toBe(true);
 	});
 
 	it('exits when WorldMeta field set is missing or empty', async () => {

@@ -5,11 +5,9 @@ import { refreshDashboard } from './RefreshDashboardCommand';
 import { buildFieldCandidates } from './shared/EntityContent';
 import { worldFolderName } from './shared/WorldIndex';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
-import {
-	formatMultiselectFrontmatterLine,
-	formatMultiselectPropertyBullet,
-} from './shared/MultiselectValues';
+import { formatMultiselectFrontmatterLine, formatMultiselectPropertyBullet } from './shared/MultiselectValues';
 import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
 export async function editWorldMeta(
 	app: App,
@@ -24,13 +22,12 @@ export async function editWorldMeta(
 		return;
 	}
 
-	const templateSet = state.templateSets.find(ts => ts.name === world.templateSet)
-		?? state.templateSets[0];
-
-	if (!templateSet) {
-		new Notice('No template set found.');
+	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	if (!resolved.ok) {
+		new Notice(missingTemplateSetMessage(resolved));
 		return;
 	}
+	const templateSet = resolved.set;
 
 	const allFields = templateSet.fieldSets['WorldMeta'] ?? [];
 	if (allFields.length === 0) {

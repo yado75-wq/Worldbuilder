@@ -20,13 +20,6 @@ export function isEntityTypeUsable(
 	return fields.some(f => f.display === 'title');
 }
 
-export function resolveTemplateSetForWorld(
-	templateSets: TemplateSetInfo[],
-	templateSetName: string
-): TemplateSetInfo | undefined {
-	return templateSets.find(ts => ts.name === templateSetName) ?? templateSets[0];
-}
-
 function isNonPlacementType(entityType: string): boolean {
 	return NON_PLACEMENT_TYPES.has(entityType.toLowerCase());
 }

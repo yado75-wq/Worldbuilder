@@ -1,9 +1,6 @@
 import { FieldDefinition } from '../../types';
 import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
-import {
-	formatMultiselectFrontmatterLine,
-	formatMultiselectPropertyBullet,
-} from './MultiselectValues';
+import { formatMultiselectFrontmatterLine, formatMultiselectPropertyBullet } from './MultiselectValues';
 
 function hasFieldValue(value: string | string[] | null | undefined): boolean {
 	if (value == null) return false;

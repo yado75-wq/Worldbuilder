@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, TFile } from 'obsidian';
 import {
 	FakeVault,
-	FakeNoticeLog,
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -51,27 +50,23 @@ vi.mock('../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),
 }));
 
-// ── Textbook field sets (hardcoded — stand-ins for *_Fields.md) ───────────
+// ── Textbook field sets ───────────────────────────────────────────────────
 
 const WORLD_PATH = 'TestWorld';
 const ENTITIES_FOLDER = `${WORLD_PATH}/Entities`;
 const MILESTONES_FOLDER = `${WORLD_PATH}/Milestones`;
 const MIXED_FOLDER = `${WORLD_PATH}/Mixed`;
+const GENERICS_FOLDER = `${WORLD_PATH}/Generics`;
 
-/** Title only (e.g. Generic_Fields.md). */
 const GENERIC_FIELDS: FieldDefinition[] = [
 	{ key: 'name', label: 'Name', type: 'text', display: 'title', mandatory: true },
 ];
 
-const GENERICS_FOLDER = `${WORLD_PATH}/Generics`;
-
-/** Simple entity: title + one optional text property. */
 const SIMPLE_FIELDS: FieldDefinition[] = [
 	{ key: 'name', label: 'Name', type: 'text', display: 'title', mandatory: true },
 	{ key: 'race', label: 'Race', type: 'text', display: 'property', mandatory: false },
 ];
 
-/** Milestone-shaped: title + one timeframe field (creation only). */
 const MILESTONE_FIELDS: FieldDefinition[] = [
 	{ key: 'name', label: 'Name', type: 'text', display: 'title', mandatory: true },
 	{ key: 'time', label: 'Time', type: 'timeframe', display: 'property', mandatory: true },
@@ -157,8 +152,6 @@ function buildState(
 	};
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────
-
 describe('createEntity', () => {
 	let app: App;
 
@@ -177,9 +170,8 @@ describe('createEntity', () => {
 			fields: SIMPLE_FIELDS,
 		});
 
-		await createEntity(app, state, 'MissingWorld', 'Character', ENTITIES_FOLDER);
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await createEntity(app, state, 'MissingWorld', 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 	});
 
 	it('exits when no template set is available', async () => {
@@ -191,9 +183,20 @@ describe('createEntity', () => {
 		});
 		state.worlds[0]!.templateSet = 'defaults';
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toMatchObject({ ok: false, code: 'no-template-sets' });
+	});
 
-		expect(FakeNoticeLog.some(m => m.includes('No template set found'))).toBe(true);
+	it('exits when world template set name is missing from registry', async () => {
+		const state = buildState(app, {
+			entityType: 'Character',
+			folderName: 'Entities',
+			fields: SIMPLE_FIELDS,
+		});
+		state.worlds[0]!.templateSet = 'gone';
+
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toMatchObject({ ok: false, code: 'missing-template-set', detail: 'gone' });
 	});
 
 	it('exits when entity type has no fields', async () => {
@@ -204,9 +207,8 @@ describe('createEntity', () => {
 		});
 		state.templateSets[0]!.fieldSets = {};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
-		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toMatchObject({ ok: false, code: 'type-not-usable' });
 	});
 
 	it('exits when entity type has fields but no title', async () => {
@@ -218,13 +220,12 @@ describe('createEntity', () => {
 			],
 		});
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
-		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toMatchObject({ ok: false, code: 'type-not-usable' });
 		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/Aria.md`)).toBeNull();
 	});
 
-	// ── Modal outcomes (simple title + property) ──────────────────────────
+	// ── Modal outcomes ────────────────────────────────────────────────────
 
 	it('creates nothing when the form is cancelled', async () => {
 		const state = buildState(app, {
@@ -234,10 +235,9 @@ describe('createEntity', () => {
 		});
 		modalBehavior = { type: 'cancel' };
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/Aria.md`)).toBeNull();
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(false);
 	});
 
 	it('rejects empty name', async () => {
@@ -251,9 +251,8 @@ describe('createEntity', () => {
 			data: { name: null, race: 'Elf' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
-		expect(FakeNoticeLog.some(m => m.includes('Name is required'))).toBe(true);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: false, code: 'name-required' });
 		expect(
 			(app.vault as unknown as FakeVault)
 				.getFiles()
@@ -273,9 +272,8 @@ describe('createEntity', () => {
 			data: { name: '   ', race: null },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
-		expect(FakeNoticeLog.some(m => m.includes('Name is required'))).toBe(true);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: false, code: 'name-required' });
 	});
 
 	it('does not overwrite an existing file', async () => {
@@ -286,15 +284,13 @@ describe('createEntity', () => {
 			fields: SIMPLE_FIELDS,
 		});
 		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, 'ORIGINAL\n');
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Aria', race: 'Elf' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
-		expect(FakeNoticeLog.some(m => m.includes('already exists'))).toBe(true);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 		expect(vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`)).toContain('ORIGINAL');
 	});
 
@@ -305,15 +301,14 @@ describe('createEntity', () => {
 			folderName: 'Entities',
 			fields: SIMPLE_FIELDS,
 		});
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Aria', race: 'Elf' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
-
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
 		const path = `${ENTITIES_FOLDER}/Aria.md`;
+		expect(result).toEqual({ ok: true, path });
 		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
 
 		const content = vault.contentAt(path) ?? '';
@@ -321,7 +316,6 @@ describe('createEntity', () => {
 		expect(content).toContain('- character');
 		expect(content).toContain('# Aria');
 		expect(content).toContain('Elf');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
 
 	it('creates entity with only the name field set', async () => {
@@ -331,13 +325,13 @@ describe('createEntity', () => {
 			folderName: 'Entities',
 			fields: SIMPLE_FIELDS,
 		});
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Borin', race: null },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: true, path: `${ENTITIES_FOLDER}/Borin.md` });
 
 		const content = vault.contentAt(`${ENTITIES_FOLDER}/Borin.md`) ?? '';
 		expect(content).toContain('name: "Borin"');
@@ -347,30 +341,29 @@ describe('createEntity', () => {
 
 	// ── Isolated field types ──────────────────────────────────────────────
 
-    it('creates an entity with only a title field', async () => {
+	it('creates an entity with only a title field', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		const state = buildState(app, {
 			entityType: 'Generic',
 			folderName: 'Generics',
 			fields: GENERIC_FIELDS,
 		});
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Note1' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Generic', GENERICS_FOLDER);
-
+		const result = await createEntity(app, state, WORLD_PATH, 'Generic', GENERICS_FOLDER);
 		const path = `${GENERICS_FOLDER}/Note1.md`;
+		expect(result).toEqual({ ok: true, path });
 		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
+
 		const content = vault.contentAt(path) ?? '';
 		expect(content).toContain('name: "Note1"');
 		expect(content).toContain('- generic');
 		expect(content).toContain('# Note1');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
-    
+
 	it('creates an entity with a select property', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		const state = buildState(app, {
@@ -378,19 +371,17 @@ describe('createEntity', () => {
 			folderName: 'Entities',
 			fields: SELECT_FIELDS,
 		});
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Aria', status: 'Alive' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: true, path: `${ENTITIES_FOLDER}/Aria.md` });
 
 		const content = vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`) ?? '';
-		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/Aria.md`)).toBeInstanceOf(TFile);
 		expect(content).toContain('name: "Aria"');
 		expect(content).toContain('Alive');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
 
 	it('creates an entity with a link property', async () => {
@@ -401,19 +392,17 @@ describe('createEntity', () => {
 			fields: LINK_FIELDS,
 		});
 		vault.seedFolder(`${WORLD_PATH}/Factions`);
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Aria', faction: '[[IronLeague]]' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: true, path: `${ENTITIES_FOLDER}/Aria.md` });
 
 		const content = vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`) ?? '';
-		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/Aria.md`)).toBeInstanceOf(TFile);
 		expect(content).toContain('name: "Aria"');
 		expect(content).toContain('[[IronLeague]]');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
 
 	it('creates an entity with a section field', async () => {
@@ -423,22 +412,18 @@ describe('createEntity', () => {
 			folderName: 'Entities',
 			fields: SECTION_FIELDS,
 		});
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Aria', background: 'Born in the woods.' },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: true, path: `${ENTITIES_FOLDER}/Aria.md` });
 
 		const content = vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`) ?? '';
-		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/Aria.md`)).toBeInstanceOf(TFile);
 		expect(content).toContain('name: "Aria"');
 		expect(content).toContain('Born in the woods.');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
-
-	// ── Milestone smoke (timeframe in field set — creation only) ──────────
 
 	it('creates a milestone when the field set includes a timeframe field', async () => {
 		const vault = app.vault as unknown as FakeVault;
@@ -447,24 +432,19 @@ describe('createEntity', () => {
 			folderName: 'Milestones',
 			fields: MILESTONE_FIELDS,
 		});
-
 		modalBehavior = {
 			type: 'submit',
 			data: { name: 'Founding', time: null },
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Milestone', MILESTONES_FOLDER);
-
+		const result = await createEntity(app, state, WORLD_PATH, 'Milestone', MILESTONES_FOLDER);
 		const path = `${MILESTONES_FOLDER}/Founding.md`;
-		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
+		expect(result).toEqual({ ok: true, path });
 
 		const content = vault.contentAt(path) ?? '';
 		expect(content).toContain('name: "Founding"');
 		expect(content).toContain('- milestone');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
-
-	// ── All types together ────────────────────────────────────────────────
 
 	it('creates an entity with text, select, link, section, and timeframe fields together', async () => {
 		const vault = app.vault as unknown as FakeVault;
@@ -474,7 +454,6 @@ describe('createEntity', () => {
 			fields: ALL_TYPES_FIELDS,
 		});
 		vault.seedFolder(`${WORLD_PATH}/Factions`);
-
 		modalBehavior = {
 			type: 'submit',
 			data: {
@@ -487,10 +466,10 @@ describe('createEntity', () => {
 			},
 		};
 
-		await createEntity(app, state, WORLD_PATH, 'Mixed', MIXED_FOLDER);
-
+		const result = await createEntity(app, state, WORLD_PATH, 'Mixed', MIXED_FOLDER);
 		const path = `${MIXED_FOLDER}/Aria.md`;
-		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
+		expect(result).toEqual({ ok: true, path });
+
 		const content = vault.contentAt(path) ?? '';
 		expect(content).toContain('name: "Aria"');
 		expect(content).toContain('- mixed');
@@ -498,6 +477,5 @@ describe('createEntity', () => {
 		expect(content).toContain('Alive');
 		expect(content).toContain('[[IronLeague]]');
 		expect(content).toContain('Born in the woods.');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
 	});
 });

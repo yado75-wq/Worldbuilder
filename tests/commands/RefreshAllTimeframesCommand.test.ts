@@ -140,7 +140,7 @@ describe('refreshAllTimeframes', () => {
 
 		await refreshAllTimeframes(app, state, WORLD_PATH);
 
-		expect(FakeNoticeLog.some(m => m.includes('No template set found'))).toBe(true);
+		expect(FakeNoticeLog.some(m => m.includes('No template sets found. Restore or create one under the templates folder (or reload the plugin).'))).toBe(true);
 	});
 
 	it('exits when no entities have a timeframe value', async () => {

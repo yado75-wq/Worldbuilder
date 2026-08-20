@@ -8,6 +8,7 @@ import { buildFieldValues } from './shared/EntityPrefill';
 import { extractPreservedSection } from '../util/PreservedSection';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
 interface RefreshCandidate {
 	file: TFile;
@@ -49,13 +50,12 @@ export async function refreshAllTimeframes(
 		return;
 	}
 
-	const templateSet = state.templateSets.find(ts => ts.name === world.templateSet)
-		?? state.templateSets[0];
-
-	if (!templateSet) {
-		new Notice('No template set found.');
+	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	if (!resolved.ok) {
+		new Notice(missingTemplateSetMessage(resolved));
 		return;
 	}
+	const templateSet = resolved.set;
 
 	const { lookup, targets } = buildTimeframeLookup(app, worldPath, templateSet);
 	if (targets.length === 0) {

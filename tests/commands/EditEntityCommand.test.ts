@@ -167,7 +167,7 @@ describe('editEntity', () => {
 
 		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
 
-		expect(FakeNoticeLog.some(m => m.includes('No template set found'))).toBe(true);
+		expect(FakeNoticeLog.some(m => m.includes('No template sets found. Restore or create one under the templates folder (or reload the plugin).'))).toBe(true);
 	});
 
 	it('exits when entity type has no fields', async () => {

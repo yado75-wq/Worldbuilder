@@ -3,6 +3,7 @@ import { PluginState, FolderRule } from '../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { syncWorldNameToFolder } from './shared/WorldIndex';
 import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
 interface MoveCandidate {
 	file: TFile;
@@ -25,14 +26,13 @@ export async function syncWorldFiles(
 		return;
 	}
 
-	const templateSet = state.templateSets.find(ts => ts.name === world.templateSet)
-		?? state.templateSets[0];
-
-	if (!templateSet) {
-		new Notice('No template set found.');
+	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	if (!resolved.ok) {
+		new Notice(missingTemplateSetMessage(resolved));
 		return;
 	}
-
+	const templateSet = resolved.set;
+	
 	const nameSynced = await syncWorldNameToFolder(app, world);
 	if (nameSynced) {
 		new Notice(`World display name set to folder name "${world.folder.name}".`);

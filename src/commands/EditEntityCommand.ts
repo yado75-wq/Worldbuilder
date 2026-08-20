@@ -15,6 +15,10 @@ import { buildFieldValues } from './shared/EntityPrefill';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 import { createLinkedEntity } from './shared/CreateLinkedEntity';
 import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import {
+		 resolveTemplateSetByName,
+		 missingTemplateSetMessage,
+	   } from '../context/TemplateSetResolve';
 
 export async function editEntity(
 	app: App,
@@ -31,14 +35,13 @@ export async function editEntity(
 		return;
 	}
 
-	const templateSet = state.templateSets.find(ts => ts.name === world.templateSet)
-		?? state.templateSets[0];
-
-	if (!templateSet) {
-		new Notice('No template set found.');
+	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	if (!resolved.ok) {
+		new Notice(missingTemplateSetMessage(resolved));
 		return;
 	}
-
+	const templateSet = resolved.set;
+	
 	if (!isEntityTypeUsable(templateSet, entityType)) {
 		new Notice(`No usable fields defined for "${entityType}".`);
 		return;
