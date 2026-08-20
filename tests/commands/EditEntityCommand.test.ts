@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, TFile } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -154,9 +153,8 @@ describe('editEntity', () => {
 		const state = buildState(app);
 		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, entityFile('Aria', 'Elf'));
 
-		await editEntity(app, state, 'MissingWorld', 'Character', `${ENTITIES_FOLDER}/Aria.md`);
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await editEntity(app, state, 'MissingWorld', 'Character', `${ENTITIES_FOLDER}/Aria.md`);
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 	});
 
 	it('exits when no template set is available', async () => {
@@ -165,9 +163,8 @@ describe('editEntity', () => {
 		state.worlds[0]!.templateSet = 'defaults';
 		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, entityFile('Aria'));
 
-		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
-
-		expect(FakeNoticeLog.some(m => m.includes('No template sets found. Restore or create one under the templates folder (or reload the plugin).'))).toBe(true);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
+		expect(result).toMatchObject({ ok: false, code: 'no-template-sets' });		
 	});
 
 	it('exits when entity type has no fields', async () => {
@@ -176,9 +173,8 @@ describe('editEntity', () => {
 		state.templateSets[0]!.fieldSets = {};
 		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, entityFile('Aria'));
 
-		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
-
-		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
+		expect(result).toMatchObject({ ok: false, code: 'type-not-usable' });		
 	});
 
 	it('exits when the field set has no title field', async () => {
@@ -186,18 +182,17 @@ describe('editEntity', () => {
 		const state = buildState(app, { fields: NO_TITLE_FIELDS });
 		vault.seedFile(`${ENTITIES_FOLDER}/Aria.md`, entityFile('Aria', 'Elf'));
 
-		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Aria.md`);
 
-		expect(FakeNoticeLog.some(m => m.includes('No usable fields defined'))).toBe(true);
+		expect(result).toMatchObject({ ok: false, code: 'type-not-usable' });
 		expect(vault.contentAt(`${ENTITIES_FOLDER}/Aria.md`)).toContain('Elf');
 	});
 
 	it('exits when file is not found', async () => {
 		const state = buildState(app);
 
-		await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Missing.md`);
-
-		expect(FakeNoticeLog.some(m => m.includes('File not found'))).toBe(true);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', `${ENTITIES_FOLDER}/Missing.md`);
+		expect(result).toMatchObject({ ok: false, code: 'file-not-found' });
 	});
 	
 	// ── Modal outcomes ────────────────────────────────────────────────────
@@ -209,11 +204,11 @@ describe('editEntity', () => {
 		vault.seedFile(path, entityFile('Aria', 'Elf', 'USER NOTES'));
 		modalBehavior = { type: 'cancel' };
 
-		await editEntity(app, state, WORLD_PATH, 'Character', path);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', path);
 
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(vault.contentAt(path)).toContain('USER NOTES');
 		expect(vault.contentAt(path)).toContain('Elf');
-		expect(FakeNoticeLog.some(m => m.includes('updated'))).toBe(false);
 	});
 
 	it('rejects empty name and does not modify the file', async () => {
@@ -226,9 +221,9 @@ describe('editEntity', () => {
 			data: { name: null, race: 'Orc' },
 		};
 
-		await editEntity(app, state, WORLD_PATH, 'Character', path);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', path);
 
-		expect(FakeNoticeLog.some(m => m.includes('Name is required'))).toBe(true);
+		expect(result).toEqual({ ok: false, code: 'name-required' });
 		expect(vault.contentAt(path)).toContain('Elf');
 		expect(vault.contentAt(path)).not.toContain('Orc');
 	});
@@ -243,9 +238,9 @@ describe('editEntity', () => {
 			data: { name: '   ', race: 'Orc' },
 		};
 
-		await editEntity(app, state, WORLD_PATH, 'Character', path);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', path);
 
-		expect(FakeNoticeLog.some(m => m.includes('Name is required'))).toBe(true);
+		expect(result).toEqual({ ok: false, code: 'name-required' });
 		expect(vault.contentAt(path)).toContain('Elf');
 	});
 
@@ -259,8 +254,9 @@ describe('editEntity', () => {
 			data: { name: 'Aria', race: 'Human' },
 		};
 
-		await editEntity(app, state, WORLD_PATH, 'Character', path);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', path);
 
+		expect(result).toEqual({ ok: true, path });
 		const content = vault.contentAt(path) ?? '';
 		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
 		expect(content).toContain('name: "Aria"');
@@ -268,8 +264,7 @@ describe('editEntity', () => {
 		expect(content).not.toContain('Elf');
 		// Marker present → content below it is preserved
 		expect(content).toContain(PRESERVED_SECTION_MARKER);
-		expect(content).toContain('Keep me.');
-		expect(FakeNoticeLog.some(m => m.includes('updated'))).toBe(true);
+		expect(content).toContain('Keep me.');		
 	});
 
 	it('renames the file when the title changes', async () => {
@@ -282,15 +277,16 @@ describe('editEntity', () => {
 			data: { name: 'Aria the Bold', race: 'Elf' },
 		};
 
-		await editEntity(app, state, WORLD_PATH, 'Character', oldPath);
-
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', oldPath);
+		
 		expect(app.vault.getAbstractFileByPath(oldPath)).toBeNull();
 		const newPath = `${ENTITIES_FOLDER}/Aria the Bold.md`;
+		expect(result).toEqual({ ok: true, path: newPath });
+		expect(app.vault.getAbstractFileByPath(oldPath)).toBeNull();
 		expect(app.vault.getAbstractFileByPath(newPath)).toBeInstanceOf(TFile);
 		const content = vault.contentAt(newPath) ?? '';
 		expect(content).toContain('name: "Aria the Bold"');
-		expect(content).toContain('# Aria the Bold');
-		expect(FakeNoticeLog.some(m => m.includes('updated'))).toBe(true);
+		expect(content).toContain('# Aria the Bold');		
 	});
 
 	it('does not rename when the target name already exists', async () => {
@@ -304,9 +300,9 @@ describe('editEntity', () => {
 			data: { name: 'Borin', race: 'Elf' },
 		};
 
-		await editEntity(app, state, WORLD_PATH, 'Character', path);
+		const result = await editEntity(app, state, WORLD_PATH, 'Character', path);
 
-		expect(FakeNoticeLog.some(m => m.includes('Cannot rename') || m.includes('already exists'))).toBe(true);
+		expect(result).toMatchObject({ ok: false, code: 'rename-conflict' });
 		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
 		expect(vault.contentAt(path)).toContain('Elf');
 		expect(vault.contentAt(`${ENTITIES_FOLDER}/Borin.md`)).toContain('Dwarf');
