@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, TFolder } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -148,32 +147,23 @@ describe('newWorld', () => {
 
 	// ── Guards ────────────────────────────────────────────────────────────
 
-	it('exits when no template sets exist', async () => {
-		const state = buildState(app, { templateSets: [] });
-
-		await newWorld(app, settings, state, '');
-
-		expect(FakeNoticeLog.some(m => m.includes('No template sets found'))).toBe(true);
+	it('exits when no template sets exist', async () => {		
+		const result = await newWorld(app, settings, buildState(app, { templateSets: [] }), '');
+		expect(result).toEqual({ ok: false, code: 'no-template-sets' });
 	});
 
 	it('exits when the resolved template set is invalid', async () => {
-		const state = buildState(app, {
+		const result = await newWorld(app, settings, buildState(app, {
 			templateSets: [validTemplateSet({ isValid: false, issues: [{ severity: 'error', kind: 'other', message: 'broken' }] })],
-		});
-
-		await newWorld(app, settings, state, '');
-
-		expect(FakeNoticeLog.some(m => m.includes('has errors'))).toBe(true);
+		}), '');
+		expect(result).toMatchObject({ ok: false, code: 'template-set-invalid' });
 	});
 
 	it('creates nothing when the name dialog is cancelled', async () => {
-		const state = buildState(app);
 		inputResult = null;
-
-		await newWorld(app, settings, state, '');
-
+		const result = await newWorld(app, settings, buildState(app), '');
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(app.vault.getAbstractFileByPath('My World')).toBeNull();
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(false);
 	});
 
 	it('exits when a folder with that name already exists', async () => {
@@ -183,9 +173,8 @@ describe('newWorld', () => {
 		inputResult = 'Existing';
 		confirmResult = false;
 
-		await newWorld(app, settings, state, '');
-
-		expect(FakeNoticeLog.some(m => m.includes('already exists'))).toBe(true);
+		const result = await newWorld(app, settings, state, '');
+		expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 	});
 
 	// ── Creation ──────────────────────────────────────────────────────────
@@ -196,7 +185,8 @@ describe('newWorld', () => {
 		inputResult = 'NewWorld';
 		confirmResult = false; // do not make active
 
-		await newWorld(app, settings, state, '');
+		const result = await newWorld(app, settings, state, '');
+		expect(result).toEqual({ ok: true, path: 'NewWorld', madeActive: false });
 
 		expect(app.vault.getAbstractFileByPath('NewWorld')).toBeInstanceOf(TFolder);
 		expect(app.vault.getAbstractFileByPath('NewWorld/Characters')).toBeInstanceOf(TFolder);
@@ -207,9 +197,7 @@ describe('newWorld', () => {
 		expect(index).toContain('name: "NewWorld"');
 		expect(index).toContain('status: inactive');
 		expect(index).toContain('template_set: defaults');
-		expect(index).toContain('# NewWorld');
-		expect(FakeNoticeLog.some(m => m.includes('created'))).toBe(true);
-		expect(FakeNoticeLog.some(m => m.includes('set as active'))).toBe(false);
+		expect(index).toContain('# NewWorld');		
 	});
 
 	it('creates an active world and deactivates the previous active world', async () => {
@@ -218,12 +206,12 @@ describe('newWorld', () => {
 		inputResult = 'NewWorld';
 		confirmResult = true;
 
-		await newWorld(app, settings, state, '');
+		const result = await newWorld(app, settings, state, '');
+		expect(result).toEqual({ ok: true, path: 'NewWorld', madeActive: true });
 
 		const newIndex = vault.contentAt('NewWorld/_index.md') ?? '';
 		expect(newIndex).toContain('status: active');
-		expect(FakeNoticeLog.some(m => m.includes('set as active'))).toBe(true);
-
+		
 		const oldIndex = vault.contentAt('OldWorld/_index.md') ?? '';
 		expect(oldIndex).toContain('status: inactive');
 	});
@@ -235,8 +223,8 @@ describe('newWorld', () => {
 		inputResult = 'Realm';
 		confirmResult = false;
 
-		await newWorld(app, settings, state, 'Campaigns');
-
+		const result = await newWorld(app, settings, state, 'Campaigns');
+		expect(result).toEqual({ ok: true, path: 'Campaigns/Realm', madeActive: false });
 		expect(app.vault.getAbstractFileByPath('Campaigns/Realm')).toBeInstanceOf(TFolder);
 		expect(app.vault.getAbstractFileByPath('Campaigns/Realm/_index.md')).not.toBeNull();
 		expect(app.vault.getAbstractFileByPath('Realm')).toBeNull();
