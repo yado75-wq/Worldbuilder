@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -175,35 +174,21 @@ describe('editWorldMeta', () => {
 
 	it('exits when world is not found', async () => {
 		const state = buildState(app);
-		
-		await editWorldMeta(app, state, 'MissingWorld');
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await editWorldMeta(app, state, 'MissingWorld');
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 	});
 	
-	/* it('exits when world is not found', async () => {
-		const state = buildState(app);
-		const result = await editWorldMeta(app, state, 'non-existent-world-path');
-		expect(result).toBeUndefined(); // Assuming the function returns null or undefined when the world is not found
-	}); */
-
 	it('exits when no template set is available', async () => {
 		const state = buildState(app, { templateSets: [] });
 		state.worlds[0]!.templateSet = 'defaults';
-
-		await editWorldMeta(app, state, WORLD_PATH);
-
-		expect(FakeNoticeLog.some(m => m.includes('No template sets found. Restore or create one under the templates folder (or reload the plugin).'))).toBe(true);
+		const result = await editWorldMeta(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'no-template-sets' });
 	});
 
 	it('exits when WorldMeta field set is missing or empty', async () => {
 		const state = buildState(app, { worldMetaFields: [] });
-
-		await editWorldMeta(app, state, WORLD_PATH);
-
-		expect(
-			FakeNoticeLog.some(m => m.includes('WorldMeta_Fields.md not found') || m.includes('empty'))
-		).toBe(true);
+		const result = await editWorldMeta(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'worldmeta-empty' });
 	});
 
 	// ── Modal outcomes ────────────────────────────────────────────────────
@@ -215,10 +200,9 @@ describe('editWorldMeta', () => {
 		});
 		modalBehavior = { type: 'cancel' };
 
-		await editWorldMeta(app, state, WORLD_PATH);
-
+		const result = await editWorldMeta(app, state, WORLD_PATH);
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(vault.contentAt(INDEX_PATH)).toContain('Fantasy');
-		expect(FakeNoticeLog.some(m => m.includes('updated'))).toBe(false);
 	});
 
 	it('updates meta properties without changing world name, status, or template_set', async () => {
@@ -255,8 +239,9 @@ describe('editWorldMeta', () => {
 			},
 		};
 
-		await editWorldMeta(app, state, WORLD_PATH);
+		const result = await editWorldMeta(app, state, WORLD_PATH);
 
+		expect(result).toEqual({ ok: true, path: WORLD_PATH });
 		const content = vault.contentAt(INDEX_PATH) ?? '';
 		expect(content).toContain('name: "TestWorld"');
 		expect(content).toContain('# TestWorld');
@@ -266,8 +251,7 @@ describe('editWorldMeta', () => {
 		expect(content).toContain('Horror');
 		expect(content).toContain('Dark');
 		expect(content).toContain('years');
-		expect(content).not.toContain('Fantasy');
-		expect(FakeNoticeLog.some(m => m.includes('World meta updated'))).toBe(true);
+		expect(content).not.toContain('Fantasy');		
 	});
 
 	it('writes section fields into the index body', async () => {
@@ -295,7 +279,8 @@ describe('editWorldMeta', () => {
 			},
 		};
 
-		await editWorldMeta(app, state, WORLD_PATH);
+		const result = await editWorldMeta(app, state, WORLD_PATH);
+		expect(result).toEqual({ ok: true, path: WORLD_PATH });
 
 		const content = vault.contentAt(INDEX_PATH) ?? '';
 		expect(content).toContain('## Premise / Hook');
@@ -333,7 +318,8 @@ describe('editWorldMeta', () => {
 			},
 		};
 
-		await editWorldMeta(app, state, WORLD_PATH);
+		const result = await editWorldMeta(app, state, WORLD_PATH);
+		expect(result).toEqual({ ok: true, path: WORLD_PATH });
 
 		const content = vault.contentAt(INDEX_PATH) ?? '';
 		expect(content).toContain('name: "TestWorld"');
@@ -341,6 +327,6 @@ describe('editWorldMeta', () => {
 		expect(content).toContain('template_set: defaults');
 		expect(content).not.toContain('Fantasy');
 		expect(content).not.toContain('genre:');
-		expect(FakeNoticeLog.some(m => m.includes('World meta updated'))).toBe(true);
+		
 	});
 });
