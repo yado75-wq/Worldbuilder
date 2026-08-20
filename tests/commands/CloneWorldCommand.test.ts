@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, TFolder } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -97,8 +96,8 @@ describe('cloneWorld', () => {
 		const state = buildState(app, 'Misko');
 		inputResult = null;
 
-		await cloneWorld(app, state, 'Misko');
-
+		const result = await cloneWorld(app, state, 'Misko');
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(app.vault.getAbstractFileByPath('Misko-copy')).toBeNull();
 	});
 
@@ -107,8 +106,9 @@ describe('cloneWorld', () => {
 		const state = buildState(app, 'Misko');
 		inputResult = 'Misko-copy';
 
-		await cloneWorld(app, state, 'Misko');
+		const result = await cloneWorld(app, state, 'Misko');
 
+		expect(result).toEqual({ ok: true, path: 'Misko-copy' });
 		expect(app.vault.getAbstractFileByPath('//Misko-copy')).toBeNull();
 		expect(app.vault.getAbstractFileByPath('Misko-copy')).toBeInstanceOf(TFolder);
 		expect(app.vault.getAbstractFileByPath('Misko-copy/_index.md')).not.toBeNull();
@@ -116,19 +116,16 @@ describe('cloneWorld', () => {
 		const content = vault.contentAt('Misko-copy/_index.md') ?? '';
 		expect(content).toContain('status: inactive');
 		expect(content).toContain('name: "Misko-copy"');
-		expect(content).toContain('# Misko-copy');
-		expect(FakeNoticeLog.some(m => m.includes('created') && m.includes('inactive'))).toBe(true);
+		expect(content).toContain('# Misko-copy');		
 	});
 
 	it('copies nested files into the clone', async () => {
 		const state = buildState(app, 'Misko');
 		inputResult = 'Misko-copy';
 
-		await cloneWorld(app, state, 'Misko');
-
-		expect(
-			app.vault.getAbstractFileByPath('Misko-copy/Characters/Aria.md')
-		).not.toBeNull();
+		const result = await cloneWorld(app, state, 'Misko');
+		expect(result).toEqual({ ok: true, path: 'Misko-copy' });
+		expect(app.vault.getAbstractFileByPath('Misko-copy/Characters/Aria.md')).not.toBeNull();
 	});
 
 	it('refuses to clone onto an existing path', async () => {
@@ -137,8 +134,7 @@ describe('cloneWorld', () => {
 		vault.seedFolder('Misko-copy');
 		inputResult = 'Misko-copy';
 
-		await cloneWorld(app, state, 'Misko');
-
-		expect(FakeNoticeLog.some(m => m.includes('already exists'))).toBe(true);
+		const result = await cloneWorld(app, state, 'Misko');
+		expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 	});
 });
