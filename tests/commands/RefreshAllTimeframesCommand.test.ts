@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -128,19 +127,16 @@ describe('refreshAllTimeframes', () => {
 
 	it('exits when world is not found', async () => {
 		const state = buildState(app);
-
-		await refreshAllTimeframes(app, state, 'Missing');
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await refreshAllTimeframes(app, state, 'Missing');
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 	});
 
 	it('exits when no template set is available', async () => {
 		const state = buildState(app, { templateSets: [] });
 		state.worlds[0]!.templateSet = 'defaults';
 
-		await refreshAllTimeframes(app, state, WORLD_PATH);
-
-		expect(FakeNoticeLog.some(m => m.includes('No template sets found. Restore or create one under the templates folder (or reload the plugin).'))).toBe(true);
+		const result = await refreshAllTimeframes(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'no-template-sets' });
 	});
 
 	it('exits when no entities have a timeframe value', async () => {
@@ -152,9 +148,8 @@ describe('refreshAllTimeframes', () => {
 			'---\ntags:\n  - milestone\nname: "Empty"\n---\n\n# Empty\n'
 		);
 
-		await refreshAllTimeframes(app, state, WORLD_PATH);
-
-		expect(FakeNoticeLog.some(m => m.includes('No entities with a timeframe value found'))).toBe(true);
+		const result = await refreshAllTimeframes(app, state, WORLD_PATH);
+		expect(result).toEqual({ ok: false, code: 'no-targets' });
 	});
 
 	// ── Confirm + write ──────────────────────────────────────────────────
@@ -167,10 +162,9 @@ describe('refreshAllTimeframes', () => {
 		vault.seedFile(path, milestoneFile('Founding', '0'));
 		confirmResult = false;
 
-		await refreshAllTimeframes(app, state, WORLD_PATH);
-
+		const result = await refreshAllTimeframes(app, state, WORLD_PATH);
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(vault.contentAt(path)).toContain('_STALE_');
-		expect(FakeNoticeLog.some(m => m.includes('Refreshed'))).toBe(false);
 	});
 
 	it('rewrites stale timeframe sections when confirmed', async () => {
@@ -180,14 +174,13 @@ describe('refreshAllTimeframes', () => {
 		vault.seedFile(path, milestoneFile('Founding', '0'));
 		confirmResult = true;
 
-		await refreshAllTimeframes(app, state, WORLD_PATH);
-
+		const result = await refreshAllTimeframes(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: true, refreshed: ['Founding'] });
 		const content = vault.contentAt(path) ?? '';
 		expect(content).not.toContain('_STALE_');
 		expect(content).toContain(PRESERVED_SECTION_MARKER);
 		expect(content).toContain('USER NOTES');
 		expect(content).toContain('## Time');
-		expect(FakeNoticeLog.some(m => m.includes('Refreshed') && m.includes('Founding'))).toBe(true);
 	});
 
 	it('skips entities whose field set has no title field', async () => {
@@ -200,12 +193,8 @@ describe('refreshAllTimeframes', () => {
 		vault.seedFile(path, milestoneFile('Founding', '0'));
 		confirmResult = true;
 
-		await refreshAllTimeframes(app, state, WORLD_PATH);
-
-		// Target exists but is skipped → no candidates → up to date + skipped
-		expect(FakeNoticeLog.some(m =>
-			m.includes('already up to date') || m.includes('Skipped')
-		)).toBe(true);
+		const result = await refreshAllTimeframes(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'already-up-to-date' });
 		expect(vault.contentAt(path)).toContain('_STALE_');
 	});
 });

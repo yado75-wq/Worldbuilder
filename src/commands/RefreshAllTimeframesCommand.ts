@@ -7,7 +7,7 @@ import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
 import { buildFieldValues } from './shared/EntityPrefill';
 import { extractPreservedSection } from '../util/PreservedSection';
 import { refreshDashboard } from './RefreshDashboardCommand';
-import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
 interface RefreshCandidate {
@@ -16,55 +16,63 @@ interface RefreshCandidate {
 	newContent: string;
 }
 
-/**
- * Regenerates every entity in the world whose own `timeframe` value is
- * present, recomputing its "Resolved:" line (§8) against the *current*
- * state of everything it anchors to.
- *
- * Why this exists: `CreateEntityCommand.ts`/`EditEntityCommand.ts` only
- * compute an entity's `Resolved:` line at the moment *that* entity is
- * created or edited. If A anchors to B and B's own timeframe later
- * changes, A's `Resolved:` line goes stale — it isn't touched again until
- * A itself is re-edited. This is the vault-wide catch-up pass for that;
- * it's a separate, explicit command (not folded into `refreshDashboard`,
- * which is scoped to one file, or `syncWorldFiles`, which is about folder
- * placement, not content) precisely because it rewrites every
- * timeframe-bearing entity at once — real scope, deserving its own
- * confirmation, not a side effect of something people already run often.
- *
- * Only entities whose regenerated content actually differs from what's on
- * disk are written — an entity whose `Resolved:` line was already correct
- * is left untouched.
- */
+export type RefreshAllTimeframesResult =
+	| { ok: true; refreshed: string[]; failed: string[]; skipped: number }
+	| {
+			ok: false;
+			code:
+				| 'active-world-conflict'
+				| 'world-not-found'
+				| 'no-template-sets'
+				| 'missing-template-set'
+				| 'no-targets'
+				| 'already-up-to-date'
+				| 'cancelled';
+			detail?: string;
+	  };
+
+function err(
+	code: Extract<RefreshAllTimeframesResult, { ok: false }>['code'],
+	detail?: string
+): RefreshAllTimeframesResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
+
 export async function refreshAllTimeframes(
 	app: App,
 	state: PluginState,
 	worldPath: string
-): Promise<void> {
+): Promise<RefreshAllTimeframesResult> {
+	if (hasActiveWorldConflict(state)) {
+		new Notice(
+			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
+		);
+		return err('active-world-conflict');
+	}
 
-	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
-	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');
-		return;
+		return err('world-not-found');
 	}
 
 	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
 	if (!resolved.ok) {
 		new Notice(missingTemplateSetMessage(resolved));
-		return;
+		return err(
+			resolved.reason === 'none' ? 'no-template-sets' : 'missing-template-set',
+			resolved.reason === 'missing' ? resolved.requested : undefined
+		);
 	}
 	const templateSet = resolved.set;
 
 	const { lookup, targets } = buildTimeframeLookup(app, worldPath, templateSet);
 	if (targets.length === 0) {
 		new Notice('No entities with a timeframe value found.');
-		return;
+		return err('no-targets');
 	}
 
 	const worldTimeUnit = getWorldTimeUnit(app, world);
-
 	const candidates: RefreshCandidate[] = [];
 	const skipped: string[] = [];
 
@@ -105,7 +113,7 @@ export async function refreshAllTimeframes(
 			? `All resolved timeframes are already up to date. ${skipped.length} entities skipped (missing type or title field).`
 			: 'All resolved timeframes are already up to date.';
 		new Notice(msg);
-		return;
+		return err('already-up-to-date', skipped.length > 0 ? String(skipped.length) : undefined);
 	}
 
 	const preview = candidates.map(c => `• ${c.basename}`).join('\n');
@@ -116,7 +124,9 @@ export async function refreshAllTimeframes(
 		'Cancel'
 	);
 
-	if (!confirmed) return;
+	if (!confirmed) {
+		return err('cancelled');
+	}
 
 	const refreshed: string[] = [];
 	const failed: string[] = [];
@@ -136,12 +146,12 @@ export async function refreshAllTimeframes(
 	if (skipped.length > 0) parts.push(`Skipped: ${skipped.length}`);
 	new Notice(parts.join('\n'));
 
-	// Refresh dashboard if it exists — Needs Attention may have changed
-	// now that some entities' resolved values are current again.
 	const dashPath = `${worldPath}/_dashboard.md`;
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, worldPath, false);
 	}
+
+	return { ok: true, refreshed, failed, skipped: skipped.length };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
