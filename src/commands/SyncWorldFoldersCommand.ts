@@ -1,83 +1,102 @@
 import { App, Notice, TFolder } from 'obsidian';
-import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
-import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { PluginState } from '../types';
+import { hasActiveWorldConflict } from '../context/ActiveWorld';
+import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+
+export type SyncWorldFoldersResult =
+	| {
+			ok: true;
+			created: string[];
+			deleted: string[];
+			kept: string[];
+	  }
+	| {
+			ok: false;
+			code:
+				| 'active-world-conflict'
+				| 'world-not-found'
+				| 'no-template-sets'
+				| 'missing-template-set'
+				| 'world-folder-not-found'
+				| 'empty-world-template';
+			detail?: string;
+	  };
+
+function err(
+	code: Extract<SyncWorldFoldersResult, { ok: false }>['code'],
+	detail?: string
+): SyncWorldFoldersResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
 
 export async function syncWorldFolders(
 	app: App,
 	state: PluginState,
 	worldPath: string
-): Promise<void> {
+): Promise<SyncWorldFoldersResult> {
+	if (hasActiveWorldConflict(state)) {
+		new Notice(
+			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
+		);
+		return err('active-world-conflict');
+	}
 
-	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
-	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');
-		return;
+		return err('world-not-found');
 	}
 
-	const templateSet = findTemplateSet(state, world);
-	if (!templateSet) {
-		new Notice(`Template set "${world.templateSet}" not found.`);
-		return;
+	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	if (!resolved.ok) {
+		new Notice(missingTemplateSetMessage(resolved));
+		return err(
+			resolved.reason === 'none' ? 'no-template-sets' : 'missing-template-set',
+			resolved.reason === 'missing' ? resolved.requested : undefined
+		);
 	}
+	const templateSet = resolved.set;
 
 	const created: string[] = [];
-	const skipped: string[] = [];
+	const kept: string[] = [];
 	const deleted: string[] = [];
 
 	const worldFolder = app.vault.getAbstractFileByPath(worldPath);
 	if (!(worldFolder instanceof TFolder)) {
 		new Notice('World folder not found.');
-		return;
+		return err('world-folder-not-found');
 	}
 
-	// Empty / missing world-template → do nothing (do not delete "extras")
 	if (templateSet.worldTemplate.length === 0) {
 		new Notice('World template is empty — no folder changes.');
-		return;
+		return err('empty-world-template');
 	}
 
-	// Create missing folders
 	for (const sub of templateSet.worldTemplate) {
 		const folderPath = `${worldPath}/${sub}`;
 		if (app.vault.getAbstractFileByPath(folderPath)) {
-			skipped.push(sub);
+			kept.push(sub);
 		} else {
 			await app.vault.createFolder(folderPath);
 			created.push(sub);
 		}
 	}
 
-	// Remove empty folders not in template
-	// Only check direct children of the world root
 	for (const child of worldFolder.children) {
 		if (!(child instanceof TFolder)) continue;
-
-		// Skip folders that are in the template
 		if (templateSet.worldTemplate.includes(child.name)) continue;
-
-		// Skip non-empty folders
 		if (child.children.length > 0) continue;
 
 		await app.fileManager.trashFile(child);
 		deleted.push(child.name);
 	}
 
-	// Build summary notice
 	const parts: string[] = [];
 	if (created.length > 0) parts.push(`Created: ${created.join(', ')}`);
 	if (deleted.length > 0) parts.push(`Removed empty: ${deleted.join(', ')}`);
-	if (skipped.length > 0) parts.push(`Kept: ${skipped.join(', ')}`);
+	if (kept.length > 0) parts.push(`Kept: ${kept.join(', ')}`);
 	if (parts.length === 0) parts.push('No changes needed.');
-
 	new Notice(parts.join('\n'));
-}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function findTemplateSet(state: PluginState, world: WorldInfo): TemplateSetInfo | null {
-	return state.templateSets.find(ts => ts.name === world.templateSet)
-		?? state.templateSets[0]
-		?? null;
+	return { ok: true, created, deleted, kept };
 }

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, TFolder } from 'obsidian';
 import {
 	FakeVault,
-	FakeNoticeLog,
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -76,69 +75,65 @@ describe('syncWorldFolders', () => {
 		resetFakeObsidian();
 	});
 
-	// ── Guards ────────────────────────────────────────────────────────────
-
 	it('exits when world is not found', async () => {
 		const state = buildState(app);
-
-		await syncWorldFolders(app, state, 'Missing');
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await syncWorldFolders(app, state, 'Missing');
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 	});
 
 	it('exits when template set is not found', async () => {
 		const state = buildState(app, { templateSets: [] });
 		state.worlds[0]!.templateSet = 'missing-set';
-
-		await syncWorldFolders(app, state, WORLD_PATH);
-
-		expect(FakeNoticeLog.some(m => m.includes('Template set') && m.includes('not found'))).toBe(true);
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'no-template-sets' });
 	});
-
-	// ── Create ────────────────────────────────────────────────────────────
 
 	it('creates missing folders from worldTemplate', async () => {
 		const state = buildState(app, { seedTemplateFolders: false });
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
-		await syncWorldFolders(app, state, WORLD_PATH);
-
+		expect(result).toMatchObject({ ok: true });
+		if (result.ok) {
+			expect(result.created).toEqual(expect.arrayContaining(['Characters', 'Factions', 'Locations']));
+		}
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters`)).toBeInstanceOf(TFolder);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions`)).toBeInstanceOf(TFolder);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Locations`)).toBeInstanceOf(TFolder);
-		expect(FakeNoticeLog.some(m => m.includes('Created'))).toBe(true);
 	});
 
 	it('keeps existing template folders and reports them as Kept', async () => {
 		const state = buildState(app, { seedTemplateFolders: true });
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
-		await syncWorldFolders(app, state, WORLD_PATH);
-
+		expect(result).toMatchObject({ ok: true });
+		if (result.ok) {
+			expect(result.kept).toEqual(expect.arrayContaining(['Characters', 'Factions', 'Locations']));
+			expect(result.created).toEqual([]);
+		}
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters`)).toBeInstanceOf(TFolder);
-		expect(FakeNoticeLog.some(m => m.includes('Kept'))).toBe(true);
 	});
-
-	// ── Delete empty extras ───────────────────────────────────────────────
 
 	it('removes empty folders that are not in worldTemplate', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		const state = buildState(app);
 		vault.seedFolder(`${WORLD_PATH}/OrphanEmpty`);
 
-		await syncWorldFolders(app, state, WORLD_PATH);
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
+		expect(result).toMatchObject({ ok: true });
+		if (result.ok) expect(result.deleted).toContain('OrphanEmpty');
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/OrphanEmpty`)).toBeNull();
-		expect(FakeNoticeLog.some(m => m.includes('Removed empty') && m.includes('OrphanEmpty'))).toBe(true);
 	});
 
 	it('does not remove non-empty folders outside the template', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		const state = buildState(app);
 		vault.seedFile(`${WORLD_PATH}/Notes/readme.md`, '# hi\n');
+		const trashSpy = vi.spyOn(app.fileManager, 'trashFile').mockResolvedValue();
 
-        const trashSpy = vi.spyOn(app.fileManager, 'trashFile').mockResolvedValue();
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
-		await syncWorldFolders(app, state, WORLD_PATH);
-
+		expect(result).toMatchObject({ ok: true });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Notes/readme.md`)).not.toBeNull();
 		expect(trashSpy).not.toHaveBeenCalled();
 	});
@@ -148,25 +143,25 @@ describe('syncWorldFolders', () => {
 			worldTemplate: ['Characters'],
 			seedTemplateFolders: true,
 		});
+		const trashSpy = vi.spyOn(app.fileManager, 'trashFile').mockResolvedValue();
 
-		const trashSpy = vi.fn(async () => {});
-		(app.fileManager as unknown as { trashFile: (f: unknown) => Promise<void> }).trashFile = trashSpy;
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
-		await syncWorldFolders(app, state, WORLD_PATH);
-
+		expect(result).toMatchObject({ ok: true });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters`)).toBeInstanceOf(TFolder);
 		expect(trashSpy).not.toHaveBeenCalled();
 	});
 
 	it('reports No changes needed when template folders exist and nothing extra', async () => {
 		const state = buildState(app, { seedTemplateFolders: true });
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
-		await syncWorldFolders(app, state, WORLD_PATH);
-
-		// All template folders already present → Kept; if no deletes/creates only Kept
-		expect(
-			FakeNoticeLog.some(m => m.includes('Kept') || m.includes('No changes needed'))
-		).toBe(true);
+		expect(result).toMatchObject({ ok: true });
+		if (result.ok) {
+			expect(result.created).toEqual([]);
+			expect(result.deleted).toEqual([]);
+			expect(result.kept.length).toBeGreaterThan(0);
+		}
 	});
 
 	it('does nothing when worldTemplate is empty (no create, no delete)', async () => {
@@ -176,13 +171,12 @@ describe('syncWorldFolders', () => {
 			seedTemplateFolders: false,
 		});
 		vault.seedFolder(`${WORLD_PATH}/OrphanEmpty`);
-
 		const trashSpy = vi.spyOn(app.fileManager, 'trashFile').mockResolvedValue();
 
-		await syncWorldFolders(app, state, WORLD_PATH);
+		const result = await syncWorldFolders(app, state, WORLD_PATH);
 
+		expect(result).toEqual({ ok: false, code: 'empty-world-template' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/OrphanEmpty`)).toBeInstanceOf(TFolder);
 		expect(trashSpy).not.toHaveBeenCalled();
-		expect(FakeNoticeLog.some(m => m.includes('World template is empty'))).toBe(true);
 	});
 });
