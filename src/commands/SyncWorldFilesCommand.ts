@@ -2,7 +2,7 @@ import { App, Notice, TFile, TFolder, getAllTags } from 'obsidian';
 import { PluginState, FolderRule } from '../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { syncWorldNameToFolder } from './shared/WorldIndex';
-import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
 interface MoveCandidate {
@@ -12,43 +12,73 @@ interface MoveCandidate {
 	reason: string;
 }
 
+export type SyncWorldFilesResult =
+	| {
+			ok: true;
+			moved: string[];
+			failed: string[];
+			unrecognized: number;
+			nameSynced: boolean;
+	  }
+	| {
+			ok: false;
+			code:
+				| 'active-world-conflict'
+				| 'world-not-found'
+				| 'no-template-sets'
+				| 'missing-template-set'
+				| 'world-folder-not-found'
+				| 'nothing-to-move'
+				| 'cancelled';
+			detail?: string;
+	  };
+
+function err(
+	code: Extract<SyncWorldFilesResult, { ok: false }>['code'],
+	detail?: string
+): SyncWorldFilesResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
+
 export async function syncWorldFiles(
 	app: App,
 	state: PluginState,
 	worldPath: string
-): Promise<void> {
+): Promise<SyncWorldFilesResult> {
+	if (hasActiveWorldConflict(state)) {
+		new Notice(
+			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
+		);
+		return err('active-world-conflict');
+	}
 
-	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
-	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');
-		return;
+		return err('world-not-found');
 	}
 
 	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
 	if (!resolved.ok) {
 		new Notice(missingTemplateSetMessage(resolved));
-		return;
+		return err(
+			resolved.reason === 'none' ? 'no-template-sets' : 'missing-template-set',
+			resolved.reason === 'missing' ? resolved.requested : undefined
+		);
 	}
 	const templateSet = resolved.set;
-	
+
 	const nameSynced = await syncWorldNameToFolder(app, world);
 	if (nameSynced) {
 		new Notice(`World display name set to folder name "${world.folder.name}".`);
 	}
-	
-	// Only rules with specific folders (not *)
+
 	const fixedRules = templateSet.folderRules.filter(r => r.targetFolder !== '*');
 
-	// Scan the whole world, any depth — not just files sitting one level
-	// inside an existing subfolder. A correctly-tagged entity sitting
-	// directly in the world root, or nested more than one level deep, is
-	// exactly as real a candidate as one already inside a wrong subfolder.
 	const worldFolder = app.vault.getAbstractFileByPath(worldPath);
 	if (!(worldFolder instanceof TFolder)) {
 		new Notice('World folder not found.');
-		return;
+		return err('world-folder-not-found');
 	}
 
 	const candidates: MoveCandidate[] = [];
@@ -57,24 +87,19 @@ export async function syncWorldFiles(
 	const worldFiles = app.vault.getFiles().filter(f =>
 		f.path.startsWith(worldPath + '/') &&
 		f.extension === 'md' &&
-		!f.basename.startsWith('_') // _index, _dashboard, sub-dashboards
+		!f.basename.startsWith('_')
 	);
 
 	for (const item of worldFiles) {
 		const cache = app.metadataCache.getFileCache(item);
 		const tags = getAllTags(cache ?? {}) ?? [];
-
-		// Normalize tags — remove # prefix
 		const normalizedTags = tags.map(t => t.replace('#', ''));
 
-		// Skip generic files
 		if (normalizedTags.includes('generic')) continue;
 
-		// Find matching rule by tag
 		const matchingRule = findRuleByTag(fixedRules, normalizedTags);
 
 		if (!matchingRule) {
-			// No rule matches — unrecognized
 			if (normalizedTags.length > 0) {
 				unrecognized.push(item.path);
 			}
@@ -82,8 +107,6 @@ export async function syncWorldFiles(
 		}
 
 		const targetFolderPath = `${worldPath}/${matchingRule.targetFolder}`;
-
-		// Check if file is already in the correct folder
 		if (item.parent?.path === targetFolderPath) continue;
 
 		candidates.push({
@@ -99,10 +122,9 @@ export async function syncWorldFiles(
 			? `All files are in correct folders. ${unrecognized.length} unrecognized file(s) left in place.`
 			: 'All files are in correct folders.';
 		new Notice(msg);
-		return;
+		return err('nothing-to-move', unrecognized.length > 0 ? String(unrecognized.length) : undefined);
 	}
 
-	// Build preview and ask confirmation
 	const preview = candidates
 		.map(c => `• ${c.file.basename}: ${c.currentFolder} → ${c.targetFolder}`)
 		.join('\n');
@@ -114,23 +136,22 @@ export async function syncWorldFiles(
 		'Cancel'
 	);
 
-	if (!confirmed) return;
+	if (!confirmed) {
+		return err('cancelled');
+	}
 
-	// Move files
 	const moved: string[] = [];
 	const failed: string[] = [];
 
 	for (const candidate of candidates) {
 		const targetPath = `${worldPath}/${candidate.targetFolder}/${candidate.file.name}`;
 
-		// Ensure target folder exists
 		const targetFolder = app.vault.getAbstractFileByPath(`${worldPath}/${candidate.targetFolder}`);
 		if (!(targetFolder instanceof TFolder)) {
 			failed.push(`${candidate.file.basename} (target folder missing)`);
 			continue;
 		}
 
-		// Check for name conflict
 		if (app.vault.getAbstractFileByPath(targetPath)) {
 			failed.push(`${candidate.file.basename} (name conflict in target)`);
 			continue;
@@ -144,12 +165,19 @@ export async function syncWorldFiles(
 		}
 	}
 
-	// Summary
 	const parts: string[] = [];
 	if (moved.length > 0) parts.push(`Moved: ${moved.join(', ')}`);
 	if (failed.length > 0) parts.push(`Failed: ${failed.join(', ')}`);
 	if (unrecognized.length > 0) parts.push(`Unrecognized (left in place): ${unrecognized.length}`);
 	new Notice(parts.join('\n'));
+
+	return {
+		ok: true,
+		moved,
+		failed,
+		unrecognized: unrecognized.length,
+		nameSynced,
+	};
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -1,16 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { App, TFile,  } from 'obsidian';
-import { FakeVault, resetFakeObsidian, FakeNoticeLog, asTFile,	asTFolder } from '../fakes/obsidian';
+import { App, TFile } from 'obsidian';
+import { FakeVault, resetFakeObsidian, asTFile, asTFolder } from '../fakes/obsidian';
 import { syncWorldFiles } from '../../src/commands/SyncWorldFilesCommand';
 import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
-
-/**
- * These tests run the REAL command function against an in-memory fake of
- * the actual `obsidian` npm package's API shape (tests/fakes/obsidian.ts) —
- * not a hand-guessed stub. `tsc` still checks every `obsidian` import here
- * against the real, verified type definitions; only the runtime is
- * substituted (vitest.config.ts's alias).
- */
 
 const WORLD_PATH = 'Michal';
 
@@ -95,20 +87,18 @@ async function waitForSelector(selector: string, timeoutMs = 1000): Promise<Elem
 	}
 }
 
-/** Start the command and confirm once the modal is in the DOM. */
-async function runAndConfirm(app: App, state: PluginState): Promise<void> {
+async function runAndConfirm(app: App, state: PluginState) {
 	const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
 	const btn = await waitForSelector('.wb-confirm-btn-primary') as HTMLButtonElement;
 	btn.click();
-	await resultPromise;
+	return resultPromise;
 }
 
-/** Start the command and cancel once the modal is in the DOM. */
-async function runAndCancel(app: App, state: PluginState): Promise<void> {
+async function runAndCancel(app: App, state: PluginState) {
 	const resultPromise = syncWorldFiles(app, state, WORLD_PATH);
 	const btn = await waitForSelector('.wb-confirm-btn-secondary') as HTMLButtonElement;
 	btn.click();
-	await resultPromise;
+	return resultPromise;
 }
 
 describe('syncWorldFiles', () => {
@@ -119,17 +109,15 @@ describe('syncWorldFiles', () => {
 		resetFakeObsidian();
 	});
 
-	// ── Already covered behaviour ─────────────────────────────────────────
-
 	it('does not move a file already in its correct one-level-deep folder', async () => {
 		const vault = app.vault as unknown as FakeVault;
 		vault.seedFile(`${WORLD_PATH}/Characters/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		await syncWorldFiles(app, state, WORLD_PATH);
+		const result = await syncWorldFiles(app, state, WORLD_PATH);
 
+		expect(result).toMatchObject({ ok: false, code: 'nothing-to-move' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
-		expect(FakeNoticeLog.some(m => m.includes('All files are in correct folders'))).toBe(true);
 	});
 
 	it('moves a misplaced but one-level-deep file to its correct folder', async () => {
@@ -137,8 +125,10 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		await runAndConfirm(app, state);
+		const result = await runAndConfirm(app, state);
 
+		expect(result).toMatchObject({ ok: true });
+		if (result.ok) expect(result.moved).toContain('Aria');
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeNull();
 	});
@@ -148,8 +138,9 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		await runAndConfirm(app, state);
+		const result = await runAndConfirm(app, state);
 
+		expect(result).toMatchObject({ ok: true });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 	});
 
@@ -158,8 +149,9 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Time/Sub/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		await runAndConfirm(app, state);
+		const result = await runAndConfirm(app, state);
 
+		expect(result).toMatchObject({ ok: true });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 	});
 
@@ -168,13 +160,12 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		await runAndCancel(app, state);
+		const result = await runAndCancel(app, state);
 
+		expect(result).toEqual({ ok: false, code: 'cancelled' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeNull();
 	});
-
-	// ── New cases ─────────────────────────────────────────────────────────
 
 	it('moves multiple misplaced files in one run', async () => {
 		const vault = app.vault as unknown as FakeVault;
@@ -182,8 +173,9 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Characters/IronLeague.md`, factionFile('IronLeague'));
 		const { state } = buildState(app);
 
-		await runAndConfirm(app, state);
+		const result = await runAndConfirm(app, state);
 
+		expect(result).toMatchObject({ ok: true });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/IronLeague.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeNull();
@@ -195,21 +187,20 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Notes/Scratch.md`, genericFile('Scratch'));
 		const { state } = buildState(app);
 
-		await syncWorldFiles(app, state, WORLD_PATH);
+		const result = await syncWorldFiles(app, state, WORLD_PATH);
 
-		// Still in original location
+		expect(result).toMatchObject({ ok: false, code: 'nothing-to-move' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Notes/Scratch.md`)).toBeInstanceOf(TFile);
-		expect(FakeNoticeLog.some(m => m.includes('All files are in correct folders'))).toBe(true);
 	});
 
 	it('skips files whose name starts with underscore', async () => {
 		const vault = app.vault as unknown as FakeVault;
-		// Even if tagged as character, underscore-prefixed files are ignored
 		vault.seedFile(`${WORLD_PATH}/_draft.md`, characterFile('Draft'));
 		const { state } = buildState(app);
 
-		await syncWorldFiles(app, state, WORLD_PATH);
+		const result = await syncWorldFiles(app, state, WORLD_PATH);
 
+		expect(result).toMatchObject({ ok: false, code: 'nothing-to-move' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/_draft.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/_draft.md`)).toBeNull();
 	});
@@ -219,37 +210,36 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Relics/Sword.md`, unknownTagFile('Sword'));
 		const { state } = buildState(app);
 
-		await syncWorldFiles(app, state, WORLD_PATH);
+		const result = await syncWorldFiles(app, state, WORLD_PATH);
 
+		expect(result).toMatchObject({ ok: false, code: 'nothing-to-move' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Relics/Sword.md`)).toBeInstanceOf(TFile);
-		expect(FakeNoticeLog.some(m => m.includes('unrecognized'))).toBe(true);
 	});
 
 	it('does not move a file when the target folder already has a name conflict', async () => {
 		const vault = app.vault as unknown as FakeVault;
-		// Correct location already occupied
 		vault.seedFile(`${WORLD_PATH}/Characters/Aria.md`, characterFile('Aria'));
-		// Misplaced duplicate
 		vault.seedFile(`${WORLD_PATH}/Factions/Aria.md`, characterFile('Aria'));
 		const { state } = buildState(app);
 
-		await runAndConfirm(app, state);
+		const result = await runAndConfirm(app, state);
 
-		// Original stays, misplaced one is not moved (conflict)
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.failed.length).toBeGreaterThan(0);
+			expect(result.moved).not.toContain('Aria');
+		}
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeInstanceOf(TFile);
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Factions/Aria.md`)).toBeInstanceOf(TFile);
-		expect(FakeNoticeLog.some(m => m.includes('Failed') || m.includes('conflict'))).toBe(true);
 	});
 
-		it('does not move a file when the target folder is missing', async () => {
-		// Build a minimal world that has the Character rule but no Characters/ folder
+	it('does not move a file when the target folder is missing', async () => {
 		const app2 = new App();
 		const v = app2.vault as unknown as FakeVault;
 
 		v.seedFile(`${WORLD_PATH}/_index.md`, '---\ntags:\n  - world\nname: "Michal"\n---\n');
 		v.seedFile(`${WORLD_PATH}/Aria.md`, characterFile('Aria'));
-		// deliberately do NOT seed Characters/
-		
+
 		const worldFolder = asTFolder(app2.vault.getAbstractFileByPath(WORLD_PATH)!);
 		const indexFile = asTFile(app2.vault.getAbstractFileByPath(`${WORLD_PATH}/_index.md`)!);
 
@@ -276,20 +266,23 @@ describe('syncWorldFiles', () => {
 			}],
 		};
 
-		await runAndConfirm(app2, state2);
+		const result = await runAndConfirm(app2, state2);
 
-		// File stays in the root because the target folder does not exist
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.failed.length).toBeGreaterThan(0);
+			expect(result.moved).not.toContain('Aria');
+		}
 		expect(app2.vault.getAbstractFileByPath(`${WORLD_PATH}/Aria.md`)).toBeInstanceOf(TFile);
 		expect(app2.vault.getAbstractFileByPath(`${WORLD_PATH}/Characters/Aria.md`)).toBeNull();
-		expect(FakeNoticeLog.some(m => m.includes('Failed') || m.includes('missing'))).toBe(true);
 	});
 
 	it('shows a notice and does nothing when the world path is unknown', async () => {
 		const { state } = buildState(app);
 
-		await syncWorldFiles(app, state, 'DoesNotExist');
+		const result = await syncWorldFiles(app, state, 'DoesNotExist');
 
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 	});
 
 	it('ignores untagged markdown files', async () => {
@@ -297,9 +290,9 @@ describe('syncWorldFiles', () => {
 		vault.seedFile(`${WORLD_PATH}/Notes/Readme.md`, untaggedFile('Readme'));
 		const { state } = buildState(app);
 
-		await syncWorldFiles(app, state, WORLD_PATH);
+		const result = await syncWorldFiles(app, state, WORLD_PATH);
 
+		expect(result).toMatchObject({ ok: false, code: 'nothing-to-move' });
 		expect(app.vault.getAbstractFileByPath(`${WORLD_PATH}/Notes/Readme.md`)).toBeInstanceOf(TFile);
-		expect(FakeNoticeLog.some(m => m.includes('All files are in correct folders'))).toBe(true);
 	});
 });
