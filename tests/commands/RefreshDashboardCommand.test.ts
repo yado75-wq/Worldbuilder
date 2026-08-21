@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App, TFile } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -95,10 +94,9 @@ describe('refreshDashboard', () => {
 
 	it('exits when world is not found', async () => {
 		const state = buildState(app);
+		const result = await refreshDashboard(app, state, 'Missing');
 
-		await refreshDashboard(app, state, 'Missing');
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		expect(result).toEqual({ ok: false, code: 'world-not-found' });
 		expect(app.vault.getAbstractFileByPath(DASH_PATH)).toBeNull();
 	});
 
@@ -106,11 +104,17 @@ describe('refreshDashboard', () => {
 		const state = buildState(app, { templateSets: [] });
 		state.worlds[0]!.templateSet = 'missing-set';
 
-		await refreshDashboard(app, state, WORLD_PATH);
-
-		expect(FakeNoticeLog.some(m => m.includes('Template set') && m.includes('not found'))).toBe(true);
+		const result = await refreshDashboard(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'no-template-sets' });
 	});
 
+	it('exits when world points at a missing template set name', async () => {
+		const state = buildState(app); // still has defaults
+		state.worlds[0]!.templateSet = 'gone';
+
+		const result = await refreshDashboard(app, state, WORLD_PATH);
+		expect(result).toMatchObject({ ok: false, code: 'missing-template-set', detail: 'gone' });
+	});
 	// ── Create / update ───────────────────────────────────────────────────
 
 	it('creates _dashboard.md when it does not exist', async () => {
@@ -119,8 +123,9 @@ describe('refreshDashboard', () => {
 			index: indexContent({ genre: 'Fantasy', todo: '- Outline act 1' }),
 		});
 
-		await refreshDashboard(app, state, WORLD_PATH, false);
+		const result = await refreshDashboard(app, state, WORLD_PATH, false);
 
+		expect(result).toEqual({ ok: true, path: DASH_PATH });
 		expect(app.vault.getAbstractFileByPath(DASH_PATH)).toBeInstanceOf(TFile);
 		const content = vault.contentAt(DASH_PATH) ?? '';
 		expect(content).toContain('tags:');
@@ -135,8 +140,7 @@ describe('refreshDashboard', () => {
 		expect(content).toContain('## Characters (0)');
 		expect(content).toContain('_No entries yet._');
 		expect(content).toContain(PRESERVED_SECTION_MARKER);
-		expect(content).toContain(DEFAULT_DASHBOARD_NOTES.split('\n')[0]!);
-		expect(FakeNoticeLog.some(m => m.includes('Dashboard refreshed'))).toBe(true);
+		expect(content).toContain(DEFAULT_DASHBOARD_NOTES.split('\n')[0]!);		
 	});
 
 	it('preserves notes below the marker when updating an existing dashboard', async () => {
@@ -197,10 +201,9 @@ describe('refreshDashboard', () => {
 		const vault = app.vault as unknown as FakeVault;
 		const state = buildState(app);
 
-		await refreshDashboard(app, state, WORLD_PATH, false);
-
+		const result = await refreshDashboard(app, state, WORLD_PATH, false);
+		expect(result).toEqual({ ok: true, path: DASH_PATH });
 		expect(app.vault.getAbstractFileByPath(DASH_PATH)).toBeInstanceOf(TFile);
-		expect(vault.contentAt(DASH_PATH)).toContain('Dashboard');
-		expect(FakeNoticeLog.some(m => m.includes('Dashboard refreshed'))).toBe(true);
+		expect(vault.contentAt(DASH_PATH)).toContain('Dashboard');		
 	});
 });

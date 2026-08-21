@@ -1,34 +1,63 @@
 import { App, Notice, TFile } from 'obsidian';
-import { PluginState, WorldInfo, TemplateSetInfo } from '../types';
+import { PluginState, TemplateSetInfo } from '../types';
 import { PRESERVED_SECTION_MARKER, extractPreservedSection } from '../util/PreservedSection';
 import { findMissingMandatoryFields } from './shared/EntityCompleteness';
 import { findUnresolvedTimeframes, formatUnresolvedTimeframeEntry } from './shared/TimeframeResolutionReport';
 import { formatMetaLabel } from './shared/MetaLabel';
 import { buildDashboardContent, DEFAULT_DASHBOARD_NOTES, EntitySectionInput } from './shared/DashboardContentBuilder';
 import { buildTimeframeLookup, getEntityFiles } from './shared/TimeframeLookupBuilder';
-import { requireUniqueActiveWorld } from '../context/ActiveWorld';
+import { hasActiveWorldConflict } from '../context/ActiveWorld';
+import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+
+export type RefreshDashboardResult =
+	| { ok: true; path: string }
+	| {
+			ok: false;
+			code:
+				| 'active-world-conflict'
+				| 'world-not-found'
+				| 'no-template-sets'
+				| 'missing-template-set';
+			detail?: string;
+	  };
+
+function err(
+	code: Extract<RefreshDashboardResult, { ok: false }>['code'],
+	detail?: string
+): RefreshDashboardResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
 
 export async function refreshDashboard(
 	app: App,
 	state: PluginState,
 	worldPath: string,
 	openAfterRefresh = true
-): Promise<void> {
+): Promise<RefreshDashboardResult> {
 
-	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return;
+	if (hasActiveWorldConflict(state)) {
+		new Notice(
+			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
+		);
+		return err('active-world-conflict');
+	}
 	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
 		new Notice('World not found.');
-		return;
+		return err('world-not-found');
 	}
 
-	const templateSet = findTemplateSet(state, world);
-	if (!templateSet) {
-		new Notice(`Template set "${world.templateSet}" not found.`);
-		return;
+	const resolved = resolveTemplateSetByName(state.templateSets, world.templateSet);
+	if (!resolved.ok) {
+		new Notice(missingTemplateSetMessage(resolved));
+		return err(
+			resolved.reason === 'none' ? 'no-template-sets' : 'missing-template-set',
+			resolved.reason === 'missing' ? resolved.requested : undefined
+		);
 	}
-
+	const templateSet = resolved.set;
+	
 	// Read existing dashboard to preserve notes section
 	const dashPath = `${worldPath}/_dashboard.md`;
 	const existingDash = app.vault.getAbstractFileByPath(dashPath);
@@ -136,15 +165,10 @@ export async function refreshDashboard(
 	}
 
 	new Notice(`Dashboard refreshed for "${world.name}".`);
+	return { ok: true, path: dashPath };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function findTemplateSet(state: PluginState, world: WorldInfo): TemplateSetInfo | null {
-	return state.templateSets.find(ts => ts.name === world.templateSet)
-		?? state.templateSets[0]
-		?? null;
-}
 
 async function buildNeedsAttentionSection(
 	app: App,
