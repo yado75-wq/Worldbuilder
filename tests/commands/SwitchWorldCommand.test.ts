@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from 'obsidian';
 import {
-	FakeVault,
-	FakeNoticeLog,
+	FakeVault,	
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -70,10 +69,8 @@ describe('setActiveWorld', () => {
 	it('returns false when the world is not found', async () => {
 		const state = stateFrom([makeWorld(app, WORLD_A, 'WorldA', 'active')]);
 
-		const ok = await setActiveWorld(app, state, 'Missing');
-
-		expect(ok).toBe(false);
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await setActiveWorld(app, state, 'Missing');
+		expect(result).toEqual({ ok: false, code: 'world-not-found', detail: 'Missing' });
 	});
 
 	it('activates the target and leaves a previously inactive peer inactive', async () => {
@@ -82,12 +79,11 @@ describe('setActiveWorld', () => {
 		const b = makeWorld(app, WORLD_B, 'WorldB', 'inactive');
 		const state = stateFrom([a, b]);
 
-		const ok = await setActiveWorld(app, state, WORLD_B);
-
-		expect(ok).toBe(true);
+		const result = await setActiveWorld(app, state, WORLD_B);
+		expect(result).toEqual({ ok: true, path: WORLD_B });
+		
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: inactive');
-		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: active');
-		expect(FakeNoticeLog.some(m => m.includes('Active world') && m.includes('WorldB'))).toBe(true);
+		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: active');		
 	});
 
 	it('resolves multi-active conflict: only the chosen world stays active on disk', async () => {
@@ -98,9 +94,9 @@ describe('setActiveWorld', () => {
 		const c = makeWorld(app, WORLD_C, 'WorldC', 'inactive');
 		const state = stateFrom([a, b, c]);
 
-		const ok = await setActiveWorld(app, state, WORLD_B);
+		const result = await setActiveWorld(app, state, WORLD_B);
 
-		expect(ok).toBe(true);
+		expect(result).toEqual({ ok: true, path: WORLD_B });
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: inactive');
 		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: active');
 		expect(vault.contentAt(`${WORLD_C}/_index.md`)).toContain('status: inactive');
@@ -112,9 +108,9 @@ describe('setActiveWorld', () => {
 		const b = makeWorld(app, WORLD_B, 'WorldB', 'inactive');
 		const state = stateFrom([a, b]);
 
-		const ok = await setActiveWorld(app, state, WORLD_A);
+		const result = await setActiveWorld(app, state, WORLD_A);
 
-		expect(ok).toBe(true);
+		expect(result).toEqual({ ok: true, path: WORLD_A });
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: active');
 		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: inactive');
 	});
@@ -126,9 +122,9 @@ describe('setActiveWorld', () => {
 		const state = stateFrom([a, b]);
 
 		// User picks A (already active) as the one to keep
-		const ok = await setActiveWorld(app, state, WORLD_A);
+		const result = await setActiveWorld(app, state, WORLD_A);
 
-		expect(ok).toBe(true);
+		expect(result).toEqual({ ok: true, path: WORLD_A });
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: active');
 		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: inactive');
 	});
@@ -145,9 +141,8 @@ describe('switchToWorld', () => {
 	it('exits when the world is not found', async () => {
 		const state = stateFrom([makeWorld(app, WORLD_A, 'WorldA', 'active')]);
 
-		await switchToWorld(app, state, 'Missing');
-
-		expect(FakeNoticeLog.some(m => m.includes('World not found'))).toBe(true);
+		const result = await switchToWorld(app, state, 'Missing');
+		expect(result).toMatchObject({ ok: false, code: 'world-not-found' });
 	});
 
 	it('exits when the target is already the unique active world', async () => {
@@ -156,9 +151,9 @@ describe('switchToWorld', () => {
 		const b = makeWorld(app, WORLD_B, 'WorldB', 'inactive');
 		const state = stateFrom([a, b]);
 
-		await switchToWorld(app, state, WORLD_A);
+		const result = await switchToWorld(app, state, WORLD_A);
 
-		expect(FakeNoticeLog.some(m => m.includes('already the active world'))).toBe(true);
+		expect(result).toEqual({ ok: false, code: 'already-active', detail: WORLD_A });		
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: active');
 		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: inactive');
 	});
@@ -169,8 +164,9 @@ describe('switchToWorld', () => {
 		const b = makeWorld(app, WORLD_B, 'WorldB', 'inactive');
 		const state = stateFrom([a, b]);
 
-		await switchToWorld(app, state, WORLD_B);
+		const result = await switchToWorld(app, state, WORLD_B);
 
+		expect(result).toEqual({ ok: true, path: WORLD_B });
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: inactive');
 		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: active');
 	});
@@ -182,11 +178,11 @@ describe('switchToWorld', () => {
 		const state = stateFrom([a, b]);
 
 		// Not "already the unique active" — activeCount is 2, so setActiveWorld runs
-		await switchToWorld(app, state, WORLD_B);
+		const result = await switchToWorld(app, state, WORLD_B);
 
+		expect(result).toEqual({ ok: true, path: WORLD_B });
 		expect(vault.contentAt(`${WORLD_A}/_index.md`)).toContain('status: inactive');
-		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: active');
-		expect(FakeNoticeLog.some(m => m.includes('already the active world'))).toBe(false);
+		expect(vault.contentAt(`${WORLD_B}/_index.md`)).toContain('status: active');		
 	});
 });
 

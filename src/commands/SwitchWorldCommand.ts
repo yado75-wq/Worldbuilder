@@ -1,16 +1,28 @@
 import { App, Notice } from 'obsidian';
 import { PluginState } from '../types';
 
+export type SetActiveWorldResult =
+	| { ok: true; path: string }
+	| { ok: false; code: 'world-not-found' | 'already-active'; detail?: string };
+
+
+function errSet(
+	code: Extract<SetActiveWorldResult, { ok: false }>['code'],
+	detail?: string
+): SetActiveWorldResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
+
 /** Make `worldPath` the only active world; all others → inactive on disk. */
 export async function setActiveWorld(
 	app: App,
 	state: PluginState,
 	worldPath: string
-): Promise<boolean> {
+): Promise<SetActiveWorldResult> {
 	const target = state.worlds.find(w => w.path === worldPath);
 	if (!target) {
 		new Notice('World not found.');
-		return false;
+		return errSet('world-not-found', worldPath);
 	}
 
 	for (const world of state.worlds) {
@@ -23,26 +35,25 @@ export async function setActiveWorld(
 	}
 
 	new Notice(`Active world: "${target.name}".`);
-	return true;
+	return { ok: true, path: worldPath };
 }
 
 export async function switchToWorld(
 	app: App,
 	state: PluginState,
 	worldPath: string
-): Promise<void> {
+): Promise<SetActiveWorldResult> {
 	const target = state.worlds.find(w => w.path === worldPath);
 	if (!target) {
 		new Notice('World not found.');
-		return;
+		return errSet('world-not-found', worldPath);
 	}
 
 	const activeCount = state.worlds.filter(w => w.status === 'active').length;
-	// Only short-circuit when already the unique active world
 	if (target.status === 'active' && activeCount === 1) {
 		new Notice(`"${target.name}" is already the active world.`);
-		return;
+		return errSet('already-active', worldPath);
 	}
 
-	await setActiveWorld(app, state, worldPath);
+	return setActiveWorld(app, state, worldPath);
 }

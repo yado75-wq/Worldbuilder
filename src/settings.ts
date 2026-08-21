@@ -226,12 +226,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							.setDisabled(uniquelyActive)
 							.onClick(() => {
 								void (async () => {
-									const ok = await setActiveWorld(
+									const result = await setActiveWorld(
 										this.app,
 										this.plugin.state,
 										world.path
 									);
-									if (!ok) return;
+									if (!result.ok) return;
 									await this.plugin.refreshState();
 									this.update();
 								})();
