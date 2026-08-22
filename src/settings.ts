@@ -19,6 +19,7 @@ import { syncWorldFiles } from './commands/SyncWorldFilesCommand';
 import { syncWorldFolders } from './commands/SyncWorldFoldersCommand';
 import { refreshAllTimeframes } from './commands/RefreshAllTimeframesCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
+import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
 	plugin: WorldBuilderPlugin;
@@ -206,7 +207,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				const uniquelyActive = isActive && activeCount === 1;
 
 				let desc = `Folder: ${world.path} · Template set: ${world.templateSet}`;
-				if (conflict && activeCount > 1 && isActive) {
+				const tsResolve = resolveTemplateSetByName(this.plugin.state.templateSets, world.templateSet);
+				if (!tsResolve.ok) {
+					desc += tsResolve.reason === 'none'
+						? ' — No template sets in vault; restore or create one.'
+						: ` — Template set "${world.templateSet}" not found; reassign below or fix _index.md.`;
+				} else if (conflict && activeCount > 1 && isActive) {
 					desc += ' — Multiple active worlds; use Set as active to keep only this one.';
 				} else if (conflict && activeCount === 0) {
 					desc += ' — No active world; use Set as active.';

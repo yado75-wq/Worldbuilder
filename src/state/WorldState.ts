@@ -63,8 +63,7 @@ async function findWorlds(
 			? rawTemplateSet
 			: 'defaults';
 
-		const templateSet = templateSets.find(ts => ts.name === templateSetName)
-			?? templateSets[0];
+		const templateSet = templateSets.find(ts => ts.name === templateSetName);
 
 		worlds.push({
 			name: typeof rawName === 'string' ? rawName : folder.name,

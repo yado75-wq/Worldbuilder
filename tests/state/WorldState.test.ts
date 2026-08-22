@@ -66,4 +66,41 @@ describe('scanVault worlds', () => {
 
 		expect(state.worlds.map(w => w.path)).toEqual(['Live']);
 	});
+
+	it('keeps template_set name but empty rules when set is missing', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFile(
+			'MyWorld/_index.md',
+			`---\ntags:\n  - world\nstatus: active\ntemplate_set: gone\nname: "MyWorld"\n---\n\n# MyWorld\n`
+		);
+		// no template sets in vault
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+		const world = state.worlds.find(w => w.path === 'MyWorld');
+
+		expect(world).toBeDefined();
+		expect(world!.templateSet).toBe('gone');
+		expect(world!.folderRules).toEqual([]);
+		expect(world!.worldTemplate).toEqual([]);
+	});
+
+	it('does not bind another set when template_set name does not match', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		// minimal defaults set so registry non-empty
+		vault.seedFolder('_system/templates/defaults');
+		vault.seedFile(
+			'_system/templates/defaults/folder-rules.md',
+			'Character | Characters\n'
+		);
+		vault.seedFile(
+			'MyWorld/_index.md',
+			`---\ntags:\n  - world\nstatus: inactive\ntemplate_set: missing-set\nname: "MyWorld"\n---\n\n# MyWorld\n`
+		);
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+		const world = state.worlds.find(w => w.path === 'MyWorld');
+
+		expect(world!.templateSet).toBe('missing-set');
+		expect(world!.folderRules).toEqual([]); // not Character rules from defaults
+	});
 });
