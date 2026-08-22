@@ -125,6 +125,17 @@ Requires Node.js v18+.
 
 On first load the plugin creates `_system/templates/defaults/` in your vault with the default template set. This is your starting point — copy it, rename the copy, and customize freely. The `defaults/` folder is restored from plugin built-ins if deleted.
 
+### Missing or renamed template sets
+
+- Each world’s `template_set` in `_index.md` must match a folder under `_system/templates/`.
+- If the name is missing or the folder was renamed/removed, the world still appears in settings, but create/edit/sync/dashboard commands refuse to run until you reassign the set (Settings → Assign to world) or fix `_index.md`.
+- The plugin does **not** silently use another template set.
+- If the whole `templates` folder is deleted, the next load recreates `_system/templates/defaults/` from plugin built-ins.
+
+### Renaming `*_Fields.md`
+
+Renaming e.g. `Character_Fields.md` changes the entity **type name** for menus and rules. Existing notes keep their old tags; the plugin does not retag them. Prefer updating `folder-rules.md` (and tags) yourself, or a future rename-type command.
+
 ## Releasing
 
 - Bump the version in manifest.json and package.json.

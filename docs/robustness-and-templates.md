@@ -48,6 +48,8 @@ Full JSON Schema for templates remains **out of scope**.
 | Empty / missing `world-template.md` | `worldTemplate = []`; **sync folders does not delete** empty folders based on a missing template |
 | Bad / duplicate field lines | Warnings; first key wins |
 | Unknown type tokens | Warnings in settings |
+| World template_set name not in registry | World kept; folderRules / worldTemplate empty; |
+| commands hard-fail via resolveTemplateSetByName | Yes |
 
 **Entity type not in folder-rules** → treated as `*` (creatable under normal folder contexts), not forced into a fixed folder.
 
@@ -129,6 +131,7 @@ Modal: no open when fields unusable; submit requires title when a title field ex
 | Empty folder-rules | Less structure | No crash | Optional warning later |
 | Empty world-template | — | Sync folders no-op | Optional warning later |
 | User clears name in form | — | No write | — |
+| Missing template set name | Menus/commands that need the set refuse | Notice + result code; settings desc explains | Reassign |
 
 ---
 
@@ -153,10 +156,12 @@ Modal: no open when fields unusable; submit requires title when a title field ex
 - [x] Usable-type / create-edit guards / conflict helper tests as landed in suite
 - [x] CI green for those paths
 
-### P3 — Optional polish — **open**
+### P3 — Optional polish — **partially done**
 
+- [x] Settings note when world’s template set is missing
+- [x] Scan: exact template set name only (no `templateSets[0]` bind)
 - [ ] Informational menu stub if omission confuses users (default remains omit)
-- [ ] Settings **warnings** for empty `folder-rules.md` / `world-template.md`
+- [x] Settings info for empty `folder-rules.md` / `world-template.md` (scan issues)
 - [ ] Template-set folder `_` prefix archive (worlds already archived that way)
 
 ### Other backlog (not P0–P3)
@@ -192,6 +197,7 @@ Modal: no open when fields unusable; submit requires title when a title field ex
 | New world / switch | `NewWorldCommand.ts`, `SwitchWorldCommand.ts` |
 | Form UI | `src/ui/EntityFormModal.ts` |
 | Settings | `src/settings.ts` |
+| Exact template resolve | src/context/TemplateSetResolve.ts |
 
 ---
 
@@ -200,3 +206,7 @@ Modal: no open when fields unusable; submit requires title when a title field ex
 Robustness track: honest menus → command nets → active-world gates. Prefer pure helpers + unit tests; short manual checklists for menu/settings paint.
 
 Testing process: see `docs/testing-strategy.md`.
+
+Last updated: 2026-08-22
+
+Exact template-set binding on scan + commands; settings surfaces missing set; ensureDefaultTemplates still recreates defaults on load.
