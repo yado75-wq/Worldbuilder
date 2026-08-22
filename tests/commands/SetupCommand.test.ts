@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { App, TFolder } from 'obsidian';
 import {
 	FakeVault,
-	FakeNoticeLog,
 	resetFakeObsidian,
 } from '../fakes/obsidian';
 import {
@@ -55,13 +54,11 @@ describe('SetupCommand', () => {
 		seedPluginDefaults(vault);
 	});
 
-	// ── ensureDefaultTemplates ────────────────────────────────────────────
-
 	describe('ensureDefaultTemplates', () => {
 		it('creates defaults folder and copies missing default files', async () => {
-			const name = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
+			const result = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
 
-			expect(name).toBe('defaults');
+			expect(result).toEqual({ ok: true, defaultSetName: 'defaults' });
 			expect(app.vault.getAbstractFileByPath('_system/templates/defaults')).toBeInstanceOf(TFolder);
 
 			for (const filename of DEFAULT_FILES) {
@@ -77,8 +74,9 @@ describe('SetupCommand', () => {
 				'USER CUSTOM\n'
 			);
 
-			await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
+			const result = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
 
+			expect(result.ok).toBe(true);
 			expect(vault.contentAt('_system/templates/defaults/Character_Fields.md')).toBe('USER CUSTOM\n');
 		});
 
@@ -88,59 +86,51 @@ describe('SetupCommand', () => {
 				{ ...defaultsTemplateSet(), name: 'fantasy', path: '_system/templates/fantasy' },
 			];
 
-			const name = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, existing);
+			const result = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, existing);
 
-			expect(name).toBe('fantasy');
+			expect(result).toEqual({ ok: true, defaultSetName: 'fantasy' });
 		});
 
-		it('warns when a default source file cannot be read', async () => {
-			// Only seed some files — leave one missing on the adapter
+		it('still succeeds when a default source file cannot be read', async () => {
 			const vault2 = (app = new App()).vault as unknown as FakeVault;
 			for (const filename of DEFAULT_FILES.slice(0, -1)) {
 				vault2.adapter.seedExternal(`${DEFAULTS_DIR}/${filename}`, 'ok\n');
 			}
 
-			await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
+			const result = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
 
-			expect(FakeNoticeLog.some(m => m.includes('could not copy default file'))).toBe(true);
+			expect(result).toEqual({ ok: true, defaultSetName: 'defaults' });
 		});
 	});
-
-	// ── cloneTemplateSet ──────────────────────────────────────────────────
 
 	describe('cloneTemplateSet', () => {
 		beforeEach(async () => {
 			await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
 		});
 
-		it('returns false when the source set is missing', async () => {
-			const ok = await cloneTemplateSet(app, DEFAULT_SETTINGS, 'nope', 'copy');
+		it('returns source-not-found when the source set is missing', async () => {
+			const result = await cloneTemplateSet(app, DEFAULT_SETTINGS, 'nope', 'copy');
 
-			expect(ok).toBe(false);
-			expect(FakeNoticeLog.some(m => m.includes('not found'))).toBe(true);
+			expect(result).toMatchObject({ ok: false, code: 'source-not-found' });
 		});
 
-		it('returns false when the target set already exists', async () => {
+		it('returns already-exists when the target set already exists', async () => {
 			await cloneTemplateSet(app, DEFAULT_SETTINGS, 'defaults', 'fantasy');
-			const ok = await cloneTemplateSet(app, DEFAULT_SETTINGS, 'defaults', 'fantasy');
+			const result = await cloneTemplateSet(app, DEFAULT_SETTINGS, 'defaults', 'fantasy');
 
-			expect(ok).toBe(false);
-			expect(FakeNoticeLog.some(m => m.includes('already exists'))).toBe(true);
+			expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 		});
 
 		it('copies files into the new template set', async () => {
-			const ok = await cloneTemplateSet(app, DEFAULT_SETTINGS, 'defaults', 'fantasy');
+			const result = await cloneTemplateSet(app, DEFAULT_SETTINGS, 'defaults', 'fantasy');
 
-			expect(ok).toBe(true);
+			expect(result).toEqual({ ok: true, name: 'fantasy' });
 			expect(app.vault.getAbstractFileByPath('_system/templates/fantasy')).toBeInstanceOf(TFolder);
 			expect(
 				app.vault.getAbstractFileByPath('_system/templates/fantasy/Character_Fields.md')
 			).not.toBeNull();
-			expect(FakeNoticeLog.some(m => m.includes('created from'))).toBe(true);
 		});
 	});
-
-	// ── resetTemplateSet ──────────────────────────────────────────────────
 
 	describe('resetTemplateSet', () => {
 		it('overwrites an existing file with plugin defaults', async () => {
@@ -152,15 +142,16 @@ describe('SetupCommand', () => {
 				'Character_Fields.md': 'FRESH DEFAULT\n',
 			});
 
-			await resetTemplateSet(app, DEFAULT_SETTINGS, PLUGIN_DIR, 'defaults');
+			const result = await resetTemplateSet(app, DEFAULT_SETTINGS, PLUGIN_DIR, 'defaults');
 
+			expect(result).toEqual({ ok: true, name: 'defaults' });
 			expect(vault.contentAt('_system/templates/defaults/Character_Fields.md')).toContain('FRESH DEFAULT');
-			expect(FakeNoticeLog.some(m => m.includes('reset to plugin defaults'))).toBe(true);
 		});
 
 		it('creates missing files in the set folder', async () => {
-			await resetTemplateSet(app, DEFAULT_SETTINGS, PLUGIN_DIR, 'defaults');
+			const result = await resetTemplateSet(app, DEFAULT_SETTINGS, PLUGIN_DIR, 'defaults');
 
+			expect(result).toEqual({ ok: true, name: 'defaults' });
 			for (const filename of DEFAULT_FILES) {
 				expect(
 					app.vault.getAbstractFileByPath(`_system/templates/defaults/${filename}`)

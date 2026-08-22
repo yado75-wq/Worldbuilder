@@ -11,12 +11,35 @@ const DEFAULT_FILES = [
 	'Faction_Fields.md',
 ];
 
+export type EnsureDefaultTemplatesResult =
+	| { ok: true; defaultSetName: string }
+	| { ok: false; code: 'failed'; detail?: string };
+
+export type CloneTemplateSetResult =
+	| { ok: true; name: string }
+	| {
+			ok: false;
+			code: 'source-not-found' | 'already-exists';
+			detail?: string;
+	  };
+
+export type ResetTemplateSetResult =
+	| { ok: true; name: string }
+	| { ok: false; code: 'failed'; detail?: string };
+
+function errClone(
+	code: Extract<CloneTemplateSetResult, { ok: false }>['code'],
+	detail?: string
+): CloneTemplateSetResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
+
 export async function ensureDefaultTemplates(
 	app: App,
 	settings: WorldBuilderSettings,
 	pluginDir: string,
 	existingSets: TemplateSetInfo[]
-): Promise<string> {
+): Promise<EnsureDefaultTemplatesResult> {
 	const templatesRoot = normalizePath(
 		`${settings.systemFolder}/${settings.templatesFolder}`
 	);
@@ -26,7 +49,6 @@ export async function ensureDefaultTemplates(
 	await ensureFolder(app, templatesRoot);
 	await ensureFolder(app, defaultsPath);
 
-	// Copy plugin defaults into _system/templates/defaults/
 	for (const filename of DEFAULT_FILES) {
 		const sourcePath = normalizePath(`${pluginDir}/defaults/${filename}`);
 		const targetPath = normalizePath(`${defaultsPath}/${filename}`);
@@ -42,9 +64,10 @@ export async function ensureDefaultTemplates(
 	}
 
 	const otherSets = existingSets.filter(s => s.name !== 'defaults');
-	if (otherSets.length === 0) return 'defaults';
+	const defaultSetName =
+		otherSets.length === 0 ? 'defaults' : (otherSets[0]?.name ?? 'defaults');
 
-	return otherSets[0]?.name ?? 'defaults';
+	return { ok: true, defaultSetName };
 }
 
 export async function cloneTemplateSet(
@@ -52,7 +75,7 @@ export async function cloneTemplateSet(
 	settings: WorldBuilderSettings,
 	sourceSetName: string,
 	newSetName: string
-): Promise<boolean> {
+): Promise<CloneTemplateSetResult> {
 	const templatesRoot = normalizePath(
 		`${settings.systemFolder}/${settings.templatesFolder}`
 	);
@@ -62,12 +85,12 @@ export async function cloneTemplateSet(
 	const sourceFolder = app.vault.getAbstractFileByPath(sourcePath);
 	if (!(sourceFolder instanceof TFolder)) {
 		new Notice(`Template set "${sourceSetName}" not found.`);
-		return false;
+		return errClone('source-not-found', sourceSetName);
 	}
 
 	if (app.vault.getAbstractFileByPath(targetPath)) {
 		new Notice(`Template set "${newSetName}" already exists.`);
-		return false;
+		return errClone('already-exists', newSetName);
 	}
 
 	await ensureFolder(app, targetPath);
@@ -76,7 +99,7 @@ export async function cloneTemplateSet(
 	}
 
 	new Notice(`Template set "${newSetName}" created from "${sourceSetName}".`);
-	return true;
+	return { ok: true, name: newSetName };
 }
 
 export async function resetTemplateSet(
@@ -84,7 +107,7 @@ export async function resetTemplateSet(
 	settings: WorldBuilderSettings,
 	pluginDir: string,
 	setName: string
-): Promise<void> {
+): Promise<ResetTemplateSetResult> {
 	const setPath = normalizePath(
 		`${settings.systemFolder}/${settings.templatesFolder}/${setName}`
 	);
@@ -108,6 +131,7 @@ export async function resetTemplateSet(
 	}
 
 	new Notice(`Template set "${setName}" reset to plugin defaults.`);
+	return { ok: true, name: setName };
 }
 
 async function copyTemplateNode(

@@ -349,7 +349,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 						sourceName,
 						name
 					);
-					if (!created) return;
+					if (!created.ok) return;
 
 					this.plugin.settings.defaultTemplateSet = name;
 					await this.plugin.saveSettings();
