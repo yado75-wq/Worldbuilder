@@ -73,3 +73,7 @@ silently re-proposed without anyone remembering why:
 - **General physical-measurement-units system** — prose is the norm.
 - **Own fictional-calendar engine** — Calendarium exists; optional bridge later.
 - **Hard validation blocking saves for Time** — report-only in Needs attention.
+
+## Next Version
+
+see [[next-release-formkit-i18n]]
