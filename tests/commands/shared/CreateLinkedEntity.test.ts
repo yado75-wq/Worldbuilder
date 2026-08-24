@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { App, TFile } from 'obsidian';
 import {
 	FakeVault,
-	FakeNoticeLog,
 	resetFakeObsidian,
 	asTFile,
 	asTFolder,
@@ -81,20 +80,16 @@ describe('createLinkedEntity', () => {
 			{ entityType: 'Faction', targetFolder: 'Factions' },
 		]);
 
-		const link = await createLinkedEntity(
-			app,
-			state,
-			world,
-			templateSet,
-			CHAR_FOLDER,
-			linkField('Faction'),
-			'Iron League'
+		const result = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, linkField('Faction'), 'Iron League'
 		);
 
-		expect(link).toBe('[[Iron League]]');
-		const path = `${WORLD}/Factions/Iron League.md`;
-		expect(app.vault.getAbstractFileByPath(path)).toBeInstanceOf(TFile);
-		expect(FakeNoticeLog.some(m => m.includes('Faction') && m.includes('created'))).toBe(true);
+		expect(result).toEqual({
+			ok: true,
+			link: '[[Iron League]]',
+			path: `${WORLD}/Factions/Iron League.md`,
+		});
+		expect(app.vault.getAbstractFileByPath(`${WORLD}/Factions/Iron League.md`)).toBeInstanceOf(TFile);
 	});
 
 	it('places the file in the current entity folder when the type has no concrete rule', async () => {
@@ -102,32 +97,22 @@ describe('createLinkedEntity', () => {
 			{ entityType: 'Faction', targetFolder: '*' },
 		]);
 
-		await createLinkedEntity(
-			app,
-			state,
-			world,
-			templateSet,
-			CHAR_FOLDER,
-			linkField('Faction'),
-			'Solo'
+		const result = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, linkField('Faction'), 'Solo'
 		);
 
+		expect(result).toMatchObject({ ok: true, path: `${CHAR_FOLDER}/Solo.md` });
 		expect(app.vault.getAbstractFileByPath(`${CHAR_FOLDER}/Solo.md`)).toBeInstanceOf(TFile);
 	});
 
 	it('places the file in the current entity folder when the type is unlisted', async () => {
 		const { state, world, templateSet } = buildState(app, []);
 
-		await createLinkedEntity(
-			app,
-			state,
-			world,
-			templateSet,
-			CHAR_FOLDER,
-			linkField('Faction'),
-			'Unlisted'
+		const result = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, linkField('Faction'), 'Unlisted'
 		);
 
+		expect(result).toMatchObject({ ok: true, path: `${CHAR_FOLDER}/Unlisted.md` });
 		expect(app.vault.getAbstractFileByPath(`${CHAR_FOLDER}/Unlisted.md`)).toBeInstanceOf(TFile);
 	});
 
@@ -138,22 +123,15 @@ describe('createLinkedEntity', () => {
 		]);
 		vault.seedFile(`${WORLD}/Factions/Iron.md`, 'ORIGINAL\n');
 
-		const link = await createLinkedEntity(
-			app,
-			state,
-			world,
-			templateSet,
-			CHAR_FOLDER,
-			linkField('Faction'),
-			'Iron'
+		const result = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, linkField('Faction'), 'Iron'
 		);
 
-		expect(link).toBeNull();
+		expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 		expect(vault.contentAt(`${WORLD}/Factions/Iron.md`)).toContain('ORIGINAL');
-		expect(FakeNoticeLog.some(m => m.includes('already exists'))).toBe(true);
 	});
 
-	it('returns null when the field has no link type', async () => {
+	it('returns no-link-type when the field has no link type', async () => {
 		const { state, world, templateSet } = buildState(app, []);
 		const field: FieldDefinition = {
 			key: 'x',
@@ -163,10 +141,10 @@ describe('createLinkedEntity', () => {
 			display: 'property',
 		};
 
-		const link = await createLinkedEntity(
+		const result = await createLinkedEntity(
 			app, state, world, templateSet, CHAR_FOLDER, field, 'Nope'
 		);
 
-		expect(link).toBeNull();
+		expect(result).toEqual({ ok: false, code: 'no-link-type' });
 	});
 });

@@ -119,16 +119,18 @@ export async function editEntity(
 			timeframePointCandidates,
 			onSubmit: (r) => { submitted = true; resolve(r); },
 			onCancel: () => { if (!submitted) resolve(null); },
-			onCreateLink: async (field, name) =>
-				createLinkedEntity(
-					app,
-					state,
-					world,
-					templateSet,
-					file.parent?.path ?? world.path,
-					field,
-					name
-				),
+			onCreateLink: async (field, name) => {
+					const result = await createLinkedEntity(
+						app,
+						state,
+						world,
+						templateSet,
+						file.parent?.path ?? world.path,
+						field,
+						name
+					);
+					return result.ok ? result.link : null;
+				},
 		});
 		modal.open();
 	});

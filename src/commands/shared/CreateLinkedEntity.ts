@@ -3,6 +3,24 @@ import { FieldDefinition, PluginState, TemplateSetInfo, WorldInfo } from '../../
 import { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
 import { refreshDashboard } from '../RefreshDashboardCommand';
 
+export type CreateLinkedEntityResult =
+	| { ok: true; link: string; path: string }
+	| {
+			ok: false;
+			code:
+				| 'no-link-type'
+				| 'empty-name'
+				| 'already-exists';
+			detail?: string;
+	  };
+
+function err(
+	code: Extract<CreateLinkedEntityResult, { ok: false }>['code'],
+	detail?: string
+): CreateLinkedEntityResult {
+	return detail !== undefined ? { ok: false, code, detail } : { ok: false, code };
+}
+
 /**
  * Hot-create a linked entity from a link field.
  * Placement: concrete folder-rule → that folder; * or no rule → currentEntityFolderPath.
@@ -15,12 +33,16 @@ export async function createLinkedEntity(
 	currentEntityFolderPath: string,
 	field: FieldDefinition,
 	name: string
-): Promise<string | null> {
+): Promise<CreateLinkedEntityResult> {
 	const entityType = (field.linkTypes?.[0] ?? field.linkFolder)?.trim();
-	if (!entityType) return null;
+	if (!entityType) {
+		return err('no-link-type');
+	}
 
 	const trimmedName = name.trim();
-	if (!trimmedName) return null;
+	if (!trimmedName) {
+		return err('empty-name');
+	}
 
 	const linkedFields = templateSet.fieldSets[entityType];
 	const targetFolder = resolveLinkedTargetFolderForType(
@@ -34,7 +56,7 @@ export async function createLinkedEntity(
 	const targetPath = `${targetFolder}/${trimmedName}.md`;
 	if (app.vault.getAbstractFileByPath(targetPath)) {
 		new Notice(`"${trimmedName}" already exists in ${targetFolder}.`);
-		return null;
+		return err('already-exists', targetPath);
 	}
 
 	const content = linkedFields && linkedFields.length > 0
@@ -49,7 +71,7 @@ export async function createLinkedEntity(
 		await refreshDashboard(app, state, world.path, false);
 	}
 
-	return `[[${trimmedName}]]`;
+	return { ok: true, link: `[[${trimmedName}]]`, path: targetPath };
 }
 
 function resolveLinkedTargetFolderForType(
