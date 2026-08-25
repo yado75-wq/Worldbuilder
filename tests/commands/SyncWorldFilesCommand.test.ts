@@ -41,8 +41,7 @@ function buildState(app: App): { state: PluginState; world: WorldInfo; templateS
 		folder: worldFolder,
 		indexFile,
 		status: 'active',
-		templateSet: 'defaults',
-		folderRules: templateSet.folderRules,
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 
@@ -251,8 +250,7 @@ describe('syncWorldFiles', () => {
 				folder: worldFolder,
 				indexFile,
 				status: 'active',
-				templateSet: 'defaults',
-				folderRules: [{ entityType: 'Character', targetFolder: 'Characters' }],
+				templateSet: 'defaults',				
 				worldTemplate: [],
 			}],
 			templateSets: [{

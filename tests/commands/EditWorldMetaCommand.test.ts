@@ -148,8 +148,7 @@ function buildState(app: App, opts?: {
 		folder: worldFolder,
 		indexFile: index,
 		status,
-		templateSet: templateSet.name,
-		folderRules: [],
+		templateSet: templateSet.name,		
 		worldTemplate: [],
 	};
 

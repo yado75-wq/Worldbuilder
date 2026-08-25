@@ -22,8 +22,7 @@ export interface WorldInfo {
 	folder: TFolder;
 	indexFile: TFile;
 	status: 'active' | 'inactive';
-	templateSet: string;
-	folderRules: FolderRule[];
+	templateSet: string;	
 	worldTemplate: string[];
 }
 

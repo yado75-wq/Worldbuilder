@@ -75,8 +75,7 @@ function buildState(app: App, folderName: string): PluginState {
 		folder,
 		indexFile,
 		status: 'active',
-		templateSet: 'defaults',
-		folderRules: [],
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 

@@ -81,8 +81,7 @@ export async function newWorld(
 			folder: newFolder,
 			indexFile,
 			status: makeActive ? 'active' : 'inactive',
-			templateSet: templateSet.name,
-			folderRules: templateSet.folderRules,
+			templateSet: templateSet.name,			
 			worldTemplate: templateSet.worldTemplate,
 		};
 		const newState: PluginState = {

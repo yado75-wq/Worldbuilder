@@ -37,8 +37,7 @@ function seedWorld(app: App): WorldInfo {
 		folder,
 		indexFile,
 		status: 'active',
-		templateSet: 'defaults',
-		folderRules: [],
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 }

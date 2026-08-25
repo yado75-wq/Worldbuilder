@@ -79,8 +79,7 @@ describe('scanVault worlds', () => {
 		const world = state.worlds.find(w => w.path === 'MyWorld');
 
 		expect(world).toBeDefined();
-		expect(world!.templateSet).toBe('gone');
-		expect(world!.folderRules).toEqual([]);
+		expect(world!.templateSet).toBe('gone');		
 		expect(world!.worldTemplate).toEqual([]);
 	});
 
@@ -100,7 +99,6 @@ describe('scanVault worlds', () => {
 		const state = await scanVault(app, DEFAULT_SETTINGS);
 		const world = state.worlds.find(w => w.path === 'MyWorld');
 
-		expect(world!.templateSet).toBe('missing-set');
-		expect(world!.folderRules).toEqual([]); // not Character rules from defaults
+		expect(world!.templateSet).toBe('missing-set');		
 	});
 });

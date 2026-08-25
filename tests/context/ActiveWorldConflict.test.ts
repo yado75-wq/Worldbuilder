@@ -9,8 +9,7 @@ function world(path: string, status: 'active' | 'inactive'): WorldInfo {
 		folder: {} as WorldInfo['folder'],
 		indexFile: {} as WorldInfo['indexFile'],
 		status,
-		templateSet: 'defaults',
-		folderRules: [],
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 }

@@ -19,8 +19,7 @@ function makeWorld(app: App, folderPath: string, indexContent: string): WorldInf
 		folder,
 		indexFile,
 		status: 'active',
-		templateSet: 'defaults',
-		folderRules: [],
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 }

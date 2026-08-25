@@ -43,8 +43,7 @@ function makeWorld(
 		folder,
 		indexFile,
 		status,
-		templateSet: 'defaults',
-		folderRules: [],
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 }

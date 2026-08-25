@@ -44,7 +44,7 @@ export function resolveContext(
 		if (worldRoot) return { type: 'world-root', world: worldRoot };
 
 		// Entity folder — direct child of world root matching a folder rule
-		const entityFolderMatch = findEntityFolder(file, worlds);
+		const entityFolderMatch = findEntityFolder(file, worlds, templateSets);
 		if (entityFolderMatch) return entityFolderMatch;
 
 		// Generic folder — inside a world but not a known entity folder
@@ -81,11 +81,16 @@ function findParentWorld(folder: TFolder, worlds: WorldInfo[]): WorldInfo | null
 
 function findEntityFolder(
 	folder: TFolder,
-	worlds: WorldInfo[]
+	worlds: WorldInfo[],
+	templateSets: TemplateSetInfo[]
 ): MenuContext | null {
 	for (const world of worlds) {
 		if (folder.parent?.path !== world.path) continue;
-		const rule = world.folderRules.find(r => r.targetFolder === folder.name);
+		const set = templateSets.find(ts => ts.name === world.templateSet);
+		// Missing set → no entity-folder match (honest; same as resolve failure)
+		if (!set) continue;
+
+		const rule = set.folderRules.find(r => r.targetFolder === folder.name);		
 		if (rule) {
 			return {
 				type: 'entity-folder',
@@ -116,7 +121,7 @@ function findEntityFile(
 	const world = worlds.find(w => file.path.startsWith(w.path + '/'));
 	if (!world) return null;
 
-	const templateSet = templateSets.find(ts => ts.name === world.templateSet) ?? templateSets[0];
+	const templateSet = templateSets.find(ts => ts.name === world.templateSet);
 	if (!templateSet) return null;
 
 	const rawTags = getAllTags(app.metadataCache.getFileCache(file) ?? {}) ?? [];

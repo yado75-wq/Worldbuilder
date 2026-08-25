@@ -141,8 +141,7 @@ function buildState(
 		folder: worldFolder,
 		indexFile,
 		status: 'active',
-		templateSet: templateSets[0]?.name ?? 'defaults',
-		folderRules: templateSet.folderRules,
+		templateSet: templateSets[0]?.name ?? 'defaults',		
 		worldTemplate: [],
 	};
 

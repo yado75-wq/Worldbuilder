@@ -71,8 +71,7 @@ async function findWorlds(
 			folder,
 			indexFile: file,
 			status: rawStatus === 'active' ? 'active' : 'inactive',
-			templateSet: templateSetName,
-			folderRules: templateSet?.folderRules ?? [],
+			templateSet: templateSetName,			
 			worldTemplate: templateSet?.worldTemplate ?? [],
 		});
 	}

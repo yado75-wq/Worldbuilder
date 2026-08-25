@@ -56,8 +56,7 @@ function buildState(
 		folder: asTFolder(app.vault.getAbstractFileByPath(WORLD)!),
 		indexFile,
 		status: 'active',
-		templateSet: 'defaults',
-		folderRules,
+		templateSet: 'defaults',		
 		worldTemplate: [],
 	};
 

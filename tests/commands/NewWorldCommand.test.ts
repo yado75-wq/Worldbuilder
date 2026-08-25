@@ -114,8 +114,7 @@ function buildState(app: App, opts?: {
 			folder,
 			indexFile,
 			status: 'active',
-			templateSet: 'defaults',
-			folderRules: [],
+			templateSet: 'defaults',			
 			worldTemplate: [],
 		};
 		worlds.push(activeWorld);
