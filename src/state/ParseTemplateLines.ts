@@ -1,6 +1,9 @@
 import {
 	DisplayType,
-	FieldDefinition,
+	FieldDefinition,	
+} from '../types/fields';
+
+import {	
 	FolderRule,
 	ValidationIssue,
 } from '../types';

@@ -7,7 +7,8 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { editWorldMeta } from '../../src/commands/EditWorldMetaCommand';
-import { PluginState, TemplateSetInfo, WorldInfo, FieldDefinition } from '../../src/types';
+import { FieldDefinition } from '../../src/types/fields';
+import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
 
 // ── Modal stub ────────────────────────────────────────────────────────────
 

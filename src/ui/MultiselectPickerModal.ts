@@ -1,6 +1,5 @@
 import { App, Modal, Setting } from 'obsidian';
-import type { LinkCandidateGroup } from '../commands/shared/EntityContent';
-import type { FieldDefinition } from '../types';
+import type { FieldDefinition, LinkCandidateGroup } from '../types/fields';
 
 export interface MultiselectPickerOptions {
 	title: string;

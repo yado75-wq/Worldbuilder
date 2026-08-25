@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findMissingMandatoryFields } from '../../../src/commands/shared/EntityCompleteness';
-import { FieldDefinition } from '../../../src/types';
+import { FieldDefinition } from '../../../src/types/fields';
 
 const titleField: FieldDefinition = {
 	key: 'name', label: 'Name', mandatory: true, type: 'text', display: 'title',

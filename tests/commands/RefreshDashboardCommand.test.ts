@@ -7,7 +7,8 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { refreshDashboard } from '../../src/commands/RefreshDashboardCommand';
-import { PluginState, TemplateSetInfo, WorldInfo, FieldDefinition } from '../../src/types';
+import { FieldDefinition } from '../../src/types/fields';
+import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
 import { PRESERVED_SECTION_MARKER } from '../../src/util/PreservedSection';
 import { DEFAULT_DASHBOARD_NOTES } from '../../src/commands/shared/DashboardContentBuilder';
 

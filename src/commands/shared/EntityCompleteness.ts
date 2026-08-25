@@ -1,4 +1,4 @@
-import { FieldDefinition } from '../../types';
+import { FieldDefinition } from '../../types/fields';
 import { extractSectionContent } from '../../util/SectionContent';
 
 /**

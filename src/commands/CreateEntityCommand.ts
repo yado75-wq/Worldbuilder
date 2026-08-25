@@ -1,5 +1,6 @@
 import { App, Notice, TFile } from 'obsidian';
-import { PluginState, FormResult } from '../types';
+import { FormResult } from '../types/fields';
+import { PluginState } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { buildEntityContent, buildFieldCandidates, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
 import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookupBuilder';

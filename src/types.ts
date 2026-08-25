@@ -1,5 +1,5 @@
 import { TFile, TFolder } from 'obsidian';
-
+import { FieldDefinition } from './types/fields';
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 export interface WorldBuilderSettings {
@@ -73,25 +73,7 @@ export function formatValidationIssue(issue: ValidationIssue): string {
 	return `${head}${issue.message}`;
 }
 
-// ── Fields ────────────────────────────────────────────────────────────────────
 
-export interface FieldDefinition {
-	key: string;
-	label: string;
-	mandatory: boolean;
-	type: FieldType;
-	display: DisplayType;
-	options?: string[];
-	/**  folder-oriented; prefer linkTypes. Still set to linkTypes[0] for one release. */
-	linkFolder?: string;
-	linkFallback?: string;
-	/** Entity type names for link:Type1>Type2>… */
-	linkTypes?: string[];
-	/** For type === 'multiselect': fixed strings vs entity links. */
-	multiKind?: 'text' | 'link';
-}
-export type FieldType = 'text' | 'link' | 'select' | 'timeframe' | 'multiselect';
-export type DisplayType = 'title' | 'property' | 'section';
 
 // ── Folder Rules ──────────────────────────────────────────────────────────────
 
@@ -109,11 +91,7 @@ export interface EntityInfo {
 	worldRoot: string;
 }
 
-// ── Forms ─────────────────────────────────────────────────────────────────────
 
-export interface FormResult {
-	data: Record<string, string | string[] | null>;
-}
 // ── Context Menu ──────────────────────────────────────────────────────────────
 
 export type MenuContext =

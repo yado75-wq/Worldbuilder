@@ -7,7 +7,8 @@ import {
 	asTFolder,
 } from '../../fakes/obsidian';
 import { createLinkedEntity } from '../../../src/commands/shared/CreateLinkedEntity';
-import { FieldDefinition, PluginState, TemplateSetInfo, WorldInfo } from '../../../src/types';
+import { FieldDefinition } from '../../../src/types/fields';
+import { PluginState, TemplateSetInfo, WorldInfo } from '../../../src/types';
 
 vi.mock('../../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),

@@ -1,8 +1,8 @@
 import { App, DropdownComponent, Modal, Setting, TextComponent } from 'obsidian';
-import { FieldDefinition, FormResult } from '../types';
+import { FieldDefinition, FormResult, LinkCandidateGroup } from '../types/fields';
 import { InputModal } from './InputModal';
 import { MultiselectPickerModal } from './MultiselectPickerModal';
-import type { LinkCandidateGroup } from '../commands/shared/EntityContent';
+
 import {
 	composeTimeframeValue,
 	decomposeTimeframeValue,

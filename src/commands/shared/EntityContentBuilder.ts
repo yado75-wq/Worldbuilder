@@ -1,4 +1,4 @@
-import { FieldDefinition } from '../../types';
+import { FieldDefinition } from '../../types/fields';
 import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
 import { formatMultiselectFrontmatterLine, formatMultiselectPropertyBullet } from './MultiselectValues';
 

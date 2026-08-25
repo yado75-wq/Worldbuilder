@@ -1,14 +1,8 @@
 import { App, getAllTags } from 'obsidian';
-import { FieldDefinition, TemplateSetInfo, WorldInfo } from '../../types';
+import { TemplateSetInfo, WorldInfo } from '../../types';
+import { FieldDefinition, LinkCandidateGroup } from '../../types/fields';
 
 export { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContentBuilder';
-
-export interface LinkCandidateGroup {
-	entityType: string;
-	/** Sorted A–Z; empty array → UI shows non-selectable "empty" placeholder. */
-	names: string[];
-}
-
 export interface FieldCandidates {
 	linkGroups: Record<string, LinkCandidateGroup[]>;
 	timeframeAnchors: Record<string, string[]>;

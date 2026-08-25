@@ -7,7 +7,8 @@ import {
 	asTFile,
 } from '../../fakes/obsidian';
 import { buildFieldCandidates } from '../../../src/commands/shared/EntityContent';
-import { FieldDefinition, TemplateSetInfo, WorldInfo } from '../../../src/types';
+import { FieldDefinition } from '../../../src/types/fields';
+import { TemplateSetInfo, WorldInfo } from '../../../src/types';
 
 const WORLD = 'TestWorld';
 
