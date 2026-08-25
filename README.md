@@ -104,6 +104,16 @@ Menus stay honest: entity types only appear when their field set is usable (non-
 3. Ensure the plugin folder contains `main.js`, `manifest.json`, `styles.css` (if present), and the `defaults/` directory
 4. Enable the plugin in Obsidian settings → Community plugins
 
+### Beta (BRAT)
+
+1. Install [BRAT](https://obsidian.md/plugins?id=obsidian42-brat) from Community plugins.
+2. Command palette → **BRAT: Add a beta plugin for testing**.
+3. Paste: `https://github.com/yado75-wq/Worldbuilder`
+4. Enable **World Builder Tools** under Community plugins.
+5. Updates: BRAT → check for beta plugin updates (or auto-update in BRAT settings).
+
+Requires a GitHub **release** with `main.js`, `manifest.json`, and `styles.css` as assets (same as manual install).
+
 ### Development
 
 ```bash
