@@ -1,6 +1,6 @@
 import { App, Notice, TFile } from 'obsidian';
 import { TemplateSetInfo } from '../types/templateSet';
-import { PluginState } from '../types';
+import { PluginState } from '../types/runtime';
 import { PRESERVED_SECTION_MARKER, extractPreservedSection } from '../util/PreservedSection';
 import { findMissingMandatoryFields } from './shared/EntityCompleteness';
 import { findUnresolvedTimeframes, formatUnresolvedTimeframeEntry } from './shared/TimeframeResolutionReport';

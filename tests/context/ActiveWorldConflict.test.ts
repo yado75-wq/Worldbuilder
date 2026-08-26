@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { hasActiveWorldConflict } from '../../src/context/ActiveWorld';
 import { WorldInfo } from '../../src/types/world';
-import { PluginState } from '../../src/types';
+import { PluginState } from '../../src/types/runtime';
 
 function world(path: string, status: 'active' | 'inactive'): WorldInfo {
 	return {

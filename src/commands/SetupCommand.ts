@@ -1,6 +1,6 @@
 import { App, Notice, normalizePath, TAbstractFile, TFile, TFolder } from 'obsidian';
 import { TemplateSetInfo } from '../types/templateSet';
-import { WorldBuilderSettings } from '../types';
+import { WorldBuilderSettings } from '../types/runtime';
 
 const DEFAULT_FILES = [
 	'world-template.md',

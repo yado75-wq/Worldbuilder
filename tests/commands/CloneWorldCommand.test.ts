@@ -8,7 +8,7 @@ import {
 } from '../fakes/obsidian';
 import { cloneWorld } from '../../src/commands/CloneWorldCommand';
 import { WorldInfo } from '../../src/types/world';
-import { PluginState } from '../../src/types';
+import { PluginState } from '../../src/types/runtime';
 
 let inputResult: string | null = null;
 

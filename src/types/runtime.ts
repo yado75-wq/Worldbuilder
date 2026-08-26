@@ -1,6 +1,5 @@
-import { TFile, TFolder } from 'obsidian';
-import {TemplateSetInfo} from "./types/templateSet";
-import { WorldInfo } from "./types/world";
+import {TemplateSetInfo} from "./templateSet";
+import { WorldInfo } from "./world";
 // ── Settings ──────────────────────────────────────────────────────────────────
 
 export interface WorldBuilderSettings {
@@ -14,18 +13,6 @@ export const DEFAULT_SETTINGS: WorldBuilderSettings = {
 	templatesFolder: 'templates',
 	defaultTemplateSet: 'defaults',
 };
-// ── Context Menu ──────────────────────────────────────────────────────────────
-
-export type MenuContext =
-	| { type: 'vault-root' }
-	| { type: 'world-root';     world: WorldInfo }
-	| { type: 'entity-folder';  world: WorldInfo; entityType: string; folder: TFolder }
-	| { type: 'entity-file';    world: WorldInfo; entityType: string; file: TFile }
-	| { type: 'index-file';     world: WorldInfo }
-	| { type: 'generic-folder'; world: WorldInfo; folder: TFolder }
-	| { type: 'template-set';   templateSet: TemplateSetInfo }
-	| { type: 'unknown' };
-
 // ── Plugin State ──────────────────────────────────────────────────────────────
 
 export interface PluginState {

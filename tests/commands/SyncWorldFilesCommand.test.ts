@@ -4,7 +4,7 @@ import { FakeVault, resetFakeObsidian, asTFile, asTFolder } from '../fakes/obsid
 import { syncWorldFiles } from '../../src/commands/SyncWorldFilesCommand';
 import { TemplateSetInfo } from "../../src/types/templateSet";
 import { WorldInfo } from '../../src/types/world';
-import { PluginState } from '../../src/types';
+import { PluginState } from '../../src/types/runtime';
 
 const WORLD_PATH = 'Michal';
 

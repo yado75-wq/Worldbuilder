@@ -4,7 +4,7 @@ import { WorldInfo } from '../types/world';
 import {
 	WorldBuilderSettings,	
 	PluginState,
-} from '../types';
+} from '../types/runtime';
 import {
 	parseFieldsWithIssues,
 	parseFolderRulesWithIssues,

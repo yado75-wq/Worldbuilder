@@ -10,7 +10,7 @@ import { createLinkedEntity } from '../../../src/commands/shared/CreateLinkedEnt
 import { FieldDefinition } from '../../../src/types/fields';
 import { TemplateSetInfo } from '../../../src/types/templateSet';
 import { WorldInfo } from '../../../src/types/world';
-import { PluginState } from '../../../src/types';
+import { PluginState } from '../../../src/types/runtime';
 
 vi.mock('../../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),

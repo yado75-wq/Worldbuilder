@@ -1,7 +1,20 @@
 import { App, TAbstractFile, TFile, TFolder, getAllTags } from 'obsidian';
 import { TemplateSetInfo } from '../types/templateSet';
 import { WorldInfo } from '../types/world';
-import { MenuContext } from '../types';
+
+// ── Context Menu ──────────────────────────────────────────────────────────────
+
+export type MenuContext =
+	| { type: 'vault-root' }
+	| { type: 'world-root';     world: WorldInfo }
+	| { type: 'entity-folder';  world: WorldInfo; entityType: string; folder: TFolder }
+	| { type: 'entity-file';    world: WorldInfo; entityType: string; file: TFile }
+	| { type: 'index-file';     world: WorldInfo }
+	| { type: 'generic-folder'; world: WorldInfo; folder: TFolder }
+	| { type: 'template-set';   templateSet: TemplateSetInfo }
+	| { type: 'unknown' };
+
+// ── Resolve functionality ─────────────────────────────────────────────────────
 
 export function resolveContext(
 	app: App,

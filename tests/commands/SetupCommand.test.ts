@@ -10,7 +10,7 @@ import {
 	resetTemplateSet,
 } from '../../src/commands/SetupCommand';
 import { TemplateSetInfo } from '../../src/types/templateSet';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import { DEFAULT_SETTINGS } from '../../src/types/runtime';
 
 const PLUGIN_DIR = 'plugin-root';
 const DEFAULTS_DIR = `${PLUGIN_DIR}/defaults`;

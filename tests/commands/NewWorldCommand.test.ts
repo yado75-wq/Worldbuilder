@@ -13,7 +13,7 @@ import {
 	DEFAULT_SETTINGS,
 	PluginState,	
 	WorldBuilderSettings,	
-} from '../../src/types';
+} from '../../src/types/runtime';
 
 // ── Modal stubs ───────────────────────────────────────────────────────────
 

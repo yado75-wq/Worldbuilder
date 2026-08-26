@@ -1,5 +1,5 @@
 import { App, Notice, TFile } from 'obsidian';
-import { PluginState } from '../types';
+import { PluginState } from '../types/runtime';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { buildEntityContent, DEFAULT_ENTITY_NOTES } from './shared/EntityContent';
 import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookupBuilder';

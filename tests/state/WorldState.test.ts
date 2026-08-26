@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { App } from 'obsidian';
 import { FakeVault, resetFakeObsidian } from '../fakes/obsidian';
 import { scanVault } from '../../src/state/WorldState';
-import { DEFAULT_SETTINGS } from '../../src/types';
+import { DEFAULT_SETTINGS } from '../../src/types/runtime';
 
 function worldIndex(name: string, status: 'active' | 'inactive' = 'inactive'): string {
 	return (

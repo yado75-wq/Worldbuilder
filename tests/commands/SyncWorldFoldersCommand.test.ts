@@ -9,7 +9,7 @@ import {
 import { syncWorldFolders } from '../../src/commands/SyncWorldFoldersCommand';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
-import { PluginState } from '../../src/types';
+import { PluginState } from '../../src/types/runtime';
 
 const WORLD_PATH = 'TestWorld';
 

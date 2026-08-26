@@ -10,7 +10,7 @@ import { refreshDashboard } from '../../src/commands/RefreshDashboardCommand';
 import { FieldDefinition } from '../../src/types/fields';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
-import { PluginState } from '../../src/types';
+import { PluginState } from '../../src/types/runtime';
 import { PRESERVED_SECTION_MARKER } from '../../src/util/PreservedSection';
 import { DEFAULT_DASHBOARD_NOTES } from '../../src/commands/shared/DashboardContentBuilder';
 

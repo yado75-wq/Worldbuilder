@@ -1,5 +1,5 @@
 import { Menu, Notice, Plugin, TAbstractFile, TFolder, normalizePath, setTooltip } from 'obsidian';
-import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types';
+import { WorldBuilderSettings, DEFAULT_SETTINGS, PluginState } from './types/runtime';
 import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
 import { registerFileMenu } from './context/MenuBuilder';

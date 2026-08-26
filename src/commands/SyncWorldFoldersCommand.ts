@@ -1,5 +1,5 @@
 import { App, Notice, TFolder } from 'obsidian';
-import { PluginState } from '../types';
+import { PluginState } from '../types/runtime';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 

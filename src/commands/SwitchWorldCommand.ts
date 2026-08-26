@@ -1,5 +1,5 @@
 import { App, Notice } from 'obsidian';
-import { PluginState } from '../types';
+import { PluginState } from '../types/runtime';
 
 export type SetActiveWorldResult =
 	| { ok: true; path: string }

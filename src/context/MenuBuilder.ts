@@ -1,6 +1,6 @@
 import { App, Menu, MenuItem, TAbstractFile, TFolder } from 'obsidian';
 import { WorldInfo } from '../types/world';
-import { PluginState, WorldBuilderSettings } from '../types';
+import { PluginState, WorldBuilderSettings } from '../types/runtime';
 import { hasActiveWorldConflict } from './ActiveWorld';
 import { resolveContext } from './ContextResolver';
 import { 
