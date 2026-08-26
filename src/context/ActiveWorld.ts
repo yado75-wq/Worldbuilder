@@ -1,4 +1,5 @@
-import { PluginState, WorldInfo } from '../types';
+import { WorldInfo } from '../types/world';
+import { PluginState } from '../types';
 
 export type ActiveWorldStatus =
 	| { kind: 'ok'; world: WorldInfo }

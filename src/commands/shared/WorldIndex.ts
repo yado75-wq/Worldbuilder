@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { WorldInfo } from '../../types';
+import { WorldInfo } from '../../types/world';
 
 /** Folder name always wins over frontmatter `name:`. */
 export function worldFolderName(world: WorldInfo): string {

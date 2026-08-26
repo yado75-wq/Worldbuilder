@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FieldDefinition } from '../../src/types/fields';
-import { TemplateSetInfo } from '../../src/types';
+import { TemplateSetInfo } from '../../src/types/templateSet';
 import { isEntityTypeUsable,
 		 isPluginMenuSuppressedPath,		 
 		 listUsableWildcardTypes, 

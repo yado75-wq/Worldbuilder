@@ -1,5 +1,6 @@
 import { App, Notice, TFile, TFolder, getAllTags } from 'obsidian';
-import { PluginState, FolderRule } from '../types';
+import { FolderRule } from '../types/folderRule';
+import { PluginState } from '../types';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { syncWorldNameToFolder } from './shared/WorldIndex';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';

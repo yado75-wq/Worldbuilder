@@ -1,6 +1,7 @@
 import { App, TFile, getAllTags } from 'obsidian';
 import { FieldDefinition } from '../../types/fields';
-import { TemplateSetInfo, WorldInfo } from '../../types';
+import { TemplateSetInfo } from '../../types/templateSet';
+import { WorldInfo } from '../../types/world';
 import { TimeframeLookup } from '../../time/TimeframeResolver';
 import { TimeframeCheckTarget } from './TimeframeResolutionReport';
 

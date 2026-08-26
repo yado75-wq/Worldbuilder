@@ -6,7 +6,7 @@ import {
 	syncWorldNameToFolder,
 	worldFolderName,
 } from '../../../src/commands/shared/WorldIndex';
-import { WorldInfo } from '../../../src/types';
+import { WorldInfo } from '../../../src/types/world';
 
 function makeWorld(app: App, folderPath: string, indexContent: string): WorldInfo {
 	const vault = app.vault as unknown as FakeVault;

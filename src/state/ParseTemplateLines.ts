@@ -4,9 +4,12 @@ import {
 } from '../types/fields';
 
 import {	
-	FolderRule,
+	FolderRule	
+} from '../types/folderRule';
+
+import {
 	ValidationIssue,
-} from '../types';
+} from '../types/templateSet';
 
 export interface ParseFieldsResult {
 	fields: FieldDefinition[];

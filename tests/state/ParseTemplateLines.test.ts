@@ -3,7 +3,7 @@ import {
 	parseFieldsWithIssues,
 	parseFolderRulesWithIssues,
 } from '../../src/state/ParseTemplateLines';
-import { formatValidationIssue } from '../../src/types';
+import { formatValidationIssue } from '../../src/types/templateSet';
 
 describe('parseFieldsWithIssues', () => {
 	it('parses a normal title field', () => {

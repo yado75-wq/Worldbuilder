@@ -1,6 +1,7 @@
 import { App, Notice, TFile } from 'obsidian';
 import { FieldDefinition, FormResult } from '../types/fields';
-import { PluginState, WorldInfo } from '../types';
+import { WorldInfo } from '../types/world';
+import { PluginState } from '../types';
 import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { buildFieldCandidates } from './shared/EntityContent';

@@ -1,8 +1,8 @@
 import { App, TFile, TFolder } from 'obsidian';
+import { TemplateSetInfo } from '../types/templateSet';
+import { WorldInfo } from '../types/world';
 import {
-	WorldBuilderSettings,
-	WorldInfo,
-	TemplateSetInfo,
+	WorldBuilderSettings,	
 	PluginState,
 } from '../types';
 import {

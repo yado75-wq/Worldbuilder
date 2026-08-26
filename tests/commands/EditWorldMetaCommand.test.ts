@@ -8,7 +8,9 @@ import {
 } from '../fakes/obsidian';
 import { editWorldMeta } from '../../src/commands/EditWorldMetaCommand';
 import { FieldDefinition } from '../../src/types/fields';
-import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
+import { TemplateSetInfo } from '../../src/types/templateSet';
+import { WorldInfo } from '../../src/types/world';
+import { PluginState } from '../../src/types';
 
 // ── Modal stub ────────────────────────────────────────────────────────────
 

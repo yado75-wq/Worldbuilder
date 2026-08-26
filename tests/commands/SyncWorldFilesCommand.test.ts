@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { App, TFile } from 'obsidian';
 import { FakeVault, resetFakeObsidian, asTFile, asTFolder } from '../fakes/obsidian';
 import { syncWorldFiles } from '../../src/commands/SyncWorldFilesCommand';
-import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
+import { TemplateSetInfo } from "../../src/types/templateSet";
+import { WorldInfo } from '../../src/types/world';
+import { PluginState } from '../../src/types';
 
 const WORLD_PATH = 'Michal';
 

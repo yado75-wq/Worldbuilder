@@ -9,7 +9,8 @@ import {
 	cloneTemplateSet,
 	resetTemplateSet,
 } from '../../src/commands/SetupCommand';
-import { DEFAULT_SETTINGS, TemplateSetInfo } from '../../src/types';
+import { TemplateSetInfo } from '../../src/types/templateSet';
+import { DEFAULT_SETTINGS } from '../../src/types';
 
 const PLUGIN_DIR = 'plugin-root';
 const DEFAULTS_DIR = `${PLUGIN_DIR}/defaults`;

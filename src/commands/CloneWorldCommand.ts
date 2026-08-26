@@ -1,5 +1,6 @@
 import { App, Notice, normalizePath, TFile, TFolder, TAbstractFile } from 'obsidian';
-import { PluginState, WorldInfo } from '../types';
+import { WorldInfo } from '../types/world';
+import { PluginState } from '../types';
 import { InputModal } from '../ui/InputModal';
 import { replaceIndexDisplayName } from './shared/WorldIndex';
 import { refreshDashboard } from './RefreshDashboardCommand';

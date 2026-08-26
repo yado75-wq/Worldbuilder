@@ -1,5 +1,7 @@
 import { App, Notice } from 'obsidian';
-import { PluginState, TemplateSetInfo, WorldInfo } from '../../types';
+import { TemplateSetInfo } from '../../types/templateSet';
+import { WorldInfo } from '../../types/world';
+import { PluginState } from '../../types';
 import { FieldDefinition } from '../../types/fields';
 import { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
 import { refreshDashboard } from '../RefreshDashboardCommand';

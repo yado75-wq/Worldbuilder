@@ -7,12 +7,12 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { newWorld } from '../../src/commands/NewWorldCommand';
+import { TemplateSetInfo } from '../../src/types/templateSet';
+import { WorldInfo } from '../../src/types/world';
 import {
 	DEFAULT_SETTINGS,
-	PluginState,
-	TemplateSetInfo,
-	WorldBuilderSettings,
-	WorldInfo,
+	PluginState,	
+	WorldBuilderSettings,	
 } from '../../src/types';
 
 // ── Modal stubs ───────────────────────────────────────────────────────────

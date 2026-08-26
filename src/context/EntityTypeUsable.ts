@@ -1,4 +1,4 @@
-import { TemplateSetInfo } from '../types';
+import { TemplateSetInfo } from '../types/templateSet';
 
 /**
  * Types that are not placed via folder-rules / auto-*.

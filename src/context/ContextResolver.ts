@@ -1,5 +1,7 @@
 import { App, TAbstractFile, TFile, TFolder, getAllTags } from 'obsidian';
-import { MenuContext, WorldInfo, TemplateSetInfo } from '../types';
+import { TemplateSetInfo } from '../types/templateSet';
+import { WorldInfo } from '../types/world';
+import { MenuContext } from '../types';
 
 export function resolveContext(
 	app: App,

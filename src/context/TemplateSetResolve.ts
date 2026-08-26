@@ -1,4 +1,4 @@
-import { TemplateSetInfo } from '../types';
+import { TemplateSetInfo } from '../types/templateSet';
 
 export type TemplateSetResolveResult =
 	| { ok: true; set: TemplateSetInfo }

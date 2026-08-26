@@ -7,7 +7,8 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { setActiveWorld, switchToWorld } from '../../src/commands/SwitchWorldCommand';
-import { PluginState, WorldInfo } from '../../src/types';
+import { WorldInfo } from '../../src/types/world';
+import { PluginState } from '../../src/types';
 
 const WORLD_A = 'WorldA';
 const WORLD_B = 'WorldB';

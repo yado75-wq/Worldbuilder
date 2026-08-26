@@ -8,7 +8,9 @@ import {
 } from '../fakes/obsidian';
 import { refreshAllTimeframes } from '../../src/commands/RefreshAllTimeframesCommand';
 import { FieldDefinition } from '../../src/types/fields';
-import { PluginState, TemplateSetInfo, WorldInfo } from '../../src/types';
+import { TemplateSetInfo } from '../../src/types/templateSet';
+import { WorldInfo } from '../../src/types/world';
+import { PluginState } from '../../src/types';
 import { PRESERVED_SECTION_MARKER } from '../../src/util/PreservedSection';
 
 // ── Confirm stub ──────────────────────────────────────────────────────────

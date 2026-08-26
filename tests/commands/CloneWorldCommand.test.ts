@@ -7,7 +7,8 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { cloneWorld } from '../../src/commands/CloneWorldCommand';
-import { PluginState, WorldInfo } from '../../src/types';
+import { WorldInfo } from '../../src/types/world';
+import { PluginState } from '../../src/types';
 
 let inputResult: string | null = null;
 

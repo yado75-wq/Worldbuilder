@@ -1,5 +1,6 @@
 import { App, Notice, TFolder } from 'obsidian';
-import { PluginState, WorldBuilderSettings, WorldInfo } from '../types';
+import { WorldInfo } from '../types/world';
+import { PluginState, WorldBuilderSettings } from '../types';
 import { InputModal } from '../ui/InputModal';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { refreshDashboard } from './RefreshDashboardCommand';

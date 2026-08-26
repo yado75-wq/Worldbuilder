@@ -1,5 +1,6 @@
 import { App, getAllTags } from 'obsidian';
-import { TemplateSetInfo, WorldInfo } from '../../types';
+import { TemplateSetInfo } from '../../types/templateSet';
+import { WorldInfo } from '../../types/world';
 import { FieldDefinition, LinkCandidateGroup } from '../../types/fields';
 
 export { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContentBuilder';

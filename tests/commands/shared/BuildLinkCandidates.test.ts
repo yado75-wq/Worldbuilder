@@ -8,7 +8,8 @@ import {
 } from '../../fakes/obsidian';
 import { buildFieldCandidates } from '../../../src/commands/shared/EntityContent';
 import { FieldDefinition } from '../../../src/types/fields';
-import { TemplateSetInfo, WorldInfo } from '../../../src/types';
+import { TemplateSetInfo } from '../../../src/types/templateSet';
+import { WorldInfo } from '../../../src/types/world';
 
 const WORLD = 'TestWorld';
 
