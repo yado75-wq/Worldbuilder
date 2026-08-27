@@ -1,3 +1,0 @@
-- Characters
-- Locations
-- Factions

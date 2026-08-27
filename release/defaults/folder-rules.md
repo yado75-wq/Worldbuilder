@@ -1,4 +1,0 @@
-- Generic | *
-- Character | Characters
-- Location | Locations
-- Faction | Factions
