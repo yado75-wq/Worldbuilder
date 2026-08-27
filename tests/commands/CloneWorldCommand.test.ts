@@ -40,6 +40,7 @@ vi.mock('../../src/ui/InputModal', () => ({
 
 vi.mock('../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),
+	worldDashboardPath: (worldPath: string) => `${worldPath}/_dashboard.md`,
 }));
 
 function indexContent(name: string, status: 'active' | 'inactive'): string {

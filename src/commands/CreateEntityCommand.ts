@@ -7,7 +7,7 @@ import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookup
 import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
 import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
-import { refreshDashboard } from './RefreshDashboardCommand';
+import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { createLinkedEntity } from './shared/CreateLinkedEntity';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
@@ -157,8 +157,8 @@ export async function createEntity(
 	}
 
 	new Notice(`${entityType} "${title}" created.`);
-
-	const dashPath = `${worldPath}/_dashboard.md`;
+	
+	const dashPath = worldDashboardPath(worldPath);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, worldPath, false);
 	}

@@ -2,7 +2,7 @@ import { App, Notice, TFile } from 'obsidian';
 import { FormResult } from '../types/fields';
 import { PluginState } from '../types/runtime';
 import { EntityFormModal } from '../ui/EntityFormModal';
-import { refreshDashboard } from './RefreshDashboardCommand';
+import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import {
 	buildEntityContent,
 	buildFieldCandidates,
@@ -184,8 +184,8 @@ export async function editEntity(
 	}
 
 	new Notice(`${entityType} "${title}" updated.`);
-
-	const dashPath = `${worldPath}/_dashboard.md`;
+	
+	const dashPath = worldDashboardPath(worldPath);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, worldPath, false);
 	}

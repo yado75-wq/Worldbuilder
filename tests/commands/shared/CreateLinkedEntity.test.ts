@@ -14,6 +14,7 @@ import { PluginState } from '../../../src/types/runtime';
 
 vi.mock('../../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),
+	worldDashboardPath: (worldPath: string) => `${worldPath}/_dashboard.md`,
 }));
 
 const WORLD = 'TestWorld';

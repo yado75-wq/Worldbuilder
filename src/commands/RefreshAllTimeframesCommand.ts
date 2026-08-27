@@ -6,7 +6,7 @@ import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookup
 import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
 import { buildFieldValues } from './shared/EntityPrefill';
 import { extractPreservedSection } from '../util/PreservedSection';
-import { refreshDashboard } from './RefreshDashboardCommand';
+import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
@@ -145,8 +145,8 @@ export async function refreshAllTimeframes(
 	if (failed.length > 0) parts.push(`Failed: ${failed.join(', ')}`);
 	if (skipped.length > 0) parts.push(`Skipped: ${skipped.length}`);
 	new Notice(parts.join('\n'));
-
-	const dashPath = `${worldPath}/_dashboard.md`;
+	
+	const dashPath = worldDashboardPath(worldPath);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, worldPath, false);
 	}

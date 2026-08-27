@@ -10,6 +10,12 @@ import { buildTimeframeLookup, getEntityFiles } from './shared/TimeframeLookupBu
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
 
+export const DASHBOARD_FILENAME = '_dashboard.md';
+
+export function worldDashboardPath(worldPath: string): string {
+	return `${worldPath}/${DASHBOARD_FILENAME}`;
+}
+
 export type RefreshDashboardResult =
 	| { ok: true; path: string }
 	| {

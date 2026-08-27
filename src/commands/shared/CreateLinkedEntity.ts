@@ -4,7 +4,7 @@ import { WorldInfo } from '../../types/world';
 import { PluginState } from '../../types/runtime';
 import { FieldDefinition } from '../../types/fields';
 import { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
-import { refreshDashboard } from '../RefreshDashboardCommand';
+import { refreshDashboard, worldDashboardPath } from '../RefreshDashboardCommand';
 
 export type CreateLinkedEntityResult =
 	| { ok: true; link: string; path: string }
@@ -69,7 +69,7 @@ export async function createLinkedEntity(
 	await app.vault.create(targetPath, content);
 	new Notice(`${entityType} "${trimmedName}" created.`);
 
-	const dashPath = `${world.path}/_dashboard.md`;
+	const dashPath = worldDashboardPath(world.path);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, world.path, false);
 	}

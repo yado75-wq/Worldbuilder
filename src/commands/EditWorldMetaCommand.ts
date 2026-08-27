@@ -3,7 +3,7 @@ import { FieldDefinition, FormResult } from '../types/fields';
 import { WorldInfo } from '../types/world';
 import { PluginState } from '../types/runtime';
 import { EntityFormModal } from '../ui/EntityFormModal';
-import { refreshDashboard } from './RefreshDashboardCommand';
+import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { buildFieldCandidates } from './shared/EntityContent';
 import { worldFolderName } from './shared/WorldIndex';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';
@@ -145,7 +145,7 @@ export async function editWorldMeta(
 	await app.vault.modify(indexFile, newContent);
 	new Notice(`World meta updated for "${newName}".`);
 
-	const dashPath = `${effectivePath}/_dashboard.md`;
+	const dashPath = worldDashboardPath(effectivePath);	
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		const refreshedState = {
 			...state,

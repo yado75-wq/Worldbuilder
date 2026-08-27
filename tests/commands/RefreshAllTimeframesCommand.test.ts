@@ -39,6 +39,7 @@ vi.mock('../../src/ui/ConfirmModal', () => ({
 
 vi.mock('../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),
+	worldDashboardPath: (worldPath: string) => `${worldPath}/_dashboard.md`,
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────────────────

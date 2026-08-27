@@ -3,7 +3,7 @@ import { WorldInfo } from '../types/world';
 import { PluginState } from '../types/runtime';
 import { InputModal } from '../ui/InputModal';
 import { replaceIndexDisplayName } from './shared/WorldIndex';
-import { refreshDashboard } from './RefreshDashboardCommand';
+import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 
 export type CloneWorldResult =
@@ -102,8 +102,8 @@ export async function cloneWorld(
 		indexFile,
 		status: 'inactive',
 	};
-
-	const dashPath = `${targetPath}/_dashboard.md`;
+	
+	const dashPath = worldDashboardPath(targetPath);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		const stateWithClone: PluginState = {
 			...state,
