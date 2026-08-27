@@ -67,16 +67,16 @@ npm run build
 
 ## Manifest rules (`manifest.json`)
 
-# World Builder Tools
+## World Builder Tools
 
-## Project
+### Project
 
 - This is an Obsidian desktop community plugin.
 - Source is TypeScript under `src/`; `src/main.ts` is bundled to the root `main.js` by esbuild.
 - The plugin is local-first: it reads and writes the current vault and makes no network calls at runtime.
 - The stable plugin ID is `world-builder-tools`. Do not change it.
 
-## Commands
+### Commands
 
 Use npm from the repository root:
 
@@ -92,7 +92,7 @@ npm run check-id      # check the manifest ID against the community registry
 
 Run `npm test`, `npm run typecheck`, and `npm run lint` after code changes. Keep tests focused on the changed behavior; the suite uses Vitest and in-memory Obsidian fakes rather than a real Obsidian window.
 
-## Source layout
+### Source layout
 
 - `src/main.ts`: plugin lifecycle, settings/state initialization, vault listeners, ribbon status menu.
 - `src/settings.ts`: settings tab and template-set/world actions.
@@ -109,7 +109,7 @@ Run `npm test`, `npm run typecheck`, and `npm run lint` after code changes. Keep
 
 Keep `src/main.ts` focused on lifecycle wiring. Put behavior in the owning command, context, state, time, or UI module. Avoid adding broad utility abstractions for one call site.
 
-## Data and behavior invariants
+### Data and behavior invariants
 
 - A world is a non-underscore folder containing a tagged `_index.md`.
 - Exactly one managed world should have `status: active`; zero or multiple active worlds are a conflict. World-changing commands must preserve the existing conflict guards.
@@ -119,7 +119,7 @@ Keep `src/main.ts` focused on lifecycle wiring. Put behavior in the owning comma
 - User-facing failures return structured result codes where the command already has a result type, and may also show an Obsidian `Notice`.
 - Use Obsidian `fileManager` operations when they preserve links or trash preferences; do not bypass them with raw filesystem APIs.
 
-## Editing conventions
+### Editing conventions
 
 - Match the existing TypeScript style and strict compiler settings in `tsconfig.json`.
 - Prefer explicit types and `async`/`await`; avoid `any`, non-null assertions, and casts unless the Obsidian API boundary requires one.
@@ -129,20 +129,20 @@ Keep `src/main.ts` focused on lifecycle wiring. Put behavior in the owning comma
 - Do not add network access, telemetry, remote code loading, or writes outside the vault without an explicit product requirement and documentation.
 - Do not edit `main.js` by hand. It is a generated bundle and is ignored by Git. The release workflow creates the install package from `main.js`, `manifest.json`, `styles.css`, and `defaults/`.
 
-## Tests
+### Tests
 
 For new behavior, add a focused test for the decision or file outcome. Cover refusal paths as well as successful paths when a command can write, rename, or modify vault content. Avoid asserting only incidental prose when a structured result or exact generated section can be checked.
 
 UI layout, focus, and real context-menu behavior remain manual checks in Obsidian. Update the relevant short guide under `docs/manual/` when a change adds a non-automatable workflow.
 
-## Versioning and releases
+### Versioning and releases
 
 - Keep the version in `manifest.json`, `package.json`, and `versions.json` aligned. `versions.json` maps each plugin version to its minimum Obsidian version.
 - Use semantic versions and tag releases with the exact manifest version, without a leading `v`.
 - Release packaging is defined in `.github/workflows/release.yml`; do not hand-edit generated contents under `release/`.
 - Before a release, run `npm run build`, `npm test`, and `npm run lint`, then verify the package contains `main.js`, `manifest.json`, `styles.css` when present, and `defaults/`.
 
-## Safety checklist
+### Safety checklist
 
 - Do not rename the plugin ID or existing command IDs.
 - Do not overwrite user template files unless the command explicitly means reset and the user has confirmed it.
