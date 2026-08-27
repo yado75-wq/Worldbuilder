@@ -74,12 +74,17 @@ export default class WorldBuilderPlugin extends Plugin {
 
 		// Wait for vault to be fully ready before scanning
 		this.app.workspace.onLayoutReady(async () => {
-			await ensureDefaultTemplates(
+			const ensured = await ensureDefaultTemplates(
 				this.app,
 				this.settings,
 				this.pluginDir,
 				this.state.templateSets
 			);
+			if (!ensured.ok) {
+				new Notice(
+					`Could not install all default template files${ensured.detail ? ` (${ensured.detail})` : ''}.`
+				);
+			}
 			await this.refreshState();
 		});
 	}

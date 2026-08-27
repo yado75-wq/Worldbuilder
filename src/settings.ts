@@ -106,12 +106,16 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								.setDestructive()
 								.onClick(() => {
 									void (async () => {
-										await resetTemplateSet(
+										const result = await resetTemplateSet(
 											this.app,
 											this.plugin.settings,
 											this.plugin.pluginDir,
 											set.name
 										);
+										if (!result.ok) {
+											new Notice(`Could not reset template set "${set.name}": ${result.detail}`);
+											return;
+										}
 										await this.plugin.refreshState();
 										this.update();
 									})();
@@ -173,12 +177,16 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										return;
 									}
 									await this.app.vault.createFolder(path);
-									await resetTemplateSet(
+									const result =await resetTemplateSet(
 										this.app,
 										this.plugin.settings,
 										this.plugin.pluginDir,
 										name
 									);
+									if (!result.ok) {
+										new Notice(`Could not create template set "${name}": ${result.detail}`);
+										return;
+									}
 									await this.plugin.refreshState();
 									this.update();
 								})();

@@ -50,6 +50,7 @@ export async function ensureDefaultTemplates(
 	await ensureFolder(app, templatesRoot);
 	await ensureFolder(app, defaultsPath);
 
+	const failed: string[] = [];
 	for (const filename of DEFAULT_FILES) {
 		const sourcePath = normalizePath(`${pluginDir}/defaults/${filename}`);
 		const targetPath = normalizePath(`${defaultsPath}/${filename}`);
@@ -60,8 +61,16 @@ export async function ensureDefaultTemplates(
 			const content = await app.vault.adapter.read(sourcePath);
 			await app.vault.create(targetPath, content);
 		} catch {
+			failed.push(filename);
 			new Notice(`Warning: could not copy default file "${filename}".`);
 		}
+	}
+	if (failed.length > 0) {
+		return {
+			ok: false,
+			code: 'failed',
+			detail: failed.join(', '),
+		};
 	}
 
 	const otherSets = existingSets.filter(s => s.name !== 'defaults');
@@ -114,6 +123,7 @@ export async function resetTemplateSet(
 	);
 	await ensureFolder(app, setPath);
 
+	const failed: string[] = [];
 	for (const filename of DEFAULT_FILES) {
 		const sourcePath = normalizePath(`${pluginDir}/defaults/${filename}`);
 		const targetPath = normalizePath(`${setPath}/${filename}`);
@@ -127,8 +137,17 @@ export async function resetTemplateSet(
 				await app.vault.create(targetPath, content);
 			}
 		} catch {
+			failed.push(filename);
 			new Notice(`Warning: could not copy "${filename}" to "${setName}".`);
 		}
+	}
+
+	if (failed.length > 0) {
+		return {
+			ok: false,
+			code: 'failed',
+			detail: failed.join(', '),
+		};
 	}
 
 	new Notice(`Template set "${setName}" reset to plugin defaults.`);

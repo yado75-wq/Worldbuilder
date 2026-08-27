@@ -92,15 +92,17 @@ describe('SetupCommand', () => {
 			expect(result).toEqual({ ok: true, defaultSetName: 'fantasy' });
 		});
 
-		it('still succeeds when a default source file cannot be read', async () => {
+		it('returns failed when a default source file cannot be read', async () => {
 			const vault2 = (app = new App()).vault as unknown as FakeVault;
+			// seed only some files
 			for (const filename of DEFAULT_FILES.slice(0, -1)) {
 				vault2.adapter.seedExternal(`${DEFAULTS_DIR}/${filename}`, 'ok\n');
 			}
 
 			const result = await ensureDefaultTemplates(app, DEFAULT_SETTINGS, PLUGIN_DIR, []);
 
-			expect(result).toEqual({ ok: true, defaultSetName: 'defaults' });
+			expect(result).toMatchObject({ ok: false, code: 'failed' });
+			expect(result.ok === false && result.detail).toContain(DEFAULT_FILES[DEFAULT_FILES.length - 1]!);
 		});
 	});
 
@@ -158,6 +160,30 @@ describe('SetupCommand', () => {
 					app.vault.getAbstractFileByPath(`_system/templates/defaults/${filename}`)
 				).not.toBeNull();
 			}
+		});
+
+		it('returns failed when a plugin default source file cannot be read', async () => {
+			// Fresh app so adapter has no full defaults seed from beforeEach
+			app = new App();
+			vault = app.vault as unknown as FakeVault;
+			resetFakeObsidian();
+
+			// Only partial plugin defaults (last file missing from adapter)
+			for (const filename of DEFAULT_FILES.slice(0, -1)) {
+				vault.adapter.seedExternal(`${DEFAULTS_DIR}/${filename}`, 'ok\n');
+			}
+
+			const missing = DEFAULT_FILES[DEFAULT_FILES.length - 1]!;
+
+			const result = await resetTemplateSet(
+				app,
+				DEFAULT_SETTINGS,
+				PLUGIN_DIR,
+				'defaults'
+			);
+
+			expect(result).toMatchObject({ ok: false, code: 'failed' });
+			expect(result.ok === false && result.detail).toContain(missing);
 		});
 	});
 });
