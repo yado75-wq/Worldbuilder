@@ -1,7 +1,7 @@
 import { App, getAllTags } from 'obsidian';
 import { TemplateSetInfo } from '../../types/templateSet';
 import { WorldInfo } from '../../types/world';
-import { FieldDefinition, LinkCandidateGroup } from '../../types/fields';
+import { FieldDefinition, LinkCandidateGroup } from '../../formkit';
 
 export { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContentBuilder';
 export interface FieldCandidates {

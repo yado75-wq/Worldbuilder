@@ -1,7 +1,7 @@
 import {
 	DisplayType,
 	FieldDefinition,	
-} from '../types/fields';
+} from '../formkit/types';
 
 import {	
 	FolderRule	

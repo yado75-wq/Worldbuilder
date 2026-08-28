@@ -1,7 +1,7 @@
 import { App, Notice, normalizePath, TFile, TFolder, TAbstractFile } from 'obsidian';
 import { WorldInfo } from '../types/world';
 import { PluginState } from '../types/runtime';
-import { InputModal } from '../ui/InputModal';
+import { InputModal } from '../formkit';
 import { replaceIndexDisplayName } from './shared/WorldIndex';
 import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';

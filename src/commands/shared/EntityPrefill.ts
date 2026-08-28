@@ -1,5 +1,5 @@
 import { App, TFile } from 'obsidian';
-import { FieldDefinition } from '../../types/fields';
+import { FieldDefinition } from '../../formkit';
 import { PRESERVED_SECTION_MARKER } from '../../util/PreservedSection';
 import { extractSectionContent } from '../../util/SectionContent';
 import { parseStoredMultiselect } from './MultiselectValues';

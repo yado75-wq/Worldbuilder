@@ -20,7 +20,7 @@ import {
 let inputResult: string | null = null;
 let confirmResult = false;
 
-vi.mock('../../src/ui/InputModal', () => ({
+vi.mock('../../src/formkit', () => ({
 	InputModal: class {
 		onSubmit: (value: string) => void;
 		onCancel: () => void;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FieldDefinition } from '../../src/types/fields';
+import { FieldDefinition } from '../../src/formkit';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { isEntityTypeUsable,
 		 isPluginMenuSuppressedPath,		 

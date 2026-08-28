@@ -7,7 +7,7 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { refreshDashboard } from '../../src/commands/RefreshDashboardCommand';
-import { FieldDefinition } from '../../src/types/fields';
+import { FieldDefinition } from '../../src/formkit';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';

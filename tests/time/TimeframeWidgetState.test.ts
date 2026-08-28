@@ -6,7 +6,7 @@ import {
 	emptyTimepointInput,
 	TimeframeFieldInput,
 	TimepointInput,
-} from '../../src/time/TimeframeWidgetState';
+} from '../../src/formkit';
 
 const YEARS = 'years';
 

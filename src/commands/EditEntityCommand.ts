@@ -1,7 +1,6 @@
 import { App, Notice, TFile } from 'obsidian';
-import { FormResult } from '../types/fields';
+import { decomposeTimeframeValue, EntityFormModal, FormResult } from '../formkit';
 import { PluginState } from '../types/runtime';
-import { EntityFormModal } from '../ui/EntityFormModal';
 import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import {
 	buildEntityContent,
@@ -10,7 +9,7 @@ import {
 } from './shared/EntityContent';
 import { buildTimeframeLookup, getWorldTimeUnit } from './shared/TimeframeLookupBuilder';
 import { resolveTimeframeFieldsForDisplay } from './shared/TimeframeDisplay';
-import { decomposeTimeframeValue } from '../time/TimeframeWidgetState';
+
 import { extractPreservedSection } from '../util/PreservedSection';
 import { buildFieldValues } from './shared/EntityPrefill';
 import { isEntityTypeUsable } from '../context/EntityTypeUsable';

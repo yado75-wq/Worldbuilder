@@ -12,7 +12,7 @@ import { PluginState } from '../../src/types/runtime';
 
 let inputResult: string | null = null;
 
-vi.mock('../../src/ui/InputModal', () => ({
+vi.mock('../../src/formkit', () => ({
 	InputModal: class {
 		onSubmit: (value: string) => void;
 		onCancel: () => void;

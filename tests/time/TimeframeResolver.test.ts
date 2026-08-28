@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseTimepoint } from '../../src/time/TimeframeSyntax';
+import { parseTimepoint } from '../../src/formkit/time/TimeframeSyntax';
 import {
 	resolveComparableDate,
 	resolveEntityTimeframe,

@@ -10,7 +10,7 @@ import {
 } from 'obsidian';
 import WorldBuilderPlugin from './main';
 import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
-import { InputModal } from './ui/InputModal';
+import { InputModal } from './formkit/ui/InputModal';
 import { setActiveWorld } from './commands/SwitchWorldCommand';
 import { editWorldMeta } from './commands/EditWorldMetaCommand';
 import { cloneWorld } from './commands/CloneWorldCommand';

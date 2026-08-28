@@ -7,7 +7,7 @@ import {
 	asTFile,
 } from '../../fakes/obsidian';
 import { buildFieldCandidates } from '../../../src/commands/shared/EntityContent';
-import { FieldDefinition } from '../../../src/types/fields';
+import { FieldDefinition } from '../../../src/formkit';
 import { TemplateSetInfo } from '../../../src/types/templateSet';
 import { WorldInfo } from '../../../src/types/world';
 

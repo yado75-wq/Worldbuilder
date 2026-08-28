@@ -1,5 +1,5 @@
 import { App, TFile, getAllTags } from 'obsidian';
-import { FieldDefinition } from '../../types/fields';
+import { FieldDefinition } from '../../formkit';
 import { TemplateSetInfo } from '../../types/templateSet';
 import { WorldInfo } from '../../types/world';
 import { TimeframeLookup } from '../../time/TimeframeResolver';

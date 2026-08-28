@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildEntityContent, buildTimeframeSection, DEFAULT_ENTITY_NOTES } from '../../../src/commands/shared/EntityContentBuilder';
-import { FieldDefinition } from '../../../src/types/fields';
+import { FieldDefinition } from '../../../src/formkit';
 
 const nameField: FieldDefinition = {
 	key: 'name', label: 'Name', mandatory: true, type: 'text', display: 'title',

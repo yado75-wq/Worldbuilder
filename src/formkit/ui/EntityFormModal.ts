@@ -1,5 +1,5 @@
 import { App, DropdownComponent, Modal, Setting, TextComponent } from 'obsidian';
-import { FieldDefinition, FormResult, LinkCandidateGroup } from '../types/fields';
+import { FieldDefinition, FormResult, LinkCandidateGroup } from '../types';
 import { InputModal } from './InputModal';
 import { MultiselectPickerModal } from './MultiselectPickerModal';
 

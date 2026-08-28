@@ -6,7 +6,7 @@ import {
 	serializeTimeframeValue,
 	Timepoint,
 	TimeframeValue,
-} from '../../src/time/TimeframeSyntax';
+} from '../../src/formkit/time/TimeframeSyntax';
 
 describe('parseTimepoint', () => {
 	it('parses a bare number', () => {

@@ -7,7 +7,7 @@ import {
 	asTFolder,
 } from '../fakes/obsidian';
 import { createEntity } from '../../src/commands/CreateEntityCommand';
-import { FieldDefinition } from '../../src/types/fields';
+import { FieldDefinition } from '../../src/formkit';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
@@ -20,7 +20,7 @@ type ModalBehavior =
 
 let modalBehavior: ModalBehavior = { type: 'cancel' };
 
-vi.mock('../../src/ui/EntityFormModal', () => ({
+vi.mock('../../src/formkit', () => ({
 	EntityFormModal: class {
 		options: {
 			onSubmit: (r: { data: Record<string, string | null> }) => void;

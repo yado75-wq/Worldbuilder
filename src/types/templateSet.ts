@@ -1,6 +1,6 @@
 
 import { FolderRule } from "./folderRule";
-import { FieldDefinition } from "./fields";
+import { FieldDefinition } from "../formkit";
 // ── Template Sets ─────────────────────────────────────────────────────────────
 
 export interface TemplateSetInfo {

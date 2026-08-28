@@ -1,4 +1,4 @@
-import { FieldDefinition } from '../../types/fields';
+import { FieldDefinition } from '../../formkit';
 import { resolveEntityTimeframe, TimeframeLookup } from '../../time/TimeframeResolver';
 import { TimeframeResolution } from './EntityContentBuilder';
 

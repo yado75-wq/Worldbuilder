@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveTimeframeFieldsForDisplay } from '../../../src/commands/shared/TimeframeDisplay';
-import { FieldDefinition } from '../../../src/types/fields';
+import { FieldDefinition } from '../../../src/formkit';
 import { TimeframeLookup } from '../../../src/time/TimeframeResolver';
 
 const timeframeField: FieldDefinition = {

@@ -21,7 +21,7 @@
 //     is therefore a separate concern layered on top of this module, not
 //     something `resolveComparableDate` itself enforces.
 
-import { Timepoint, TimeframeValue, parseTimeframeValue } from './TimeframeSyntax';
+import { Timepoint, TimeframeValue, parseTimeframeValue } from '../formkit';
 
 /** Returns the raw `timeframe` frontmatter string for an entity, or `undefined` if it has none. */
 export type TimeframeLookup = (entityRef: string) => string | undefined;
