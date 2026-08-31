@@ -9,6 +9,7 @@ import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand'
 import { createLinkedEntity } from './shared/CreateLinkedEntity';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import {t} from '../i18n';
 
 export type CreateEntityResult =
 	| { ok: true; path: string }
@@ -43,15 +44,13 @@ export async function createEntity(
 	folderPath: string
 ): Promise<CreateEntityResult> {
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(	t('notice.active-world-conflict') );
 		return err('active-world-conflict');
 	}
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -66,13 +65,13 @@ export async function createEntity(
 	const templateSet = resolved.set;
 
 	if (!isEntityTypeUsable(templateSet, entityType)) {
-		new Notice(`No usable fields defined for "${entityType}".`);
+		new Notice(t('notice.no-usable-fields', { type: entityType }));
 		return err('type-not-usable', entityType);
 	}
 
 	const fields = templateSet.fieldSets[entityType];
 	if (!fields || fields.length === 0) {
-		new Notice(`No fields defined for "${entityType}".`);
+		new Notice(t('notice.no-fields', { type: entityType }));
 		return err('no-fields', entityType);
 	}
 
@@ -92,7 +91,7 @@ export async function createEntity(
 	const formResult = await new Promise<FormResult | null>((resolve) => {
 		let submitted = false;
 		const modal = new EntityFormModal(app, {
-			title: `New ${entityType}`,
+			title: t('modal.new-entity-title', { type: entityType }),
 			fields,
 			prefill: {},
 			linkCandidateGroups: linkGroups,
@@ -123,20 +122,20 @@ export async function createEntity(
 
 	const titleField = fields.find(f => f.display === 'title');
 	if (!titleField) {
-		new Notice(`No title field defined for "${entityType}".`);
+		new Notice(t('notice.no-title-field', { type: entityType }));
 		return err('no-title-field', entityType);
 	}
 
 	const rawTitle = formResult.data[titleField.key];
 	const title = typeof rawTitle === 'string' ? rawTitle.trim() : '';
 	if (!title) {
-		new Notice('Name is required.');
+		new Notice(t('notice.name-required'));
 		return err('name-required');
 	}
 
 	const targetPath = `${folderPath}/${title}.md`;
 	if (app.vault.getAbstractFileByPath(targetPath)) {
-		new Notice(`"${title}" already exists in ${folderPath}.`);
+		new Notice(t('notice.already-exists-in-folder', { name: title, folder: folderPath }));
 		return err('already-exists', targetPath);
 	}
 
@@ -154,7 +153,7 @@ export async function createEntity(
 		await app.workspace.getLeaf(false).openFile(newFile);
 	}
 
-	new Notice(`${entityType} "${title}" created.`);
+	new Notice(t('notice.entity-created', { type: entityType, name: title }));
 	
 	const dashPath = worldDashboardPath(worldPath);
 	if (app.vault.getAbstractFileByPath(dashPath)) {

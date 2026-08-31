@@ -9,6 +9,7 @@ import { buildDashboardContent, DEFAULT_DASHBOARD_NOTES, EntitySectionInput } fr
 import { buildTimeframeLookup, getEntityFiles } from './shared/TimeframeLookupBuilder';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import { t } from '../i18n';
 
 export const DASHBOARD_FILENAME = '_dashboard.md';
 
@@ -43,15 +44,13 @@ export async function refreshDashboard(
 ): Promise<RefreshDashboardResult> {
 
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(t('notice.active-world-conflict'));
 		return err('active-world-conflict');
 	}
 	
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -171,7 +170,7 @@ export async function refreshDashboard(
 		}
 	}
 
-	new Notice(`Dashboard refreshed for "${world.name}".`);
+	new Notice(t('notice.dashboard-refreshed', { name: world.name }));
 	return { ok: true, path: dashPath };
 }
 

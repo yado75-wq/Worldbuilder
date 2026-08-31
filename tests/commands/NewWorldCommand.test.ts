@@ -14,7 +14,8 @@ import {
 	PluginState,	
 	WorldBuilderSettings,	
 } from '../../src/types/runtime';
-
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 // ── Modal stubs ───────────────────────────────────────────────────────────
 
 let inputResult: string | null = null;
@@ -142,6 +143,7 @@ describe('newWorld', () => {
 		resetFakeObsidian();
 		inputResult = null;
 		confirmResult = false;
+		setCatalogForTests(en);
 	});
 
 	// ── Guards ────────────────────────────────────────────────────────────

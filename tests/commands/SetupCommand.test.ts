@@ -11,6 +11,8 @@ import {
 } from '../../src/commands/SetupCommand';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { DEFAULT_SETTINGS } from '../../src/types/runtime';
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 
 const PLUGIN_DIR = 'plugin-root';
 const DEFAULTS_DIR = `${PLUGIN_DIR}/defaults`;
@@ -53,6 +55,7 @@ describe('SetupCommand', () => {
 		vault = app.vault as unknown as FakeVault;
 		resetFakeObsidian();
 		seedPluginDefaults(vault);
+		setCatalogForTests(en);
 	});
 
 	describe('ensureDefaultTemplates', () => {

@@ -9,7 +9,7 @@ import { extractPreservedSection } from '../util/PreservedSection';
 import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
-
+import { t } from '../i18n';
 interface RefreshCandidate {
 	file: TFile;
 	basename: string;
@@ -44,15 +44,13 @@ export async function refreshAllTimeframes(
 	worldPath: string
 ): Promise<RefreshAllTimeframesResult> {
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(t('notice.active-world-conflict'));
 		return err('active-world-conflict');
 	}
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -68,7 +66,7 @@ export async function refreshAllTimeframes(
 
 	const { lookup, targets } = buildTimeframeLookup(app, worldPath, templateSet);
 	if (targets.length === 0) {
-		new Notice('No entities with a timeframe value found.');
+		new Notice(t('notice.no-timeframe-targets'));
 		return err('no-targets');
 	}
 
@@ -109,19 +107,28 @@ export async function refreshAllTimeframes(
 	}
 
 	if (candidates.length === 0) {
-		const msg = skipped.length > 0
-			? `All resolved timeframes are already up to date. ${skipped.length} entities skipped (missing type or title field).`
-			: 'All resolved timeframes are already up to date.';
-		new Notice(msg);
+		new Notice(
+			skipped.length > 0
+				? t('notice.timeframes-up-to-date-skipped', { count: String(skipped.length) })
+				: t('notice.timeframes-up-to-date')
+		);
 		return err('already-up-to-date', skipped.length > 0 ? String(skipped.length) : undefined);
 	}
 
 	const preview = candidates.map(c => `• ${c.basename}`).join('\n');
+	const confirmMsg =
+		candidates.length === 1
+			? t('modal.refresh-timeframes-confirm-one', { preview })
+			: t('modal.refresh-timeframes-confirm-many', {
+					count: String(candidates.length),
+					preview,
+				});
+
 	const confirmed = await askConfirm(
 		app,
-		`Refresh ${candidates.length} entit${candidates.length === 1 ? 'y' : 'ies'}' resolved timeframes?\n\n${preview}`,
-		'Refresh',
-		'Cancel'
+		confirmMsg,
+		t('modal.refresh-timeframes-ok'),
+		t('modal.refresh-timeframes-cancel')
 	);
 
 	if (!confirmed) {
@@ -141,9 +148,15 @@ export async function refreshAllTimeframes(
 	}
 
 	const parts: string[] = [];
-	if (refreshed.length > 0) parts.push(`Refreshed: ${refreshed.join(', ')}`);
-	if (failed.length > 0) parts.push(`Failed: ${failed.join(', ')}`);
-	if (skipped.length > 0) parts.push(`Skipped: ${skipped.length}`);
+	if (refreshed.length > 0) {
+		parts.push(t('notice.timeframes-refreshed', { names: refreshed.join(', ') }));
+	}
+	if (failed.length > 0) {
+		parts.push(t('notice.timeframes-failed', { names: failed.join(', ') }));
+	}
+	if (skipped.length > 0) {
+		parts.push(t('notice.timeframes-skipped-count', { count: String(skipped.length) }));
+	}
 	new Notice(parts.join('\n'));
 	
 	const dashPath = worldDashboardPath(worldPath);
@@ -163,7 +176,7 @@ function askConfirm(
 	cancelLabel: string
 ): Promise<boolean> {
 	return new Promise((resolve) => {
-		const modal = new ConfirmModal(app, message, resolve, confirmLabel, cancelLabel, 'Refresh all timeframes');
+		const modal = new ConfirmModal(app, message, resolve, confirmLabel, cancelLabel, t('modal.refresh-timeframes-title'));
 		modal.open();
 	});
 }

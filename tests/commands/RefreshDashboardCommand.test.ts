@@ -13,6 +13,8 @@ import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
 import { PRESERVED_SECTION_MARKER } from '../../src/util/PreservedSection';
 import { DEFAULT_DASHBOARD_NOTES } from '../../src/commands/shared/DashboardContentBuilder';
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 
 const WORLD_PATH = 'TestWorld';
 const DASH_PATH = `${WORLD_PATH}/_dashboard.md`;
@@ -90,6 +92,7 @@ describe('refreshDashboard', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
+		setCatalogForTests(en);
 	});
 
 	// ── Guards ────────────────────────────────────────────────────────────

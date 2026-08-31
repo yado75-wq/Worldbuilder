@@ -4,6 +4,7 @@ import { PluginState, WorldBuilderSettings } from '../types/runtime';
 import { InputModal } from '../formkit';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
+import { t } from '../i18n';
 
 export type NewWorldResult =
 	| { ok: true; path: string; madeActive: boolean }
@@ -37,16 +38,16 @@ export async function newWorld(
 		?? state.templateSets[0];
 
 	if (!templateSet) {
-		new Notice('No template sets found. Create one in _system/templates/ first.');
+		new Notice(t('notice.no-template-sets'));
 		return err('no-template-sets');
 	}
 
 	if (!templateSet.isValid) {
-		new Notice(`Template set "${templateSet.name}" has errors. Check plugin settings.`);
+		new Notice(t('notice.template-set-invalid', { name: templateSet.name }));
 		return err('template-set-invalid', templateSet.name);
 	}
 
-	const name = await askInput(app, 'New world name', 'My World', '');
+	const name = await askInput(app, t('modal.new-world-prompt'), t('modal.new-world-placeholder'), '');
 	if (!name) {
 		return err('cancelled');
 	}
@@ -54,11 +55,11 @@ export async function newWorld(
 	const base = parentPath ? `${parentPath}/${name}` : name;
 
 	if (app.vault.getAbstractFileByPath(base)) {
-		new Notice(`"${name}" already exists.`);
+		new Notice(t('notice.already-exists', { name }));
 		return err('already-exists', base);
 	}
 
-	const makeActive = await askConfirm(app, `Make "${name}" the active world?`);
+	const makeActive = await askConfirm(app, t('modal.make-active-world-confirm', { name }));
 
 	await app.vault.createFolder(base);
 	for (const sub of templateSet.worldTemplate) {
@@ -72,7 +73,11 @@ export async function newWorld(
 	const indexContent = buildMinimalIndex(name, makeActive ? 'active' : 'inactive', templateSet.name);
 	const indexFile = await app.vault.create(`${base}/_index.md`, indexContent);
 
-	new Notice(`"${name}" created${makeActive ? ' and set as active world' : ''}.`);
+	new Notice(
+		makeActive
+			? t('notice.world-created-active', { name })
+			: t('notice.world-created', { name })
+	);
 
 	const newFolder = app.vault.getAbstractFileByPath(base);
 	if (newFolder instanceof TFolder) {

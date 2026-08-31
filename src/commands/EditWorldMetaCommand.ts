@@ -9,6 +9,7 @@ import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 import { formatMultiselectFrontmatterLine, formatMultiselectPropertyBullet } from './shared/MultiselectValues';
 import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import { t } from '../i18n';
 
 export type EditWorldMetaResult =
 	| { ok: true; path: string }
@@ -41,11 +42,13 @@ export async function editWorldMeta(
 	state: PluginState,
 	worldPath: string
 ): Promise<EditWorldMetaResult> {
-	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))) return err('active-world-conflict');
+	if (!requireUniqueActiveWorld(state, msg => new Notice(msg))){
+		return err('active-world-conflict');
+	} 
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -61,19 +64,19 @@ export async function editWorldMeta(
 
 	const allFields = templateSet.fieldSets['WorldMeta'] ?? [];
 	if (allFields.length === 0) {
-		new Notice('WorldMeta_Fields.md not found or empty.');
+		new Notice(t('notice.worldmeta-empty'));
 		return err('worldmeta-empty');
 	}
 
 	if (!isEntityTypeUsable(templateSet, 'WorldMeta')) {
-		new Notice('No usable world meta fields defined.');
+		new Notice(t('notice.worldmeta-not-usable'));
 		return err('worldmeta-not-usable');
 	}
 
 	const fields = allFields;
 	const titleField = fields.find(f => f.display === 'title');
 	if (!titleField) {
-		new Notice('WorldMeta_Fields.md has no title field.');
+		new Notice(t('notice.worldmeta-no-title'));
 		return err('no-title-field');
 	}
 
@@ -87,7 +90,7 @@ export async function editWorldMeta(
 	const result = await new Promise<FormResult | null>((resolve) => {
 		let submitted = false;
 		const modal = new EntityFormModal(app, {
-			title: `Edit world meta — ${folderName}`,
+			title: t('modal.edit-world-meta-title', { name: folderName }),
 			fields,
 			prefill,
 			linkCandidateGroups: linkGroups,
@@ -105,7 +108,7 @@ export async function editWorldMeta(
 	const rawName = result.data[titleField.key];
 	const newName = typeof rawName === 'string' ? rawName.trim() : '';
 	if (!newName) {
-		new Notice('Name is required.');
+		new Notice(t('notice.name-required'));
 		return err('name-required');
 	}
 
@@ -118,7 +121,7 @@ export async function editWorldMeta(
 		const newFolderPath = parentPath ? `${parentPath}/${newName}` : newName;
 
 		if (app.vault.getAbstractFileByPath(newFolderPath)) {
-			new Notice(`A folder named "${newName}" already exists.`);
+			new Notice(t('notice.folder-name-conflict', { name: newName }));
 			return err('folder-name-conflict', newFolderPath);
 		}
 
@@ -127,7 +130,7 @@ export async function editWorldMeta(
 
 		const renamedIndex = app.vault.getAbstractFileByPath(`${newFolderPath}/_index.md`);
 		if (!(renamedIndex instanceof TFile)) {
-			new Notice('World folder was renamed but _index.md could not be found.');
+			new Notice(t('notice.index-missing-after-rename'));
 			return err('index-missing-after-rename', newFolderPath);
 		}
 		indexFile = renamedIndex;
@@ -142,7 +145,7 @@ export async function editWorldMeta(
 		world.templateSet
 	);
 	await app.vault.modify(indexFile, newContent);
-	new Notice(`World meta updated for "${newName}".`);
+	new Notice(t('notice.world-meta-updated', { name: newName }));
 
 	const dashPath = worldDashboardPath(effectivePath);	
 	if (app.vault.getAbstractFileByPath(dashPath)) {

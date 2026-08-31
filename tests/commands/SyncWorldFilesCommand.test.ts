@@ -5,6 +5,8 @@ import { syncWorldFiles } from '../../src/commands/SyncWorldFilesCommand';
 import { TemplateSetInfo } from "../../src/types/templateSet";
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 
 const WORLD_PATH = 'Michal';
 
@@ -108,6 +110,7 @@ describe('syncWorldFiles', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
+		setCatalogForTests(en);
 	});
 
 	it('does not move a file already in its correct one-level-deep folder', async () => {

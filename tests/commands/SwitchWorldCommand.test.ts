@@ -9,6 +9,8 @@ import {
 import { setActiveWorld, switchToWorld } from '../../src/commands/SwitchWorldCommand';
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 
 const WORLD_A = 'WorldA';
 const WORLD_B = 'WorldB';
@@ -64,6 +66,7 @@ describe('setActiveWorld', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
+		setCatalogForTests(en);
 	});
 
 	it('returns false when the world is not found', async () => {
@@ -136,6 +139,7 @@ describe('switchToWorld', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
+		setCatalogForTests(en);
 	});
 
 	it('exits when the world is not found', async () => {

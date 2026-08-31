@@ -12,7 +12,8 @@ import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
 import { PRESERVED_SECTION_MARKER } from '../../src/util/PreservedSection';
-
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 // ── Confirm stub ──────────────────────────────────────────────────────────
 
 let confirmResult = false;
@@ -124,6 +125,7 @@ describe('refreshAllTimeframes', () => {
 		app = new App();
 		resetFakeObsidian();
 		confirmResult = false;
+		setCatalogForTests(en);
 	});
 
 	// ── Guards ────────────────────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { ConfirmModal } from '../ui/ConfirmModal';
 import { syncWorldNameToFolder } from './shared/WorldIndex';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import { t } from '../i18n';
 
 interface MoveCandidate {
 	file: TFile;
@@ -47,15 +48,13 @@ export async function syncWorldFiles(
 	worldPath: string
 ): Promise<SyncWorldFilesResult> {
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(t('notice.active-world-conflict'));
 		return err('active-world-conflict');
 	}
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -71,14 +70,14 @@ export async function syncWorldFiles(
 
 	const nameSynced = await syncWorldNameToFolder(app, world);
 	if (nameSynced) {
-		new Notice(`World display name set to folder name "${world.folder.name}".`);
+		new Notice(t('notice.world-name-synced', { name: world.folder.name }));
 	}
 
 	const fixedRules = templateSet.folderRules.filter(r => r.targetFolder !== '*');
 
 	const worldFolder = app.vault.getAbstractFileByPath(worldPath);
 	if (!(worldFolder instanceof TFolder)) {
-		new Notice('World folder not found.');
+		new Notice(t('notice.world-folder-not-found'));
 		return err('world-folder-not-found');
 	}
 
@@ -119,10 +118,13 @@ export async function syncWorldFiles(
 	}
 
 	if (candidates.length === 0) {
-		const msg = unrecognized.length > 0
-			? `All files are in correct folders. ${unrecognized.length} unrecognized file(s) left in place.`
-			: 'All files are in correct folders.';
-		new Notice(msg);
+		new Notice(
+			unrecognized.length > 0
+				? t('notice.files-already-sorted-unrecognized', {
+						count: String(unrecognized.length),
+					})
+				: t('notice.files-already-sorted')
+		);
 		return err('nothing-to-move', unrecognized.length > 0 ? String(unrecognized.length) : undefined);
 	}
 
@@ -132,9 +134,12 @@ export async function syncWorldFiles(
 
 	const confirmed = await askConfirm(
 		app,
-		`Move ${candidates.length} file(s)?\n\n${preview}`,
-		'Move files',
-		'Cancel'
+		t('modal.sync-files-confirm', {
+			count: String(candidates.length),
+			preview,
+		}),
+		t('modal.sync-files-ok'),
+		t('modal.sync-files-cancel')
 	);
 
 	if (!confirmed) {
@@ -149,12 +154,20 @@ export async function syncWorldFiles(
 
 		const targetFolder = app.vault.getAbstractFileByPath(`${worldPath}/${candidate.targetFolder}`);
 		if (!(targetFolder instanceof TFolder)) {
-			failed.push(`${candidate.file.basename} (target folder missing)`);
+			failed.push(
+				t('notice.file-move-fail-folder-missing', {
+					name: candidate.file.basename,
+				})
+			);
 			continue;
 		}
 
 		if (app.vault.getAbstractFileByPath(targetPath)) {
-			failed.push(`${candidate.file.basename} (name conflict in target)`);
+			failed.push(
+				t('notice.file-move-fail-name-conflict', {
+					name: candidate.file.basename,
+				})
+			);
 			continue;
 		}
 
@@ -167,9 +180,19 @@ export async function syncWorldFiles(
 	}
 
 	const parts: string[] = [];
-	if (moved.length > 0) parts.push(`Moved: ${moved.join(', ')}`);
-	if (failed.length > 0) parts.push(`Failed: ${failed.join(', ')}`);
-	if (unrecognized.length > 0) parts.push(`Unrecognized (left in place): ${unrecognized.length}`);
+	if (moved.length > 0) {
+		parts.push(t('notice.files-moved', { names: moved.join(', ') }));
+	}
+	if (failed.length > 0) {
+		parts.push(t('notice.files-move-failed', { names: failed.join(', ') }));
+	}
+	if (unrecognized.length > 0) {
+		parts.push(
+			t('notice.files-unrecognized-count', {
+				count: String(unrecognized.length),
+			})
+		);
+	}
 	new Notice(parts.join('\n'));
 
 	return {
@@ -201,7 +224,7 @@ function askConfirm(
 	cancelLabel: string
 ): Promise<boolean> {
 	return new Promise((resolve) => {
-		const modal = new ConfirmModal(app, message, resolve, confirmLabel, cancelLabel, 'Sync world files');
+		const modal = new ConfirmModal(app, message, resolve, confirmLabel, cancelLabel, t('modal.sync-files-title'));
 		modal.open();
 	});
 }

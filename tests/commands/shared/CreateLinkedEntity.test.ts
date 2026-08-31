@@ -11,6 +11,8 @@ import { FieldDefinition } from '../../../src/formkit';
 import { TemplateSetInfo } from '../../../src/types/templateSet';
 import { WorldInfo } from '../../../src/types/world';
 import { PluginState } from '../../../src/types/runtime';
+import { setCatalogForTests } from '../../../src/i18n';
+import en from '../../../locales/en.json';
 
 vi.mock('../../../src/commands/RefreshDashboardCommand', () => ({
 	refreshDashboard: vi.fn(async () => {}),
@@ -76,6 +78,7 @@ describe('createLinkedEntity', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
+		setCatalogForTests(en);
 	});
 
 	it('places the file under the concrete folder rule for the type', async () => {

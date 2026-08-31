@@ -2,6 +2,7 @@ import { App, Notice, TFolder } from 'obsidian';
 import { PluginState } from '../types/runtime';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import { t } from '../i18n';
 
 export type SyncWorldFoldersResult =
 	| {
@@ -35,15 +36,13 @@ export async function syncWorldFolders(
 	worldPath: string
 ): Promise<SyncWorldFoldersResult> {
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(t('notice.active-world-conflict'));
 		return err('active-world-conflict');
 	}
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -63,12 +62,12 @@ export async function syncWorldFolders(
 
 	const worldFolder = app.vault.getAbstractFileByPath(worldPath);
 	if (!(worldFolder instanceof TFolder)) {
-		new Notice('World folder not found.');
+		new Notice(t('notice.world-folder-not-found'));
 		return err('world-folder-not-found');
 	}
 
 	if (templateSet.worldTemplate.length === 0) {
-		new Notice('World template is empty — no folder changes.');
+		new Notice(t('notice.empty-world-template'));
 		return err('empty-world-template');
 	}
 
@@ -92,10 +91,18 @@ export async function syncWorldFolders(
 	}
 
 	const parts: string[] = [];
-	if (created.length > 0) parts.push(`Created: ${created.join(', ')}`);
-	if (deleted.length > 0) parts.push(`Removed empty: ${deleted.join(', ')}`);
-	if (kept.length > 0) parts.push(`Kept: ${kept.join(', ')}`);
-	if (parts.length === 0) parts.push('No changes needed.');
+	if (created.length > 0) {
+		parts.push(t('notice.folders-created', { names: created.join(', ') }));
+	}
+	if (deleted.length > 0) {
+		parts.push(t('notice.folders-removed-empty', { names: deleted.join(', ') }));
+	}
+	if (kept.length > 0) {
+		parts.push(t('notice.folders-kept', { names: kept.join(', ') }));
+	}
+	if (parts.length === 0) {
+		parts.push(t('notice.folders-no-changes'));
+	}
 	new Notice(parts.join('\n'));
 
 	return { ok: true, created, deleted, kept };

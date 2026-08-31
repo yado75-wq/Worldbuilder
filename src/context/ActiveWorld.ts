@@ -1,5 +1,6 @@
 import { WorldInfo } from '../types/world';
 import { PluginState } from '../types/runtime';
+import { t } from '../i18n';
 
 export type ActiveWorldStatus =
 	| { kind: 'ok'; world: WorldInfo }
@@ -23,12 +24,9 @@ export function hasActiveWorldConflict(state: PluginState): boolean {
 	return getActiveWorldStatus(state.worlds).kind !== 'ok';
 }
 
-export const ACTIVE_WORLD_CONFLICT_NOTICE =
-	'Active world conflict: open Worldbuilder settings and use Set as active (exactly one world must be active).';
-
 /** Notice + false when conflict; true when unique active (or no worlds). */
 export function requireUniqueActiveWorld(state: PluginState, notice: (msg: string) => void): boolean {
 	if (!hasActiveWorldConflict(state)) return true;
-	notice(ACTIVE_WORLD_CONFLICT_NOTICE);
+	notice(t('notice.active-world-conflict'));
 	return false;
 }

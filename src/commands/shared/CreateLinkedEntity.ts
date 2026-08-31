@@ -5,6 +5,7 @@ import { PluginState } from '../../types/runtime';
 import { FieldDefinition } from '../../formkit';
 import { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
 import { refreshDashboard, worldDashboardPath } from '../RefreshDashboardCommand';
+import { t } from '../../i18n';
 
 export type CreateLinkedEntityResult =
 	| { ok: true; link: string; path: string }
@@ -58,7 +59,12 @@ export async function createLinkedEntity(
 
 	const targetPath = `${targetFolder}/${trimmedName}.md`;
 	if (app.vault.getAbstractFileByPath(targetPath)) {
-		new Notice(`"${trimmedName}" already exists in ${targetFolder}.`);
+		new Notice(
+			t('notice.already-exists-in-folder', {
+				name: trimmedName,
+				folder: targetFolder,
+			})
+		);
 		return err('already-exists', targetPath);
 	}
 
@@ -67,8 +73,13 @@ export async function createLinkedEntity(
 		: buildMinimalEntityContent(entityType, trimmedName, DEFAULT_ENTITY_NOTES);
 
 	await app.vault.create(targetPath, content);
-	new Notice(`${entityType} "${trimmedName}" created.`);
-
+	new Notice(
+		t('notice.entity-created', {
+			type: entityType,
+			name: trimmedName,
+		})
+	);
+	
 	const dashPath = worldDashboardPath(world.path);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, world.path, false);

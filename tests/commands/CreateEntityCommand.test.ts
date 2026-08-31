@@ -11,7 +11,9 @@ import { FieldDefinition } from '../../src/formkit';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
+import { setCatalogForTests } from '../../src/i18n';
 
+import en from '../../locales/en.json';
 // ── Modal stub (no UI) ────────────────────────────────────────────────────
 
 type ModalBehavior =
@@ -162,6 +164,7 @@ describe('createEntity', () => {
 		app = new App();
 		resetFakeObsidian();
 		modalBehavior = { type: 'cancel' };
+		setCatalogForTests(en);
 	});
 
 	// ── Guards ────────────────────────────────────────────────────────────

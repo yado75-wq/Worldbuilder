@@ -13,7 +13,9 @@ import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
 import { PRESERVED_SECTION_MARKER } from '../../src/util/PreservedSection';
 import { DEFAULT_ENTITY_NOTES } from '../../src/commands/shared/EntityContentBuilder';
+import { setCatalogForTests } from '../../src/i18n';
 
+import en from '../../locales/en.json';
 // ── Modal stub ────────────────────────────────────────────────────────────
 
 type ModalBehavior =
@@ -147,6 +149,7 @@ describe('editEntity', () => {
 		app = new App();
 		resetFakeObsidian();
 		modalBehavior = { type: 'cancel' };
+		setCatalogForTests(en);
 	});
 
 	// ── Guards ────────────────────────────────────────────────────────────

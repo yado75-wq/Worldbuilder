@@ -19,6 +19,7 @@ import {
 	resolveTemplateSetByName,
 	missingTemplateSetMessage,
 } from '../context/TemplateSetResolve';
+import { t } from '../i18n';
 
 export type EditEntityResult =
 	| { ok: true; path: string }
@@ -54,15 +55,13 @@ export async function editEntity(
 	filePath: string
 ): Promise<EditEntityResult> {
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(t('notice.active-world-conflict'));
 		return err('active-world-conflict');
 	}
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -77,19 +76,19 @@ export async function editEntity(
 	const templateSet = resolved.set;
 
 	if (!isEntityTypeUsable(templateSet, entityType)) {
-		new Notice(`No usable fields defined for "${entityType}".`);
+		new Notice(t('notice.no-usable-fields', { type: entityType }));
 		return err('type-not-usable', entityType);
 	}
 
 	const fields = templateSet.fieldSets[entityType];
 	if (!fields || fields.length === 0) {
-		new Notice(`No fields defined for "${entityType}".`);
+		new Notice(t('notice.no-fields', { type: entityType }));
 		return err('no-fields', entityType);
 	}
 
 	const file = app.vault.getAbstractFileByPath(filePath);
 	if (!(file instanceof TFile)) {
-		new Notice('File not found.');
+		new Notice(t('notice.file-not-found'));
 		return err('file-not-found', filePath);
 	}
 
@@ -141,14 +140,14 @@ export async function editEntity(
 
 	const titleField = fields.find(f => f.display === 'title');
 	if (!titleField) {
-		new Notice(`No title field defined for "${entityType}".`);
+		new Notice(t('notice.no-title-field', { type: entityType }));
 		return err('no-title-field', entityType);
 	}
 
 	const rawTitle = formResult.data[titleField.key];
 	const title = typeof rawTitle === 'string' ? rawTitle.trim() : '';
 	if (!title) {
-		new Notice('Name is required.');
+		new Notice(t('notice.name-required'));
 		return err('name-required');
 	}
 
@@ -167,7 +166,7 @@ export async function editEntity(
 	if (file.basename !== title) {
 		const newPath = `${file.parent?.path ?? ''}/${title}.md`;
 		if (app.vault.getAbstractFileByPath(newPath)) {
-			new Notice(`Cannot rename: "${title}" already exists.`);
+			new Notice(t('notice.rename-conflict', { name: title }));
 			return err('rename-conflict', newPath);
 		}
 		await app.fileManager.renameFile(file, newPath);
@@ -182,7 +181,7 @@ export async function editEntity(
 		await app.workspace.getLeaf(false).openFile(file);
 	}
 
-	new Notice(`${entityType} "${title}" updated.`);
+	new Notice(t('notice.entity-updated', { type: entityType, name: title }));
 	
 	const dashPath = worldDashboardPath(worldPath);
 	if (app.vault.getAbstractFileByPath(dashPath)) {

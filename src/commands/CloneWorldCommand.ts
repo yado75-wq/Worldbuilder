@@ -5,6 +5,7 @@ import { InputModal } from '../formkit';
 import { replaceIndexDisplayName } from './shared/WorldIndex';
 import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
+import { t } from '../i18n';
 
 export type CloneWorldResult =
 	| { ok: true; path: string }
@@ -37,9 +38,7 @@ export async function cloneWorld(
 	worldPath: string
 ): Promise<CloneWorldResult> {
 	if (hasActiveWorldConflict(state)) {
-		new Notice(
-			'Active world conflict: open worldbuilder settings and use set as active (exactly one world must be active).'
-		);
+		new Notice(t('notice.active-world-conflict'));
 		return err('active-world-conflict');
 	}
 
@@ -64,7 +63,7 @@ export async function cloneWorld(
 	);
 
 	if (app.vault.getAbstractFileByPath(targetPath)) {
-		new Notice(`"${newName}" already exists.`);
+		new Notice(t('notice.already-exists', { name: newName }));
 		return err('already-exists', targetPath);
 	}
 
@@ -75,7 +74,7 @@ export async function cloneWorld(
 	const indexFile = app.vault.getAbstractFileByPath(indexPath);
 
 	if (!(indexFile instanceof TFile)) {
-		new Notice(`Clone created at "${targetPath}" but _index.md was not found.`);
+		new Notice(t('notice.clone-index-missing', { path: targetPath }));
 		return err('index-missing-after-copy', targetPath);
 	}
 
@@ -90,7 +89,7 @@ export async function cloneWorld(
 
 	const folder = app.vault.getAbstractFileByPath(targetPath);
 	if (!(folder instanceof TFolder)) {
-		new Notice(`Clone folder "${targetPath}" could not be resolved after copy.`);
+		new Notice(t('notice.clone-folder-missing', { path: targetPath }));
 		return err('folder-missing-after-copy', targetPath);
 	}
 
@@ -112,7 +111,7 @@ export async function cloneWorld(
 		await refreshDashboard(app, stateWithClone, targetPath, false);
 	}
 
-	new Notice(`World "${newName}" created (inactive) at "${targetPath}".`);
+	new Notice(t('notice.world-cloned', { name: newName, path: targetPath }));
 	return { ok: true, path: targetPath };
 }
 
@@ -123,8 +122,8 @@ function askName(app: App, initial: string): Promise<string | null> {
 		let submitted = false;
 		new InputModal(
 			app,
-			'Name for cloned world',
-			'My World copy',
+			t('modal.clone-world-prompt'),
+			t('modal.clone-world-placeholder'),
 			initial,
 			(value) => {
 				submitted = true;

@@ -1,6 +1,7 @@
 import { App, Notice, normalizePath, TAbstractFile, TFile, TFolder } from 'obsidian';
 import { TemplateSetInfo } from '../types/templateSet';
 import { WorldBuilderSettings } from '../types/runtime';
+import { t } from '../i18n';
 
 const DEFAULT_FILES = [
 	'world-template.md',
@@ -62,7 +63,7 @@ export async function ensureDefaultTemplates(
 			await app.vault.create(targetPath, content);
 		} catch {
 			failed.push(filename);
-			new Notice(`Warning: could not copy default file "${filename}".`);
+			new Notice(t('notice.default-file-copy-failed', { filename }));
 		}
 	}
 	if (failed.length > 0) {
@@ -94,12 +95,12 @@ export async function cloneTemplateSet(
 
 	const sourceFolder = app.vault.getAbstractFileByPath(sourcePath);
 	if (!(sourceFolder instanceof TFolder)) {
-		new Notice(`Template set "${sourceSetName}" not found.`);
+		new Notice(t('notice.template-set-not-found', { name: sourceSetName }));
 		return errClone('source-not-found', sourceSetName);
 	}
 
 	if (app.vault.getAbstractFileByPath(targetPath)) {
-		new Notice(`Template set "${newSetName}" already exists.`);
+		new Notice(t('notice.template-set-already-exists', { name: newSetName }));
 		return errClone('already-exists', newSetName);
 	}
 
@@ -108,7 +109,7 @@ export async function cloneTemplateSet(
 		await copyTemplateNode(app, child, targetPath);
 	}
 
-	new Notice(`Template set "${newSetName}" created from "${sourceSetName}".`);
+	new Notice(t('notice.template-set-cloned', { name: newSetName, source: sourceSetName }));
 	return { ok: true, name: newSetName };
 }
 
@@ -138,7 +139,7 @@ export async function resetTemplateSet(
 			}
 		} catch {
 			failed.push(filename);
-			new Notice(`Warning: could not copy "${filename}" to "${setName}".`);
+			new Notice(t('notice.template-file-copy-failed', { filename, set: setName }));
 		}
 	}
 
@@ -150,7 +151,7 @@ export async function resetTemplateSet(
 		};
 	}
 
-	new Notice(`Template set "${setName}" reset to plugin defaults.`);
+	new Notice(t('notice.template-set-reset', { name: setName }));
 	return { ok: true, name: setName };
 }
 

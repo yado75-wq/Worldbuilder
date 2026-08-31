@@ -1,5 +1,6 @@
 import { App, Notice } from 'obsidian';
 import { PluginState } from '../types/runtime';
+import { t } from '../i18n';
 
 export type SetActiveWorldResult =
 	| { ok: true; path: string }
@@ -21,7 +22,7 @@ export async function setActiveWorld(
 ): Promise<SetActiveWorldResult> {
 	const target = state.worlds.find(w => w.path === worldPath);
 	if (!target) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return errSet('world-not-found', worldPath);
 	}
 
@@ -34,7 +35,7 @@ export async function setActiveWorld(
 		}
 	}
 
-	new Notice(`Active world: "${target.name}".`);
+	new Notice(t('notice.active-world-set', { name: target.name }));
 	return { ok: true, path: worldPath };
 }
 
@@ -45,13 +46,13 @@ export async function switchToWorld(
 ): Promise<SetActiveWorldResult> {
 	const target = state.worlds.find(w => w.path === worldPath);
 	if (!target) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return errSet('world-not-found', worldPath);
 	}
 
 	const activeCount = state.worlds.filter(w => w.status === 'active').length;
 	if (target.status === 'active' && activeCount === 1) {
-		new Notice(`"${target.name}" is already the active world.`);
+		new Notice(t('notice.already-active-world', { name: target.name }));
 		return errSet('already-active', worldPath);
 	}
 

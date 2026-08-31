@@ -1,4 +1,5 @@
 import { TemplateSetInfo } from '../types/templateSet';
+import { t } from '../i18n';
 
 export type TemplateSetResolveResult =
 	| { ok: true; set: TemplateSetInfo }
@@ -26,7 +27,7 @@ export function missingTemplateSetMessage(
 	result: Extract<TemplateSetResolveResult, { ok: false }>
 ): string {
 	if (result.reason === 'none') {
-		return 'No template sets found. Restore or create one under the templates folder (or reload the plugin).';
+		return t('notice.template-sets-none');
 	}
-	return `Template set "${result.requested}" not found. It may have been renamed or removed. Reassign the world in settings.`;
+	return t('notice.template-set-missing', { name: result.requested });
 }

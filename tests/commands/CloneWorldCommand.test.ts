@@ -9,6 +9,8 @@ import {
 import { cloneWorld } from '../../src/commands/CloneWorldCommand';
 import { WorldInfo } from '../../src/types/world';
 import { PluginState } from '../../src/types/runtime';
+import { setCatalogForTests } from '../../src/i18n';
+import en from '../../locales/en.json';
 
 let inputResult: string | null = null;
 
@@ -91,6 +93,7 @@ describe('cloneWorld', () => {
 		app = new App();
 		resetFakeObsidian();
 		inputResult = null;
+		setCatalogForTests(en);
 	});
 
 	it('does nothing when name dialog is cancelled', async () => {

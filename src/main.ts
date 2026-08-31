@@ -4,6 +4,7 @@ import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
 import { registerFileMenu } from './context/MenuBuilder';
 import { ensureDefaultTemplates } from './commands/SetupCommand';
+import { loadI18n } from './i18n';
 
 export default class WorldBuilderPlugin extends Plugin {
 	settings!: WorldBuilderSettings;
@@ -14,7 +15,8 @@ export default class WorldBuilderPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-
+		await loadI18n(this.app, this.manifest.id);
+		
 		this.state = {
 			activeWorld: null,
 			worlds: [],
