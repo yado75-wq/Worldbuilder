@@ -166,17 +166,17 @@ Renaming e.g. `Character_Fields.md` changes the entity **type name** for menus a
 
 User-visible plugin strings (notices, menus, settings chrome) live in locales/en.json.
 
-On load the plugin reads Obsidian's language via getLanguage(), loads locales/<code>.json when present, and falls back to en.json.
+On load the plugin reads Obsidian's language via getLanguage(), loads `locales/<code>.json` when present, and falls back to `en.json`.
 
 ### Add a language
 
-1. Copy locales/en.json to locales/<code>.json (for example cs.json or de.json).
+1. Copy locales/en.json to locales/`<code>`.json (for example cs.json or de.json).
 2. Translate values only. Keep keys and {placeholders} unchanged.
 3. Include the new file in the plugin folder. Releases ship the locales/ directory.
 
 English is required. Other locale files are optional. Result codes and generated vault markdown (entity notes, dashboard body) are not translated through this catalog.
 
-Template field labels in *_Fields.md stay under your control in the vault (edit the label column).
+Template field labels in `*_Fields.md` stay under your control in the vault (edit the label column).
 
 ## Roadmap
 
