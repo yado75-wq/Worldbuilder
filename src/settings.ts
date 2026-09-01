@@ -20,6 +20,7 @@ import { syncWorldFolders } from './commands/SyncWorldFoldersCommand';
 import { refreshAllTimeframes } from './commands/RefreshAllTimeframesCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
+import { t } from './i18n';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
 	plugin: WorldBuilderPlugin;
@@ -36,8 +37,8 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 		if (templateSets.length === 0) {
 			templateSetItems.push({
-				name: 'No template sets found',
-				desc: 'Reload the plugin to initialize default templates.',
+				name: t('settings.no-template-sets'),
+				desc: t('settings.no-template-sets-desc'),
 			});
 		} else {
 			for (const set of templateSets) {
@@ -50,29 +51,29 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				const lines: string[] = [];
 
 				if (isDefault) {
-					lines.push('Default for new worlds.');
+					lines.push(t('settings.default-for-new-worlds'));
 				}
 
 				if (errorCount > 0) {
-					lines.push(`${errorCount} error(s)`);
+					lines.push(t('settings.error-count', { count: String(errorCount) }));
 				}
 				if (warningCount > 0) {
-					lines.push(`${warningCount} warning(s)`);
+					lines.push(t('settings.warning-count', { count: String(warningCount) }));
 				}
 
 				if (errorCount === 0 && warningCount === 0) {
-					lines.push('Valid.');
+					lines.push(t('settings.valid'));
 				}
 
 				let issuesSummary: string;
 				if (errorCount > 0 && warningCount > 0) {
-					issuesSummary = `Show ${errorCount} error(s), ${warningCount} warning(s)`;
+					issuesSummary = t('settings.show-errors-and-warnings', { errors: String(errorCount), warnings: String(warningCount) });
 				} else if (errorCount > 0) {
-					issuesSummary = `Show ${errorCount} error(s)`;
+					issuesSummary = t('settings.show-errors', { count: String(errorCount) });
 				} else if (warningCount > 0) {
-					issuesSummary = `Show ${warningCount} warning(s)`;
+					issuesSummary = t('settings.show-warnings', { count: String(warningCount) });
 				} else {
-					issuesSummary = 'Show notes';
+					issuesSummary = t('settings.show-notes');
 				}
 				const desc = lines.join('·');
 				templateSetItems.push({
@@ -81,7 +82,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					render: (setting: Setting) => {
 						setting
 							.addButton(btn => btn
-								.setButtonText('Set as default')
+								.setButtonText(t('settings.set-as-default'))
 								.setDisabled(isDefault || !set.isValid)
 								.onClick(() => {
 									void (async () => {
@@ -92,17 +93,17 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								})
 							)
 							.addButton(btn => btn
-								.setButtonText('Clone')
+								.setButtonText(t('settings.clone'))
 								.onClick(() => this.cloneTemplateSet(set.name))
 							)
 							.addButton(btn => btn
-								.setButtonText('Assign to world')
+								.setButtonText(t('settings.assign-to-world'))
 								.onClick(() => {
 									void this.assignTemplateSetToWorld(set.name);
 								})
 							)
 							.addButton(btn => btn
-								.setButtonText('Reset to defaults')
+								.setButtonText(t('settings.reset-to-defaults'))
 								.setDestructive()
 								.onClick(() => {
 									void (async () => {
@@ -113,7 +114,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 											set.name
 										);
 										if (!result.ok) {
-											new Notice(`Could not reset template set "${set.name}": ${result.detail}`);
+											new Notice(t('settings.reset-failed', { name: set.name, detail: result.detail ?? '' }));
 											return;
 										}
 										await this.plugin.refreshState();
@@ -135,10 +136,14 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 							const table = details.createEl('table', { cls: 'wb-issues-table' });
 							const head = table.createEl('tr');
-							for (const label of ['Sev', 'Kind', 'Where', 'Message']) {
+							for (const label of [
+								t('settings.issues-sev'),
+								t('settings.issues-kind'),
+								t('settings.issues-where'),
+								t('settings.issues-message'),
+								]) {
 								head.createEl('th', { text: label });
 							}
-
 							for (const issue of set.issues) {
 								const row = table.createEl('tr');
 								row.createEl('td', { text: issue.severity });
@@ -157,23 +162,23 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		}
 
 		templateSetItems.push({
-			name: 'New template set',
-			desc: 'Create a new template set copied from plugin defaults.',
+			name: t('settings.new-template-set'),
+			desc: t('settings.new-template-set-desc'),
 			render: (setting: Setting) => {
 				setting.addButton(btn => btn
-					.setButtonText('Create')
+					.setButtonText(t('settings.create'))
 					.setCta()
 					.onClick(() => {
 						new InputModal(
 							this.app,
-							'Template set name',
-							'fantasy',
+							t('settings.template-set-name-prompt'),
+							t('settings.template-set-name-placeholder'),
 							'',
 							(name) => {
 								void (async () => {
 									const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${name}`;
 									if (this.app.vault.getAbstractFileByPath(path)) {
-										new Notice(`"${name}" already exists.`);
+										new Notice(t('notice.already-exists', { name }));
 										return;
 									}
 									await this.app.vault.createFolder(path);
@@ -184,7 +189,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										name
 									);
 									if (!result.ok) {
-										new Notice(`Could not create template set "${name}": ${result.detail}`);
+										new Notice(t('settings.create-template-set-failed', { name, detail: result.detail ?? '' }));
 										return;
 									}
 									await this.plugin.refreshState();
@@ -206,24 +211,24 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 		if (worlds.length === 0) {
 			worldItems.push({
-				name: 'No worlds',
-				desc: 'Create a world from the file explorer context menu.',
+				name: t('settings.no-worlds'),
+				desc: t('settings.no-worlds-desc'),
 			});
 		} else {
 			for (const world of worlds) {
 				const isActive = world.status === 'active';
 				const uniquelyActive = isActive && activeCount === 1;
 
-				let desc = `Folder: ${world.path} · Template set: ${world.templateSet}`;
+				let desc = t('settings.world-desc', { path: world.path, templateSet: world.templateSet });
 				const tsResolve = resolveTemplateSetByName(this.plugin.state.templateSets, world.templateSet);
 				if (!tsResolve.ok) {
 					desc += tsResolve.reason === 'none'
-						? ' — No template sets in vault; restore or create one.'
-						: ` — Template set "${world.templateSet}" not found; reassign below or fix _index.md.`;
+						? t('settings.world-no-template-sets')
+    					: t('settings.world-template-missing', { name: world.templateSet });
 				} else if (conflict && activeCount > 1 && isActive) {
-					desc += ' — Multiple active worlds; use Set as active to keep only this one.';
+					desc += t('settings.world-multi-active');
 				} else if (conflict && activeCount === 0) {
-					desc += ' — No active world; use Set as active.';
+					desc += t('settings.world-zero-active');
 				}
 
 				const folderName = world.folder.name;
@@ -236,7 +241,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					desc,
 					render: (setting: Setting) => {
 						setting.addButton(btn => btn
-							.setButtonText('Set as active')
+							.setButtonText(t('settings.set-as-active'))
 							.setDisabled(uniquelyActive)
 							.onClick(() => {
 								void (async () => {
@@ -253,14 +258,14 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 						);
 
 						setting.addButton(btn => btn
-							.setButtonText('Actions')
+							.setButtonText(t('settings.actions'))
 							.setDisabled(hasActiveWorldConflict(this.plugin.state))
 							.onClick((evt: MouseEvent) => {
 								const menu = new Menu();
 								const path = world.path;
 
 								menu.addItem(item => item
-									.setTitle('Edit world meta')
+									.setTitle(t('menu.edit-world-meta'))
 									.setIcon('pencil')
 									.onClick(() => {
 										void (async () => {
@@ -272,7 +277,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								);
 
 								menu.addItem(item => item
-									.setTitle('Clone world')
+									.setTitle(t('settings.clone'))
 									.setIcon('copy')
 									.onClick(() => {
 										void (async () => {
@@ -286,7 +291,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								menu.addSeparator();
 
 								menu.addItem(item => item
-									.setTitle('Refresh dashboard')
+									.setTitle(t('menu.refresh-dashboard'))
 									.setIcon('layout-dashboard')
 									.onClick(() => {
 										void refreshDashboard(this.app, this.plugin.state, path);
@@ -294,7 +299,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								);
 
 								menu.addItem(item => item
-									.setTitle('Sync world folders')
+									.setTitle(t('menu.sync-world-folders'))
 									.setIcon('folder-sync')
 									.onClick(() => {
 										void syncWorldFolders(this.app, this.plugin.state, path);
@@ -302,7 +307,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								);
 
 								menu.addItem(item => item
-									.setTitle('Sync world files')
+									.setTitle(t('menu.sync-world-files'))
 									.setIcon('arrow-right-left')
 									.onClick(() => {
 										void (async () => {
@@ -314,7 +319,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								);
 
 								menu.addItem(item => item
-									.setTitle('Refresh all timeframes')
+									.setTitle(t('menu.refresh-all-timeframes'))
 									.setIcon('refresh-cw')
 									.onClick(() => {
 										void refreshAllTimeframes(this.app, this.plugin.state, path);
@@ -338,12 +343,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		return [
 			{
 				type: 'group',
-				heading: 'Template sets',
+				heading: t('settings.template-sets'),
 				items: templateSetItems,
 			},
 			{
 				type: 'group',
-				heading: conflict ? 'Active world ⚠' : 'Active world',
+				heading: conflict ? t('settings.active-world-conflict') : t('settings.active-world'),
 				items: worldItems,
 			},
 		];
@@ -352,8 +357,8 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 	private cloneTemplateSet(sourceName: string): void {
 		new InputModal(
 			this.app,
-			'Name for cloned template set',
-			'fantasy-copy',
+			t('settings.clone-template-prompt'),
+			t('settings.clone-template-placeholder'),
 			`${sourceName}-copy`,
 			(name) => {
 				void (async () => {
@@ -378,20 +383,20 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 	private async assignTemplateSetToWorld(templateSetName: string): Promise<void> {
 		const worlds = this.plugin.state.worlds;
 		if (worlds.length === 0) {
-			new Notice('No worlds found.');
+			new Notice(t('settings.no-worlds-found'));
 			return;
 		}
 
 		const picked = await new Promise<number | null>((resolve) => {
 			let resolved = false;
 			const modal = new Modal(this.app);
-			modal.titleEl.setText(`Assign "${templateSetName}" to world`);
+			modal.titleEl.setText(t('settings.assign-title', { name: templateSetName }));
 
 			for (let i = 0; i < worlds.length; i++) {
 				const world = worlds[i];
 				if (!world) continue;
 				const active = world.status === 'active' ? ' ★' : '';
-				const current = world.templateSet === templateSetName ? ' (current)' : '';
+				const current = world.templateSet === templateSetName ? t('settings.current-suffix') : '';
 				const label = `${world.name}${active}${current}`;
 
 				const btn = modal.contentEl.createEl('button', {
@@ -422,7 +427,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		await this.app.vault.modify(world.indexFile, updatedContent);
 		await this.plugin.refreshState();
 		this.update();
-		new Notice(`Assigned "${templateSetName}" to "${world.name}".`);
+		new Notice(t('settings.assigned', { templateSet: templateSetName, world: world.name }));
 	}
 }
 

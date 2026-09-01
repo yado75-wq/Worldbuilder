@@ -101,4 +101,59 @@ describe('scanVault worlds', () => {
 
 		expect(world!.templateSet).toBe('missing-set');		
 	});
+
+	it('missing folder-rules.md is info, set remains valid', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFolder('_system/templates/defaults');
+		vault.seedFile('_system/templates/defaults/world-template.md', 'Characters\n');
+		vault.seedFile('_system/templates/defaults/WorldMeta_Fields.md',
+			'name | Name | mandatory | text | title\n');
+		vault.seedFile('_system/templates/defaults/Generic_Fields.md',
+			'name | Name | mandatory | text | title\n');
+		// no folder-rules.md
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+		const set = state.templateSets.find(s => s.name === 'defaults');
+		expect(set).toBeDefined();
+		expect(set!.isValid).toBe(true);
+		expect(set!.issues.some(i => i.kind === 'empty-folder-rules' && i.severity === 'info')).toBe(true);
+		expect(set!.issues.some(i => i.file === 'folder-rules.md' && i.severity === 'error')).toBe(false);
+	});
+
+	it('missing world-template.md is info, set remains valid', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFolder('_system/templates/defaults');
+		vault.seedFile(
+			'_system/templates/defaults/Character_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		vault.seedFile(
+			'_system/templates/defaults/folder-rules.md',
+			'Character | Characters\n'
+		);
+		vault.seedFile(
+			'_system/templates/defaults/WorldMeta_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		vault.seedFile(
+			'_system/templates/defaults/Generic_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		// no world-template.md
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+		const set = state.templateSets.find(s => s.name === 'defaults');
+		expect(set).toBeDefined();
+		expect(set!.isValid).toBe(true);
+		expect(
+			set!.issues.some(
+				i => i.kind === 'empty-world-template' && i.severity === 'info'
+			)
+		).toBe(true);
+		expect(
+			set!.issues.some(
+				i => i.file === 'world-template.md' && i.severity === 'error'
+			)
+		).toBe(false);
+	});
 });

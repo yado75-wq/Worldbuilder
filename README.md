@@ -101,7 +101,7 @@ Menus stay honest: entity types only appear when their field set is usable (non-
 
 1. Download the latest `worldbuilder.zip` from the GitHub release page
 2. Extract it into your vault at `.obsidian/plugins/world-builder-tools/`
-3. Ensure the plugin folder contains `main.js`, `manifest.json`, `styles.css` (if present), and the `defaults/` directory
+3. Ensure the plugin folder contains main.js, manifest.json, styles.css (if present), defaults/, and locales/ (at least locales/en.json).
 4. Enable the plugin in Obsidian settings → Community plugins
 
 ### Beta (BRAT)
@@ -161,6 +161,22 @@ Renaming e.g. `Character_Fields.md` changes the entity **type name** for menus a
 - **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
 - **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings
 - **Manage template sets** — in the plugin settings tab you can create a new set, clone an existing one, assign a set to a specific world, reset a set to plugin defaults, or mark one as the default for new worlds
+
+## Localization
+
+User-visible plugin strings (notices, menus, settings chrome) live in locales/en.json.
+
+On load the plugin reads Obsidian's language via getLanguage(), loads locales/<code>.json when present, and falls back to en.json.
+
+### Add a language
+
+1. Copy locales/en.json to locales/<code>.json (for example cs.json or de.json).
+2. Translate values only. Keep keys and {placeholders} unchanged.
+3. Include the new file in the plugin folder. Releases ship the locales/ directory.
+
+English is required. Other locale files are optional. Result codes and generated vault markdown (entity notes, dashboard body) are not translated through this catalog.
+
+Template field labels in *_Fields.md stay under your control in the vault (edit the label column).
 
 ## Roadmap
 

@@ -12,9 +12,7 @@ import {
 
 // ── Required files in every template set ─────────────────────────────────────
 
-const REQUIRED_FILES = [
-	'world-template.md',
-	'folder-rules.md',
+const REQUIRED_FILES = [	
 	'WorldMeta_Fields.md',
 	'Generic_Fields.md',
 ];
@@ -141,6 +139,14 @@ async function buildTemplateSetInfo(
 					'folder-rules.md has no rules; entity folders will not be suggested from rules (types still use * placement where applicable).',
 			});
 		}
+	} else {
+		issues.push({
+			severity: 'info',
+			kind: 'empty-folder-rules',
+			file: 'folder-rules.md',
+			message:
+				'folder-rules.md is missing; all entity types use * placement (create anywhere under the world).',
+		});
 	}
 
 	const worldTemplateFile = app.vault.getAbstractFileByPath(`${folder.path}/world-template.md`);
@@ -157,6 +163,14 @@ async function buildTemplateSetInfo(
 					'world-template.md has no folders; new worlds will not get a default subfolder tree.',
 			});
 		}
+	} else {
+		issues.push({
+			severity: 'info',
+			kind: 'empty-world-template',
+			file: 'world-template.md',
+			message:
+				'world-template.md is missing; new worlds will not get a default subfolder tree.',
+		});
 	}
 
 	const fieldFiles = folder.children.filter(
