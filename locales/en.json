@@ -71,5 +71,15 @@
   "modal.sync-files-title": "Sync world files",
   "modal.sync-files-confirm": "Move {count} file(s)?\n\n{preview}",
   "modal.sync-files-ok": "Move files",
-  "modal.sync-files-cancel": "Cancel"
+  "modal.sync-files-cancel": "Cancel",
+  "menu.new-world": "New world",
+  "menu.set-default-template-set": "Set as default template set",
+  "menu.edit-world-meta": "Edit world meta",
+  "menu.refresh-dashboard": "Refresh dashboard",
+  "menu.sync-world-folders": "Sync world folders",
+  "menu.sync-world-files": "Sync world files",
+  "menu.refresh-all-timeframes": "Refresh all timeframes",
+  "menu.switch-to-this-world": "Switch to this world",
+  "menu.new-entity": "New {type}",
+  "menu.edit-entity": "Edit {type}"
 }

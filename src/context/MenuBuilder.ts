@@ -18,6 +18,7 @@ import { createEntity } from '../commands/CreateEntityCommand';
 import { editEntity } from '../commands/EditEntityCommand';
 import { refreshAllTimeframes } from '../commands/RefreshAllTimeframesCommand';
 import { resolveTemplateSetByName } from './TemplateSetResolve';
+import { t } from '../i18n';
 
 function templateSetForWorld(state: PluginState, world: WorldInfo) {
 	const r = resolveTemplateSetByName(state.templateSets, world.templateSet);
@@ -45,7 +46,7 @@ export function registerFileMenu(
 
 		case 'vault-root':
 			menu.addItem(item => item
-				.setTitle('New world')
+				.setTitle(t('menu.new-world'))
 				.setIcon('globe')
 				.onClick(() => { void newWorld(app, settings, state, ''); })
 			);
@@ -54,7 +55,7 @@ export function registerFileMenu(
 		case 'unknown':
 			if (file instanceof TFolder) {
 				menu.addItem(item => item
-					.setTitle('New world')
+					.setTitle(t('menu.new-world'))
 					.setIcon('globe')
 					.onClick(() => { void newWorld(app, settings, state, file.path); })
 				);
@@ -66,7 +67,7 @@ export function registerFileMenu(
 			const isValid = context.templateSet.isValid;
 
 			menu.addItem(item => {
-				item.setTitle('Set as default template set')
+				item.setTitle(t('menu.set-default-template-set'))
 					.setIcon('star')
 					.setDisabled(isDefault || !isValid)
 					.onClick(() => {
@@ -83,33 +84,33 @@ export function registerFileMenu(
 			menu.addSeparator();
 			if (!conflict) {
 				menu.addItem(item => item
-					.setTitle('Edit world meta')
+					.setTitle(t('menu.edit-world-meta'))
 					.setIcon('pencil')
 					.onClick(() => { void editWorldMeta(app, state, context.world.path); })
 				);
 				menu.addItem(item => item
-					.setTitle('Refresh dashboard')
+					.setTitle(t('menu.refresh-dashboard'))
 					.setIcon('layout-dashboard')
 					.onClick(() => { void refreshDashboard(app, state, context.world.path); })
 				);
 				menu.addItem(item => item
-					.setTitle('Sync world folders')
+					.setTitle(t('menu.sync-world-folders'))
 					.setIcon('folder-sync')
 					.onClick(() => { void syncWorldFolders(app, state, context.world.path); })
 				);
 				menu.addItem(item => item
-					.setTitle('Sync world files')
+					.setTitle(t('menu.sync-world-files'))
 					.setIcon('arrow-right-left')
 					.onClick(() => { void syncWorldFiles(app, state, context.world.path); })
 				);
 				menu.addItem(item => item
-					.setTitle('Refresh all timeframes')
+					.setTitle(t('menu.refresh-all-timeframes'))	
 					.setIcon('refresh-cw')
 					.onClick(() => { void refreshAllTimeframes(app, state, context.world.path); })
 				);
 			}
 			menu.addItem(item => item
-				.setTitle('Switch to this world')
+				.setTitle(t('menu.switch-to-this-world'))
 				.setIcon('check')
 				.setDisabled(uniquelyActive)
 				.onClick(() => { void switchToWorld(app, state, context.world.path); })
@@ -134,7 +135,7 @@ export function registerFileMenu(
 			const ts = templateSetForWorld(state, context.world);
 			if (!hasActiveWorldConflict(state) && isEntityTypeUsable(ts, context.entityType)) {
 				menu.addItem(item => item
-					.setTitle(`New ${context.entityType.toLowerCase()}`)
+					.setTitle(t('menu.new-entity', { type: context.entityType.toLowerCase() }))
 					.setIcon('plus-circle')
 					.onClick(() => {						
 						void createEntity(app, state, context.world.path, context.entityType, context.folder.path);
@@ -157,7 +158,7 @@ export function registerFileMenu(
 			const ts = templateSetForWorld(state, context.world);
 			if (!hasActiveWorldConflict(state) && isEntityTypeUsable(ts, context.entityType)) {
 				menu.addItem(item => item
-					.setTitle(`Edit ${context.entityType.toLowerCase()}`)
+					.setTitle(t('menu.edit-entity', { type: context.entityType.toLowerCase() }))
 					.setIcon('pencil')
 					.onClick(() => {						
 						void editEntity(app, state, context.world.path, context.entityType, context.file.path);
@@ -170,12 +171,12 @@ export function registerFileMenu(
 		case 'index-file':
 			if (!hasActiveWorldConflict(state)) {
 				menu.addItem(item => item
-					.setTitle('Edit world meta')
+					.setTitle(t('menu.edit-world-meta'))
 					.setIcon('pencil')
 					.onClick(() => { void editWorldMeta(app, state, context.world.path); })
 				);
 				menu.addItem(item => item
-					.setTitle('Refresh dashboard')
+					.setTitle(t('menu.refresh-dashboard'))
 					.setIcon('layout-dashboard')
 					.onClick(() => { void refreshDashboard(app, state, context.world.path); })
 				);
@@ -215,7 +216,7 @@ function addWildcardItems(
 
 	for (const entityType of types) {
 		menu.addItem((item: MenuItem) => item
-			.setTitle(`New ${entityType.toLowerCase()}`)
+			.setTitle(t('menu.new-entity', { type: entityType.toLowerCase() }))
 			.setIcon('file-plus')
 			.onClick(() => { onCreate(entityType, getFolderPath()); })
 		);
