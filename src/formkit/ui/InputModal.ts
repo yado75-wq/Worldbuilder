@@ -1,4 +1,5 @@
 import { App, Modal } from 'obsidian';
+import { t } from '../../i18n';
 
 export class InputModal extends Modal {
 	private prompt: string;
@@ -43,13 +44,13 @@ export class InputModal extends Modal {
 		input.value = this.initialValue;
 
 		const errorEl = contentEl.createEl('p', {
-			text: 'A name is required.',
+			text: t('form.name-required-a'),
 			cls: 'wb-input-error',
 		});
 		errorEl.addClass('wb-hidden');
 
 		const btn = contentEl.createEl('button', {
-			text: 'OK',
+			text: t('form.ok'),
 			cls: 'wb-modal-submit-btn',
 		});
 

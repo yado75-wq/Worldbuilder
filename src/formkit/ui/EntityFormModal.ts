@@ -2,6 +2,7 @@ import { App, DropdownComponent, Modal, Setting, TextComponent } from 'obsidian'
 import { FieldDefinition, FormResult, LinkCandidateGroup } from '../types';
 import { InputModal } from './InputModal';
 import { MultiselectPickerModal } from './MultiselectPickerModal';
+import { t } from '../../i18n';
 
 import {
 	composeTimeframeValue,
@@ -113,14 +114,14 @@ export class EntityFormModal extends Modal {
 		}
 
 		const errorEl = contentEl.createEl('p', {
-			text: 'Name is required.',
+			text: t('form.name-required'),
 			cls: 'wb-input-error',
 		});
 		errorEl.addClass('wb-hidden');
 
 		new Setting(contentEl)
 			.addButton(btn => btn
-				.setButtonText('Save')
+				.setButtonText(t('form.save'))
 				.setCta()
 				.onClick(() => { this.submit(errorEl); })
 			);
@@ -169,7 +170,7 @@ export class EntityFormModal extends Modal {
 					labels.push(v.replace(/^\[\[|\]\]$/g, ''));
 				}
 			}
-			return labels.length > 0 ? labels.join(', ') : '— None —';
+			return labels.length > 0 ? labels.join(', ') : t('form.none');
 		};
 
 		if (!this.values[field.key]) {
@@ -181,7 +182,7 @@ export class EntityFormModal extends Modal {
 		summaryEl.setText(summaryText(parseCurrent()));
 
 		setting.addButton(btn => btn
-			.setButtonText('Choose…')
+			.setButtonText(t('form.choose'))
 			.onClick(() => {
 				new MultiselectPickerModal(this.app, {
 					title: name,
@@ -205,8 +206,8 @@ export class EntityFormModal extends Modal {
 		return new Promise((resolve) => {
 			new InputModal(
 				this.app,
-				`Name for new ${typeLabel}`,
-				'New item',
+				t('form.name-for-new', { type: typeLabel }),
+				t('form.new-item-placeholder'),
 				'',
 				(value: string) => {
 					const trimmed = value.trim();
@@ -228,7 +229,7 @@ export class EntityFormModal extends Modal {
 		current: string,
 		onSelect: (link: string) => void
 	): void {
-		const UNDEFINED = '— None / not yet defined —';
+		const UNDEFINED = t('form.none-undefined');
 		const CREATE_VALUE = '__create__';
 		const headerValue = (entityType: string): string => `__header__:${entityType}`;
 		const emptyValue = (entityType: string): string => `__empty__:${entityType}`;
@@ -242,7 +243,7 @@ export class EntityFormModal extends Modal {
 		for (const group of groups) {
 			if (showHeaders) {
 				const hv = headerValue(group.entityType);
-				drop.addOption(hv, `— ${group.entityType} —`);
+				drop.addOption(hv, t('form.category-header', { type: group.entityType }));
 				const headerOpt = Array.from(drop.selectEl.options).find(o => o.value === hv);
 				if (headerOpt) headerOpt.disabled = true;
 			}
@@ -250,7 +251,7 @@ export class EntityFormModal extends Modal {
 			if (group.names.length === 0) {
 				if (showHeaders) {
 					const ev = emptyValue(group.entityType);
-					drop.addOption(ev, 'Empty');
+					drop.addOption(ev, t('form.empty'));
 					const emptyOpt = Array.from(drop.selectEl.options).find(o => o.value === ev);
 					if (emptyOpt) emptyOpt.disabled = true;
 				}
@@ -263,7 +264,7 @@ export class EntityFormModal extends Modal {
 		}
 
 		if (this.options.onCreateLink && typeForCreate) {
-			drop.addOption(CREATE_VALUE, `Create new ${typeForCreate}…`);
+			drop.addOption(CREATE_VALUE, t('form.create-new', { type: typeForCreate }));
 		}
 
 		const initial = selectableNames.includes(current) ? current : UNDEFINED;
@@ -300,7 +301,7 @@ export class EntityFormModal extends Modal {
 		onSelect: (link: string) => void,
 		extraOption?: { value: string; label: string }
 	): void {
-		const UNDEFINED = '— None / not yet defined —';
+		const UNDEFINED = t('form.none-undefined');
 
 		drop.addOption(UNDEFINED, UNDEFINED);
 		if (extraOption) {
@@ -349,7 +350,7 @@ export class EntityFormModal extends Modal {
 		let inheritBlock: HTMLElement | undefined = undefined;
 
 		new Setting(container)
-			.setName('Same as another entity')
+			.setName(t('form.same-as-entity'))
 			.addToggle(toggle => {
 				toggle.setValue(state.mode === 'inherit');
 				toggle.onChange(value => {
@@ -367,7 +368,7 @@ export class EntityFormModal extends Modal {
 
 		const inheritCurrent = state.inheritLink.replace(/^\[\[|\]\]$/g, '');
 		new Setting(inheritBlock)
-			.setName('Entity')
+			.setName(t('form.entity'))
 			.addDropdown(drop => this.buildAnchorDropdown(drop, field, candidates, inheritCurrent, link => {
 				state.inheritLink = link;
 				recompute();
@@ -379,7 +380,7 @@ export class EntityFormModal extends Modal {
 		const renderStartRow = (): void => {
 			startRow.empty();
 			this.buildTimepointRow(
-				startRow, candidates, pointCandidates, 'Start', worldUnit, state.start,
+				startRow, candidates, pointCandidates, t('form.start'), worldUnit, state.start,
 				!state.point && !state.end.unbounded, -1, recompute,
 				() => { renderEndRow(); }
 			);
@@ -387,7 +388,7 @@ export class EntityFormModal extends Modal {
 		const renderEndRow = (): void => {
 			endRow.empty();
 			this.buildTimepointRow(
-				endRow, candidates, pointCandidates, 'End', worldUnit, state.end,
+				endRow, candidates, pointCandidates, t('form.end'), worldUnit, state.end,
 				!state.start.unbounded, 1, recompute,
 				() => { renderStartRow(); }
 			);
@@ -397,7 +398,7 @@ export class EntityFormModal extends Modal {
 		renderEndRow();
 
 		new Setting(intervalBlock)
-			.setName('Point in time')
+			.setName(t('form.point-in-time'))
 			.addToggle(toggle => {
 				toggle.setValue(state.point);
 				toggle.onChange(value => {
@@ -429,9 +430,9 @@ export class EntityFormModal extends Modal {
 		mainLine.createSpan({ cls: 'wb-timeframe-row-label', text: label });
 		mainLine.createSpan({ cls: 'wb-timeframe-unit-label', text: worldUnit });
 
-		const UNDEFINED = '— None / not yet defined —';
+		const UNDEFINED = t('form.none-undefined');
 		const UNBOUNDED_VALUE = unboundedSign === 1 ? '__unbounded_end__' : '__unbounded_start__';
-		const UNBOUNDED_LABEL = unboundedSign === 1 ? '∞ (unbounded)' : '-∞ (unbounded)';
+		const UNBOUNDED_LABEL = unboundedSign === 1 ? t('form.unbounded-end') : t('form.unbounded-start');
 		const boundaryKey = (n: string, which: 'start' | 'end'): string => `${n}::${which}`;
 
 		const setUnbounded = (value: boolean): void => {
@@ -465,8 +466,8 @@ export class EntityFormModal extends Modal {
 					if (pointCandidates.has(c)) {
 						drop.addOption(boundaryKey(c, 'start'), c);
 					} else {
-						drop.addOption(boundaryKey(c, 'start'), `${c}:start`);
-						drop.addOption(boundaryKey(c, 'end'), `${c}:end`);
+						drop.addOption(boundaryKey(c, 'start'), t('form.boundary-start', { name: c }));
+						drop.addOption(boundaryKey(c, 'end'), t('form.boundary-end', { name: c }));
 					}
 				}
 

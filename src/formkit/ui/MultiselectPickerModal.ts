@@ -1,5 +1,6 @@
 import { App, Modal, Setting } from 'obsidian';
 import type { FieldDefinition, LinkCandidateGroup } from '../types';
+import { t } from '../../i18n';
 
 export interface MultiselectPickerOptions {
 	title: string;
@@ -43,7 +44,7 @@ export class MultiselectPickerModal extends Modal {
 		const top = contentEl.createDiv({ cls: 'wb-multiselect-picker-top' });
 		new Setting(top)
 			.addButton(btn => btn
-				.setButtonText('OK')
+				.setButtonText(t('form.ok'))
 				.setCta()
 				.onClick(() => {
 					this.applied = true;
@@ -52,7 +53,7 @@ export class MultiselectPickerModal extends Modal {
 				})
 			)
 			.addButton(btn => btn
-				.setButtonText('Cancel')
+				.setButtonText(t('form.cancel'))
 				.onClick(() => this.close())
 			);
 
@@ -85,7 +86,7 @@ export class MultiselectPickerModal extends Modal {
 					list.createDiv({ cls: 'wb-multiselect-header', text: g.entityType });
 				}
 				if (g.names.length === 0 && showHeaders) {
-					list.createDiv({ cls: 'wb-multiselect-empty', text: 'empty' });
+					list.createDiv({ cls: 'wb-multiselect-empty', text: t('form.empty-lower') });
 					continue;
 				}
 				for (const n of g.names) {
