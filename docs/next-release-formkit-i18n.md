@@ -1,6 +1,6 @@
 # Next release planning — architecture and localization
 
-**Status:** planning  
+**Status:** shipped  
 **Last updated:** 2026-08-24  
 **Scope:** engineering quality and i18n foundation (not a public form library)
 

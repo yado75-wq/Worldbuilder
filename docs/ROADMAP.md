@@ -35,7 +35,9 @@ to the GitHub Wiki — edit it here, not there.
 - **Clone world / name sync** — clone inactive; display name follows folder
   when synced
 - **Command result codes** — structured ok/code returns for tests; Notices
-  unchanged for users (i18n-friendly later)
+  Notices via `t()`
+  - **Internal formkit** — form UI/types under `src/formkit/`; domain stays in commands/state
+- **i18n foundation** — `locales/en.json`, `t()` / `loadI18n`, notices, menus, settings, formkit `form.*`; tests use result codes, not Notice text
 
 ## In design (not yet implemented)
 
@@ -76,4 +78,10 @@ silently re-proposed without anyone remembering why:
 
 ## Next Version
 
-see [[next-release-formkit-i18n]]
+Nothing locked. Candidates from **Deferred** (pick one):
+
+- Rename / delete entity type (migrate rules + tags)
+- Template-set `_` archive
+- Multiselect picker search / large lists
+
+Or release hygiene only: tag current tree, update wiki pointer, community process when ready.

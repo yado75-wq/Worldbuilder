@@ -21,3 +21,4 @@ data.json
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
 AI/SESSION_CONTEXT.md
+locales/es.json
