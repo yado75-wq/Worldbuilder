@@ -1,6 +1,6 @@
 {
   "name": "world-builder-tools",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "Template-driven worldbuilding tools for Obsidian",
   "main": "main.js",
