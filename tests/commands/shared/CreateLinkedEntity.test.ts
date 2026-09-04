@@ -153,4 +153,17 @@ describe('createLinkedEntity', () => {
 
 		expect(result).toEqual({ ok: false, code: 'no-link-type' });
 	});
+
+	it('rejects a name with leading underscore', async () => {
+		const { state, world, templateSet } = buildState(app, [
+			{ entityType: 'Faction', targetFolder: 'Factions' },
+		]);
+
+		const result = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, linkField('Faction'), '_Secret'
+		);
+
+		expect(result).toEqual({ ok: false, code: 'leading-underscore', detail: '_Secret' });
+		expect(app.vault.getAbstractFileByPath(`${WORLD}/Factions/_Secret.md`)).toBeNull();
+	});
 });

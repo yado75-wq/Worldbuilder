@@ -9,6 +9,7 @@ import { isEntityTypeUsable } from '../context/EntityTypeUsable';
 import { formatMultiselectFrontmatterLine, formatMultiselectPropertyBullet } from './shared/MultiselectValues';
 import { requireUniqueActiveWorld } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import { hasLeadingUnderscore } from '../util/names';
 import { t } from '../i18n';
 
 export type EditWorldMetaResult =
@@ -26,7 +27,8 @@ export type EditWorldMetaResult =
 				| 'cancelled'
 				| 'name-required'
 				| 'folder-name-conflict'
-				| 'index-missing-after-rename';
+				| 'index-missing-after-rename'
+				| 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -112,6 +114,11 @@ export async function editWorldMeta(
 		return err('name-required');
 	}
 
+	if (hasLeadingUnderscore(newName)) {
+		new Notice(t('notice.leading-underscore'));
+		return err('leading-underscore', newName);
+	}
+	
 	let indexFile = world.indexFile;
 	let effectivePath = worldPath;
 	const status = world.status;

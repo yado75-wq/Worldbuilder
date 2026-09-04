@@ -230,4 +230,14 @@ describe('newWorld', () => {
 		expect(app.vault.getAbstractFileByPath('Campaigns/Realm/_index.md')).not.toBeNull();
 		expect(app.vault.getAbstractFileByPath('Realm')).toBeNull();
 	});
+
+	it('rejects a world name with leading underscore', async () => {
+		const state = buildState(app);
+		inputResult = '_Archived';
+		confirmResult = false;
+
+		const result = await newWorld(app, settings, state, '');
+		expect(result).toEqual({ ok: false, code: 'leading-underscore', detail: '_Archived' });
+		expect(app.vault.getAbstractFileByPath('_Archived')).toBeNull();
+	});
 });

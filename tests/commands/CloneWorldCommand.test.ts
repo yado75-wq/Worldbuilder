@@ -141,4 +141,13 @@ describe('cloneWorld', () => {
 		const result = await cloneWorld(app, state, 'Misko');
 		expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 	});
+
+	it('rejects a clone name with leading underscore', async () => {
+		const state = buildState(app, 'Misko');
+		inputResult = '_Misko-copy';
+
+		const result = await cloneWorld(app, state, 'Misko');
+		expect(result).toEqual({ ok: false, code: 'leading-underscore', detail: '_Misko-copy' });
+		expect(app.vault.getAbstractFileByPath('_Misko-copy')).toBeNull();
+	});
 });

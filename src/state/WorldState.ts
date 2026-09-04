@@ -95,6 +95,7 @@ async function findTemplateSets(
 
 	for (const child of rootFolder.children) {
 		if (!(child instanceof TFolder)) continue;
+		if (child.name.startsWith('_')) continue;
 		const setInfo = await buildTemplateSetInfo(app, child);
 		templateSets.push(setInfo);
 	}

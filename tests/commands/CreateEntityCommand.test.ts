@@ -484,4 +484,20 @@ describe('createEntity', () => {
 		expect(content).toContain('[[IronLeague]]');
 		expect(content).toContain('Born in the woods.');
 	});
+
+	it('rejects a name with leading underscore', async () => {
+		const state = buildState(app, {
+			entityType: 'Character',
+			folderName: 'Entities',
+			fields: SIMPLE_FIELDS,
+		});
+		modalBehavior = {
+			type: 'submit',
+			data: { name: '_Secret', race: null },
+		};
+
+		const result = await createEntity(app, state, WORLD_PATH, 'Character', ENTITIES_FOLDER);
+		expect(result).toEqual({ ok: false, code: 'leading-underscore', detail: '_Secret' });
+		expect(app.vault.getAbstractFileByPath(`${ENTITIES_FOLDER}/_Secret.md`)).toBeNull();
+	});
 });

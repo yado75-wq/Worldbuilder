@@ -1,6 +1,7 @@
 import { App, Notice, normalizePath, TAbstractFile, TFile, TFolder } from 'obsidian';
 import { TemplateSetInfo } from '../types/templateSet';
 import { WorldBuilderSettings } from '../types/runtime';
+import { hasLeadingUnderscore } from '../util/names';
 import { t } from '../i18n';
 
 const DEFAULT_FILES = [
@@ -21,7 +22,7 @@ export type CloneTemplateSetResult =
 	| { ok: true; name: string }
 	| {
 			ok: false;
-			code: 'source-not-found' | 'already-exists';
+			code: 'source-not-found' | 'already-exists' | 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -93,6 +94,12 @@ export async function cloneTemplateSet(
 	const sourcePath = normalizePath(`${templatesRoot}/${sourceSetName}`);
 	const targetPath = normalizePath(`${templatesRoot}/${newSetName}`);
 
+	const trimmed = newSetName.trim();
+	if (!trimmed || hasLeadingUnderscore(trimmed)) {
+		new Notice(t('notice.leading-underscore'));
+		return errClone('leading-underscore', newSetName);
+	}
+	// use trimmed for targetPath
 	const sourceFolder = app.vault.getAbstractFileByPath(sourcePath);
 	if (!(sourceFolder instanceof TFolder)) {
 		new Notice(t('notice.template-set-not-found', { name: sourceSetName }));

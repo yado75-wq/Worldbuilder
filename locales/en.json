@@ -55,6 +55,7 @@
   "notice.folders-no-changes": "No changes needed.",
   "notice.template-sets-none": "No template sets found. Restore or create one under the templates folder (or reload the plugin).",
   "notice.template-set-missing": "Template set \"{name}\" not found. It may have been renamed or removed. Reassign the world in settings.",
+  "notice.leading-underscore": "Names cannot start with \"_\". That prefix is reserved for archived or system folders.",
   "modal.new-entity-title": "New {type}",
   "modal.edit-entity-title": "Edit {type}: {name}",
   "modal.clone-world-prompt": "Name for cloned world",

@@ -4,6 +4,7 @@ import { PluginState, WorldBuilderSettings } from '../types/runtime';
 import { InputModal } from '../formkit';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
+import { hasLeadingUnderscore } from '../util/names';
 import { t } from '../i18n';
 
 export type NewWorldResult =
@@ -14,7 +15,8 @@ export type NewWorldResult =
 				| 'no-template-sets'
 				| 'template-set-invalid'
 				| 'cancelled'
-				| 'already-exists';
+				| 'already-exists'
+				| 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -47,9 +49,14 @@ export async function newWorld(
 		return err('template-set-invalid', templateSet.name);
 	}
 
-	const name = await askInput(app, t('modal.new-world-prompt'), t('modal.new-world-placeholder'), '');
+	const name = (await askInput(app, t('modal.new-world-prompt'), t('modal.new-world-placeholder'), ''))?.trim() ?? '';
 	if (!name) {
 		return err('cancelled');
+	}
+
+	if (hasLeadingUnderscore(name)) {
+		new Notice(t('notice.leading-underscore'));
+		return err('leading-underscore', name);
 	}
 
 	const base = parentPath ? `${parentPath}/${name}` : name;

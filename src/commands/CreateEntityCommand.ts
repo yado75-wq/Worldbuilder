@@ -9,6 +9,7 @@ import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand'
 import { createLinkedEntity } from './shared/CreateLinkedEntity';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
 import { resolveTemplateSetByName, missingTemplateSetMessage } from '../context/TemplateSetResolve';
+import { hasLeadingUnderscore } from '../util/names';
 import {t} from '../i18n';
 
 export type CreateEntityResult =
@@ -25,7 +26,8 @@ export type CreateEntityResult =
 				| 'cancelled'
 				| 'no-title-field'
 				| 'name-required'
-				| 'already-exists';
+				| 'already-exists'
+				| 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -132,7 +134,11 @@ export async function createEntity(
 		new Notice(t('notice.name-required'));
 		return err('name-required');
 	}
-
+	
+	if (hasLeadingUnderscore(title)) {
+		new Notice(t('notice.leading-underscore'));
+		return err('leading-underscore', title);
+	}
 	const targetPath = `${folderPath}/${title}.md`;
 	if (app.vault.getAbstractFileByPath(targetPath)) {
 		new Notice(t('notice.already-exists-in-folder', { name: title, folder: folderPath }));

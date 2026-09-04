@@ -5,6 +5,7 @@ import { PluginState } from '../../types/runtime';
 import { FieldDefinition } from '../../formkit';
 import { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
 import { refreshDashboard, worldDashboardPath } from '../RefreshDashboardCommand';
+import { hasLeadingUnderscore } from '../../util/names';
 import { t } from '../../i18n';
 
 export type CreateLinkedEntityResult =
@@ -14,7 +15,8 @@ export type CreateLinkedEntityResult =
 			code:
 				| 'no-link-type'
 				| 'empty-name'
-				| 'already-exists';
+				| 'already-exists'
+				| 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -47,7 +49,11 @@ export async function createLinkedEntity(
 	if (!trimmedName) {
 		return err('empty-name');
 	}
-
+	
+	if (hasLeadingUnderscore(trimmedName)) {
+		new Notice(t('notice.leading-underscore'));
+		return err('leading-underscore', trimmedName);
+	}
 	const linkedFields = templateSet.fieldSets[entityType];
 	const targetFolder = resolveLinkedTargetFolderForType(
 		world,

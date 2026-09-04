@@ -19,6 +19,7 @@ import {
 	resolveTemplateSetByName,
 	missingTemplateSetMessage,
 } from '../context/TemplateSetResolve';
+import { hasLeadingUnderscore } from '../util/names';
 import { t } from '../i18n';
 
 export type EditEntityResult =
@@ -36,7 +37,8 @@ export type EditEntityResult =
 				| 'cancelled'
 				| 'no-title-field'
 				| 'name-required'
-				| 'rename-conflict';
+				| 'rename-conflict'
+				| 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -149,6 +151,11 @@ export async function editEntity(
 	if (!title) {
 		new Notice(t('notice.name-required'));
 		return err('name-required');
+	}
+
+	if (hasLeadingUnderscore(title)) {
+		new Notice(t('notice.leading-underscore'));
+		return err('leading-underscore', title);
 	}
 
 	const currentContent = await app.vault.read(file);

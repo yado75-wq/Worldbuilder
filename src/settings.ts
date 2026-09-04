@@ -20,6 +20,7 @@ import { syncWorldFolders } from './commands/SyncWorldFoldersCommand';
 import { refreshAllTimeframes } from './commands/RefreshAllTimeframesCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
+import { hasLeadingUnderscore } from './util/names';
 import { t } from './i18n';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
@@ -176,7 +177,13 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							'',
 							(name) => {
 								void (async () => {
-									const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${name}`;
+									const trimmed = name.trim();
+									if (!trimmed) return;
+									if (hasLeadingUnderscore(trimmed)) {
+										new Notice(t('notice.leading-underscore'));
+										return;
+									}
+									const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${trimmed}`;
 									if (this.app.vault.getAbstractFileByPath(path)) {
 										new Notice(t('notice.already-exists', { name }));
 										return;
@@ -362,15 +369,21 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			`${sourceName}-copy`,
 			(name) => {
 				void (async () => {
+					const trimmed = name.trim();
+					if (!trimmed) return;
+					if (hasLeadingUnderscore(trimmed)) {
+						new Notice(t('notice.leading-underscore'));
+						return;
+					}
 					const created = await cloneTemplateSet(
 						this.app,
 						this.plugin.settings,
 						sourceName,
-						name
+						trimmed
 					);
 					if (!created.ok) return;
 
-					this.plugin.settings.defaultTemplateSet = name;
+					this.plugin.settings.defaultTemplateSet = trimmed;
 					await this.plugin.saveSettings();
 					await this.plugin.refreshState();
 					this.update();

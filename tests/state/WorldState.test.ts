@@ -156,4 +156,31 @@ describe('scanVault worlds', () => {
 			)
 		).toBe(false);
 	});
+
+	it('ignores a template set folder whose name starts with underscore', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFolder('_system/templates/defaults');
+		vault.seedFile(
+			'_system/templates/defaults/WorldMeta_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		vault.seedFile(
+			'_system/templates/defaults/Generic_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		vault.seedFolder('_system/templates/_archived');
+		vault.seedFile(
+			'_system/templates/_archived/WorldMeta_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		vault.seedFile(
+			'_system/templates/_archived/Generic_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+
+		expect(state.templateSets.map(s => s.name)).toEqual(['defaults']);
+		expect(state.templateSets.some(s => s.name === '_archived')).toBe(false);
+	});
 });

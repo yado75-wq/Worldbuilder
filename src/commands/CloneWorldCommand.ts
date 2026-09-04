@@ -5,6 +5,7 @@ import { InputModal } from '../formkit';
 import { replaceIndexDisplayName } from './shared/WorldIndex';
 import { refreshDashboard, worldDashboardPath } from './RefreshDashboardCommand';
 import { hasActiveWorldConflict } from '../context/ActiveWorld';
+import { hasLeadingUnderscore } from '../util/names';
 import { t } from '../i18n';
 
 export type CloneWorldResult =
@@ -17,7 +18,8 @@ export type CloneWorldResult =
 				| 'cancelled'
 				| 'already-exists'
 				| 'index-missing-after-copy'
-				| 'folder-missing-after-copy';
+				| 'folder-missing-after-copy'
+				| 'leading-underscore';
 			detail?: string;
 	  };
 
@@ -44,7 +46,7 @@ export async function cloneWorld(
 
 	const world = state.worlds.find(w => w.path === worldPath);
 	if (!world) {
-		new Notice('World not found.');
+		new Notice(t('notice.world-not-found'));
 		return err('world-not-found');
 	}
 
@@ -54,6 +56,11 @@ export async function cloneWorld(
 	const newName = await askName(app, defaultName);
 	if (!newName) {
 		return err('cancelled');
+	}
+
+	if (hasLeadingUnderscore(newName)) {
+		new Notice(t('notice.leading-underscore'));
+		return err('leading-underscore', newName);
 	}
 
 	const targetPath = normalizePath(
