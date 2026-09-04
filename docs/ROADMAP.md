@@ -34,9 +34,8 @@ to the GitHub Wiki — edit it here, not there.
 - **World archive** — world folders starting with `_` ignored entirely
 - **Clone world / name sync** — clone inactive; display name follows folder
   when synced
-- **Command result codes** — structured ok/code returns for tests; Notices
-  Notices via `t()`
-  - **Internal formkit** — form UI/types under `src/formkit/`; domain stays in commands/state
+- **Command result codes** — structured ok/code returns for tests; Notices via `t()`
+- **Internal formkit** — form UI/types under `src/formkit/`; domain stays in commands/state
 - **i18n foundation** — `locales/en.json`, `t()` / `loadI18n`, notices, menus, settings, formkit `form.*`; tests use result codes, not Notice text
 
 ## In design (not yet implemented)
@@ -59,6 +58,8 @@ Nothing currently.
   stays whole numbers for now.
 - **Multiselect picker search / large lists** — scale UX if vaults get huge
   equipment sets.
+- **Export / import world kit** — package world folder + template set; import inactive with conflict policy (see `docs/next-release-consistency-sharing.md`).
+- **Suggest fields from entities** — draft `*_Fields.md` from notes of a type after fields were lost/overwritten (best-effort).
 
 ## Considered and dropped
 
@@ -78,10 +79,13 @@ silently re-proposed without anyone remembering why:
 
 ## Next Version
 
-Nothing locked. Candidates from **Deferred** (pick one):
+See [`docs/next-release-consistency-sharing.md`](next-release-consistency-sharing.md) (policies, sharing, archive, type rename, recovery).
 
-- Rename / delete entity type (migrate rules + tags)
+**P0 (docs)** — README policies: share handoff, language vs notes, safe template edits.
+
+### **Candidates after P0**
+
 - Template-set `_` archive
-- Multiselect picker search / large lists
-
-Or release hygiene only: tag current tree, update wiki pointer, community process when ready.
+- Export / import world kit
+- Rename / delete entity type
+- Suggest fields from entities

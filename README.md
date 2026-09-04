@@ -142,9 +142,19 @@ On first load the plugin creates `_system/templates/defaults/` in your vault wit
 - The plugin does **not** silently use another template set.
 - If the whole `templates` folder is deleted, the next load recreates `_system/templates/defaults/` from plugin built-ins.
 
-### Renaming `*_Fields.md`
+### Renaming `*_Fields.md` (entity type id)
 
-Renaming e.g. `Character_Fields.md` changes the entity **type name** for menus and rules. Existing notes keep their old tags; the plugin does not retag them. Prefer updating `folder-rules.md` (and tags) yourself, or a future rename-type command.
+The file stem is the **type id** (menus, tags, folder-rules, `link:Type`).
+
+Renaming e.g. `Character_Fields.md` → `Postava_Fields.md` by hand changes the type id for **new** scans only. Existing notes keep old tags; `folder-rules.md` and `link:Character` lines are not updated. The type can look broken or empty until everything is aligned.
+
+#### **Safe today**
+
+- Translate the **label** column only (forms and, after regenerate, generated headings).
+- Rename **folders** and update `folder-rules.md` / `world-template.md` to match.
+- Leave **keys**, type stems, and tags alone unless you migrate them all yourself.
+
+A dedicated **Rename entity type** command (rules + tags + link targets) is planned; until then, do not rely on renaming only the fields file.
 
 ## Releasing
 
@@ -157,7 +167,7 @@ Renaming e.g. `Character_Fields.md` changes the entity **type name** for menus a
 ## Customization
 
 - **Add entity types** — create a new `_Fields.md` file and add a line to `folder-rules.md`. No code changes needed.
-- **Translate labels** — edit any `_Fields.md` file, change the label column to your language
+- **Translate labels** — change the label column in `*_Fields.md`; keep keys and type stems stable (see Renaming above)
 - **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
 - **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings
 - **Manage template sets** — in the plugin settings tab you can create a new set, clone an existing one, assign a set to a specific world, reset a set to plugin defaults, or mark one as the default for new worlds
@@ -177,6 +187,24 @@ On load the plugin reads Obsidian's language via getLanguage(), loads `locales/<
 English is required. Other locale files are optional. Result codes and generated vault markdown (entity notes, dashboard body) are not translated through this catalog.
 
 Template field labels in `*_Fields.md` stay under your control in the vault (edit the label column).
+
+### UI language vs note content
+
+- Menus, notices, settings, and form chrome follow Obsidian’s language and `locales/*.json` (English fallback).
+- Text already written into notes (entity bodies, resolved timeframes, dashboard stock phrases) is **not** rewritten when you change language.
+- To refresh generated shells after label or language changes, edit/save entities or run Refresh dashboard / Refresh all timeframes. Mixed language in the vault is possible.
+
+### Sharing a world with someone else
+
+There is no export command yet. Hand off:
+
+1. Compatible **plugin** version (release zip or BRAT).
+2. The **world folder** (the folder that contains `_index.md`).
+3. The **template set folder** named in that world’s `template_set` field (under `_system/templates/`).
+
+Recipient: place both in the vault, enable the plugin, reassign the template set in settings if needed, set the world active if desired.
+
+Do not send only the world folder — without the matching template set, create/edit/sync/dashboard will refuse to run.
 
 ## Roadmap
 
