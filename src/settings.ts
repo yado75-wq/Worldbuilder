@@ -18,6 +18,9 @@ import { refreshDashboard } from './commands/RefreshDashboardCommand';
 import { syncWorldFiles } from './commands/SyncWorldFilesCommand';
 import { syncWorldFolders } from './commands/SyncWorldFoldersCommand';
 import { refreshAllTimeframes } from './commands/RefreshAllTimeframesCommand';
+import { newWorld } from './commands/NewWorldCommand';
+import { exportWorld } from './commands/ExportWorldCommand';
+import { importWorld } from './commands/ImportWorldCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 import { hasLeadingUnderscore } from './util/names';
@@ -214,7 +217,54 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		const activeCount = worlds.filter(w => w.status === 'active').length;
 		const conflict = worlds.length > 0 && activeCount !== 1;
 
-		const worldItems: SettingGroupItem[] = [];
+				const worldItems: SettingGroupItem[] = [];
+
+		worldItems.push({
+			name: '',
+			desc: '',
+			render: (setting: Setting) => {
+				setting.settingEl.addClass('wb-world-group-actions');
+				setting.addButton(btn => btn
+					.setIcon('plus')
+					.setTooltip(t('menu.new-world'))
+					.onClick((evt: MouseEvent) => {
+						const menu = new Menu();
+						menu.addItem(item => item
+							.setTitle(t('menu.new-world'))
+							.setIcon('plus')
+							.onClick(() => {
+								void (async () => {
+									await newWorld(
+										this.app,
+										this.plugin.settings,
+										this.plugin.state,
+										''
+									);
+									await this.plugin.refreshState();
+									this.update();
+								})();
+							})
+						);
+						menu.addItem(item => item
+							.setTitle(t('menu.import-world'))
+							.setIcon('package')
+							.onClick(() => {
+								void (async () => {
+									await importWorld(
+										this.app,
+										this.plugin.state,
+										this.plugin.settings
+									);
+									await this.plugin.refreshState();
+									this.update();
+								})();
+							})
+						);
+						menu.showAtMouseEvent(evt);
+					})
+				);
+			},
+		});
 
 		if (worlds.length === 0) {
 			worldItems.push({
@@ -294,7 +344,22 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										})();
 									})
 								);
-
+								
+								menu.addItem(item => item
+									.setTitle(t('menu.export-world'))
+									.setIcon('package')
+									.onClick(() => {
+										void (async () => {
+											await exportWorld(
+												this.app,
+												this.plugin.state,
+												this.plugin.settings,
+												path,
+												this.plugin.manifest.version
+											);
+										})();
+									})
+								);
 								menu.addSeparator();
 
 								menu.addItem(item => item
