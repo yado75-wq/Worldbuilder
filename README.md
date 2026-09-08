@@ -13,6 +13,7 @@ These two failed so many times that it made me reconsider my view of project man
 ## Features
 
 - **World management** — create worlds with templated folder structures, switch between active worlds, sync folders as your template evolves
+- **World kits** — export a world plus its template set as a zip; import via Settings (system file picker). Imported worlds are inactive; name clashes use a localized `(imported)` suffix
 - **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu. Freeform notes added below the auto-generated content survive future edits, same protected-section behavior as the dashboard
 - **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
 - **Template set management** — create, clone, reset, assign to a world, and set a default template set from the plugin settings tab
@@ -196,15 +197,19 @@ Template field labels in `*_Fields.md` stay under your control in the vault (edi
 
 ### Sharing a world with someone else
 
-There is no export command yet. Hand off:
+Preferred path — **world kit** (one zip):
 
-1. Compatible **plugin** version (release zip or BRAT).
-2. The **world folder** (the folder that contains `_index.md`).
-3. The **template set folder** named in that world’s `template_set` field (under `_system/templates/`).
+1. Compatible **plugin** version (release zip or BRAT) on both sides.
+2. **Export:** Settings → Worlds → world row **Actions** → **Export world**. Choose a path (or accept the vault fallback under `_system/exports/`).
+3. Send the `.zip` to the recipient.
+4. **Import:** Settings → Worlds → header **+** → **Import world**, pick the zip. The world is created **inactive**. If the template set name already exists, choose **Use existing** or **Import as new name**. If the world folder name is taken, the plugin allocates `Name (imported)`, then `Name (imported 2)`, …
 
-Recipient: place both in the vault, enable the plugin, reassign the template set in settings if needed, set the world active if desired.
+Manual folder copy still works if you prefer:
 
-Do not send only the world folder — without the matching template set, create/edit/sync/dashboard will refuse to run.
+1. The **world folder** (contains `_index.md`).
+2. The **template set folder** named in that world’s `template_set` field (under `_system/templates/`).
+
+Do not send only the world folder without a matching template set — create/edit/sync/dashboard will refuse to run until the set is present and assigned.
 
 ## Roadmap
 

@@ -48,10 +48,10 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			for (const set of templateSets) {
 				const statusIcon = set.isValid ? '✓' : '✗';
 				const isDefault = set.name === defaultSet;
-								
+
 				const errorCount = set.issues.filter(i => i.severity === 'error').length;
 				const warningCount = set.issues.filter(i => i.severity === 'warning').length;
-				
+
 				const lines: string[] = [];
 
 				if (isDefault) {
@@ -71,7 +71,10 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 				let issuesSummary: string;
 				if (errorCount > 0 && warningCount > 0) {
-					issuesSummary = t('settings.show-errors-and-warnings', { errors: String(errorCount), warnings: String(warningCount) });
+					issuesSummary = t('settings.show-errors-and-warnings', {
+						errors: String(errorCount),
+						warnings: String(warningCount),
+					});
 				} else if (errorCount > 0) {
 					issuesSummary = t('settings.show-errors', { count: String(errorCount) });
 				} else if (warningCount > 0) {
@@ -118,7 +121,10 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 											set.name
 										);
 										if (!result.ok) {
-											new Notice(t('settings.reset-failed', { name: set.name, detail: result.detail ?? '' }));
+											new Notice(t('settings.reset-failed', {
+												name: set.name,
+												detail: result.detail ?? '',
+											}));
 											return;
 										}
 										await this.plugin.refreshState();
@@ -133,7 +139,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							const details = setting.settingEl.createEl('details', {
 								cls: 'wb-template-issues',
 							});
-							
+
 							details.createEl('summary', {
 								text: issuesSummary,
 							});
@@ -145,7 +151,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								t('settings.issues-kind'),
 								t('settings.issues-where'),
 								t('settings.issues-message'),
-								]) {
+							]) {
 								head.createEl('th', { text: label });
 							}
 							for (const issue of set.issues) {
@@ -165,106 +171,11 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			}
 		}
 
-		templateSetItems.push({
-			name: t('settings.new-template-set'),
-			desc: t('settings.new-template-set-desc'),
-			render: (setting: Setting) => {
-				setting.addButton(btn => btn
-					.setButtonText(t('settings.create'))
-					.setCta()
-					.onClick(() => {
-						new InputModal(
-							this.app,
-							t('settings.template-set-name-prompt'),
-							t('settings.template-set-name-placeholder'),
-							'',
-							(name) => {
-								void (async () => {
-									const trimmed = name.trim();
-									if (!trimmed) return;
-									if (hasLeadingUnderscore(trimmed)) {
-										new Notice(t('notice.leading-underscore'));
-										return;
-									}
-									const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${trimmed}`;
-									if (this.app.vault.getAbstractFileByPath(path)) {
-										new Notice(t('notice.already-exists', { name }));
-										return;
-									}
-									await this.app.vault.createFolder(path);
-									const result =await resetTemplateSet(
-										this.app,
-										this.plugin.settings,
-										this.plugin.pluginDir,
-										name
-									);
-									if (!result.ok) {
-										new Notice(t('settings.create-template-set-failed', { name, detail: result.detail ?? '' }));
-										return;
-									}
-									await this.plugin.refreshState();
-									this.update();
-								})();
-							},
-							() => {}
-						).open();
-					})
-				);
-			},
-		});
-
 		const worlds = this.plugin.state.worlds;
 		const activeCount = worlds.filter(w => w.status === 'active').length;
 		const conflict = worlds.length > 0 && activeCount !== 1;
 
-				const worldItems: SettingGroupItem[] = [];
-
-		worldItems.push({
-			name: '',
-			desc: '',
-			render: (setting: Setting) => {
-				setting.settingEl.addClass('wb-world-group-actions');
-				setting.addButton(btn => btn
-					.setIcon('plus')
-					.setTooltip(t('menu.new-world'))
-					.onClick((evt: MouseEvent) => {
-						const menu = new Menu();
-						menu.addItem(item => item
-							.setTitle(t('menu.new-world'))
-							.setIcon('plus')
-							.onClick(() => {
-								void (async () => {
-									await newWorld(
-										this.app,
-										this.plugin.settings,
-										this.plugin.state,
-										''
-									);
-									await this.plugin.refreshState();
-									this.update();
-								})();
-							})
-						);
-						menu.addItem(item => item
-							.setTitle(t('menu.import-world'))
-							.setIcon('package')
-							.onClick(() => {
-								void (async () => {
-									await importWorld(
-										this.app,
-										this.plugin.state,
-										this.plugin.settings
-									);
-									await this.plugin.refreshState();
-									this.update();
-								})();
-							})
-						);
-						menu.showAtMouseEvent(evt);
-					})
-				);
-			},
-		});
+		const worldItems: SettingGroupItem[] = [];
 
 		if (worlds.length === 0) {
 			worldItems.push({
@@ -276,12 +187,19 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				const isActive = world.status === 'active';
 				const uniquelyActive = isActive && activeCount === 1;
 
-				let desc = t('settings.world-desc', { path: world.path, templateSet: world.templateSet });
-				const tsResolve = resolveTemplateSetByName(this.plugin.state.templateSets, world.templateSet);
+				let desc = t('settings.world-desc', {
+					path: world.path,
+					templateSet: world.templateSet,
+				});
+				const tsResolve = resolveTemplateSetByName(
+					this.plugin.state.templateSets,
+					world.templateSet
+				);
 				if (!tsResolve.ok) {
-					desc += tsResolve.reason === 'none'
-						? t('settings.world-no-template-sets')
-    					: t('settings.world-template-missing', { name: world.templateSet });
+					desc +=
+						tsResolve.reason === 'none'
+							? t('settings.world-no-template-sets')
+							: t('settings.world-template-missing', { name: world.templateSet });
 				} else if (conflict && activeCount > 1 && isActive) {
 					desc += t('settings.world-multi-active');
 				} else if (conflict && activeCount === 0) {
@@ -344,7 +262,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										})();
 									})
 								);
-								
+
 								menu.addItem(item => item
 									.setTitle(t('menu.export-world'))
 									.setIcon('package')
@@ -360,6 +278,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										})();
 									})
 								);
+
 								menu.addSeparator();
 
 								menu.addItem(item => item
@@ -404,7 +323,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 						if (conflict && isActive) {
 							setting.nameEl.addClass('wb-invalid');
-						}else if (nameMismatch) {
+						} else if (nameMismatch) {
 							setting.nameEl.addClass('wb-name-mismatch');
 						}
 					},
@@ -416,14 +335,110 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			{
 				type: 'group',
 				heading: t('settings.template-sets'),
+				extraButtons: [
+					(btn) => {
+						btn
+							.setIcon('plus')
+							.setTooltip(t('settings.new-template-set'))
+							.onClick(() => {
+								this.openNewTemplateSetModal();
+							});
+					},
+				],
 				items: templateSetItems,
 			},
 			{
 				type: 'group',
-				heading: conflict ? t('settings.active-world-conflict') : t('settings.active-world'),
+				heading: conflict
+					? t('settings.active-world-conflict')
+					: t('settings.active-world'),
+				extraButtons: [
+					(btn) => {
+						btn
+							.setIcon('plus')
+							.setTooltip(t('menu.new-world'))
+							.onClick(() => {
+								const menu = new Menu();
+								menu.addItem(item => item
+									.setTitle(t('menu.new-world'))
+									.setIcon('plus')
+									.onClick(() => {
+										void (async () => {
+											await newWorld(
+												this.app,
+												this.plugin.settings,
+												this.plugin.state,
+												''
+											);
+											await this.plugin.refreshState();
+											this.update();
+										})();
+									})
+								);
+								menu.addItem(item => item
+									.setTitle(t('menu.import-world'))
+									.setIcon('package')
+									.onClick(() => {
+										void (async () => {
+											await importWorld(
+												this.app,
+												this.plugin.state,
+												this.plugin.settings
+											);
+											await this.plugin.refreshState();
+											this.update();
+										})();
+									})
+								);
+								const rect = btn.extraSettingsEl.getBoundingClientRect();
+								menu.showAtPosition({ x: rect.left, y: rect.bottom + 4 });
+							});
+					},
+				],
 				items: worldItems,
 			},
 		];
+	}
+
+	private openNewTemplateSetModal(): void {
+		new InputModal(
+			this.app,
+			t('settings.template-set-name-prompt'),
+			t('settings.template-set-name-placeholder'),
+			'',
+			(name) => {
+				void (async () => {
+					const trimmed = name.trim();
+					if (!trimmed) return;
+					if (hasLeadingUnderscore(trimmed)) {
+						new Notice(t('notice.leading-underscore'));
+						return;
+					}
+					const path = `${this.plugin.settings.systemFolder}/${this.plugin.settings.templatesFolder}/${trimmed}`;
+					if (this.app.vault.getAbstractFileByPath(path)) {
+						new Notice(t('notice.already-exists', { name: trimmed }));
+						return;
+					}
+					await this.app.vault.createFolder(path);
+					const result = await resetTemplateSet(
+						this.app,
+						this.plugin.settings,
+						this.plugin.pluginDir,
+						trimmed
+					);
+					if (!result.ok) {
+						new Notice(t('settings.create-template-set-failed', {
+							name: trimmed,
+							detail: result.detail ?? '',
+						}));
+						return;
+					}
+					await this.plugin.refreshState();
+					this.update();
+				})();
+			},
+			() => {}
+		).open();
 	}
 
 	private cloneTemplateSet(sourceName: string): void {

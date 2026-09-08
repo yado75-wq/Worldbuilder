@@ -98,7 +98,7 @@
   "menu.import-world": "Import world",
   "menu.export-world": "Export world",
   "settings.template-sets": "Template sets",
-  "settings.active-world": "Active world",
+  "settings.active-world": "Worlds",
   "settings.active-world-conflict": "Active world ⚠",
   "settings.no-template-sets": "No template sets found",
   "settings.no-template-sets-desc": "Reload the plugin to initialize default templates.",
