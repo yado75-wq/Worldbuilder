@@ -32,21 +32,30 @@ to the GitHub Wiki — edit it here, not there.
   fallback to another set; settings note when missing; `ensureDefaultTemplates`
   still recreates defaults on load
 - **World archive** — world folders starting with `_` ignored entirely
+- **Template-set archive** — template set folders under `_system/templates/`
+  whose names start with `_` are ignored; `defaultTemplateSet` falls back to a
+  live set (prefer `defaults` if present) with Notice; worlds stay orphaned
+  until reassigned
 - **Clone world / name sync** — clone inactive; display name follows folder
   when synced
 - **Command result codes** — structured ok/code returns for tests; Notices via `t()`
 - **Internal formkit** — form UI/types under `src/formkit/`; domain stays in commands/state
-- **i18n foundation** — `locales/en.json`, `t()` / `loadI18n`, notices, menus, settings, formkit `form.*`; tests use result codes, not Notice text
+- **i18n foundation** — `locales/en.json`, `t()` / `loadI18n`, notices, menus, settings,
+  formkit `form.*`, main chrome; tests use result codes, not Notice text
+- **World kit export / import** — zip pack of world + template set; import inactive;
+  folder name clashes use localized `(imported)` / `(imported N)`; template set
+  clash offers use existing or import under a new name; Settings group `+` for
+  new world / import and new template set
+- **Leading `_` identity rules** — block creating worlds, entities, template sets
+  with names starting with `_`
 
 ## In design (not yet implemented)
 
-Nothing currently.
+- **Rename / delete entity type** — migrate `*_Fields.md` stem, folder-rules,
+  tags, and `link:` / multiselect targets without breaking existing notes
 
 ## Deferred, not rejected
 
-- **Rename / delete entity type** — rename or remove `*_Fields.md` + folder-rules + retag existing notes; manual rename today does not migrate tags (no crash).
-- **Template-set `_` archive** — same ignore rule as worlds for
-  `_system/templates/_foo` (not implemented yet).
 - **Reckoning-to-reckoning unit conversion** (Time §9) — only if a world needs
   two mutually convertible calendars.
 - **Localized unit pluralization** (Time §10) — cosmetic.
@@ -58,8 +67,9 @@ Nothing currently.
   stays whole numbers for now.
 - **Multiselect picker search / large lists** — scale UX if vaults get huge
   equipment sets.
-- **Export / import world kit** — package world folder + template set; import inactive with conflict policy (see `docs/next-release-consistency-sharing.md`).
-- **Suggest fields from entities** — draft `*_Fields.md` from notes of a type after fields were lost/overwritten (best-effort).
+- **Suggest fields from entities** — draft `*_Fields.md` from notes of a type
+  after fields were lost/overwritten (best-effort).
+- **Kit polish** — file-explorer Export world; richer template-set clash UI.
 
 ## Considered and dropped
 
@@ -76,16 +86,15 @@ silently re-proposed without anyone remembering why:
 - **General physical-measurement-units system** — prose is the norm.
 - **Own fictional-calendar engine** — Calendarium exists; optional bridge later.
 - **Hard validation blocking saves for Time** — report-only in Needs attention.
+- **Public form library / npm formkit** — space covered (e.g. Modal Forms);
+  keep formkit internal.
 
-## Next Version
+## Next version
 
-See [`docs/next-release-consistency-sharing.md`](next-release-consistency-sharing.md) (policies, sharing, archive, type rename, recovery).
+Primary candidate: **Rename / delete entity type** (design + implement).
 
-**P0 (docs)** — README policies: share handoff, language vs notes, safe template edits.
+Supporting: kit polish, suggest-fields recovery, non-English locale packs when
+reviewers exist.
 
-### **Candidates after P0**
-
-- Template-set `_` archive
-- Export / import world kit
-- Rename / delete entity type
-- Suggest fields from entities
+Policy reference: `docs/next-release-consistency-sharing.md` (language vs notes,
+safe template edits, sharing).
