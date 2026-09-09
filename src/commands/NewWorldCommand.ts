@@ -5,6 +5,7 @@ import { InputModal } from '../formkit';
 import { ConfirmModal } from '../ui/ConfirmModal';
 import { refreshDashboard } from './RefreshDashboardCommand';
 import { hasLeadingUnderscore } from '../util/names';
+import { pickLiveDefaultTemplateSet } from '../util/pickLiveDefaultTemplateSet';
 import { t } from '../i18n';
 
 export type NewWorldResult =
@@ -34,10 +35,16 @@ export async function newWorld(
 	parentPath: string
 ): Promise<NewWorldResult> {
 	// Prefer configured default, then first valid set (intentional for *new* worlds — not world-bound resolve)
-	const preferredSetName = settings.defaultTemplateSet || state.activeWorld?.templateSet || '';
-	const templateSet = state.templateSets.find(ts => ts.name === preferredSetName)
-		?? state.templateSets.find(ts => ts.isValid)
-		?? state.templateSets[0];
+	const preferredName =
+	settings.defaultTemplateSet || state.activeWorld?.templateSet || '';
+	const picked = pickLiveDefaultTemplateSet(state.templateSets, preferredName);
+
+	if (!picked.name) {
+		new Notice(t('notice.no-template-sets'));
+		return err('no-template-sets');
+	}
+
+	const templateSet = state.templateSets.find(ts => ts.name === picked.name);
 
 	if (!templateSet) {
 		new Notice(t('notice.no-template-sets'));

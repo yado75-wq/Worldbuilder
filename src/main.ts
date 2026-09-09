@@ -4,7 +4,8 @@ import { WorldBuilderSettingTab } from './settings';
 import { scanVault } from './state/WorldState';
 import { registerFileMenu } from './context/MenuBuilder';
 import { ensureDefaultTemplates } from './commands/SetupCommand';
-import { loadI18n } from './i18n';
+import { pickLiveDefaultTemplateSet } from './util/pickLiveDefaultTemplateSet';
+import { loadI18n, t } from './i18n';
 
 export default class WorldBuilderPlugin extends Plugin {
 	settings!: WorldBuilderSettings;
@@ -83,10 +84,7 @@ export default class WorldBuilderPlugin extends Plugin {
 				this.state.templateSets
 			);
 			if (!ensured.ok) {
-				new Notice(
-					`Could not install all default template files${ensured.detail ? ` (${ensured.detail})` : ''}.`
-				);
-			}
+				new Notice(	t('notice.defaults-install-failed', { detail: ensured.detail ? ` (${ensured.detail})` : '',	}));}
 			await this.refreshState();
 		});
 	}
@@ -95,25 +93,25 @@ export default class WorldBuilderPlugin extends Plugin {
 
 	async refreshState() {
 		this.state = await scanVault(this.app, this.settings);
+		
+		const picked = pickLiveDefaultTemplateSet(
+			this.state.templateSets,
+			this.settings.defaultTemplateSet
+		);
 
-		// If default template set no longer exists, fall back to first available
-		const defaultExists = this.state.templateSets
-			.some(ts => ts.name === this.settings.defaultTemplateSet);
-
-		if (!defaultExists && this.state.templateSets.length > 0) {
-			const fallback = this.state.templateSets[0]?.name ?? 'defaults';
-			this.settings.defaultTemplateSet = fallback;
+		if (picked.name !== null && picked.switched) {
+			this.settings.defaultTemplateSet = picked.name;
 			await this.saveSettings();
-			new Notice(`Default template set was removed. Switched to "${fallback}".`);
+			new Notice(	t('notice.default-template-set-switched', {	from: picked.from, to: picked.name,}));
 		}
-
+		
 		const activeCount = this.state.worlds.filter(w => w.status === 'active').length;
 		const conflict = this.state.worlds.length > 0 && activeCount !== 1;
 		if (conflict && !this.activeWorldConflictNotified) {
 			new Notice(
 				activeCount > 1
-					? 'Multiple worlds are marked active. Open Worldbuilder settings and use Set as active.'
-					: 'No active world. Open Worldbuilder settings and use Set as active.'
+					? t('notice.active-world-conflict-multi')
+					: t('notice.active-world-conflict-none')
 			);
 			this.activeWorldConflictNotified = true;
 		} else if (!conflict) {
@@ -126,8 +124,12 @@ export default class WorldBuilderPlugin extends Plugin {
 
 	private updateRibbonTooltip(): void {
 		const worldName = this.state.activeWorld?.name;
-		const tooltip = worldName ? `Worldbuilder — Active: ${worldName}` : 'Worldbuilder — No active world';
-		setTooltip(this.ribbonIconEl, tooltip);
+		setTooltip(
+			this.ribbonIconEl,
+			worldName
+				? t('ribbon.active', { name: worldName })
+				: t('ribbon.none')
+		);
 	}
 
 	private showStatusMenu(evt: MouseEvent): void {
@@ -135,13 +137,15 @@ export default class WorldBuilderPlugin extends Plugin {
 
 		const activeWorld = this.state.activeWorld;
 		menu.addItem(item => item
-			.setTitle(activeWorld ? `Active world: ${activeWorld.name}` : 'No active world')
+			.setTitle(activeWorld ? t('menu.status-active', { name: activeWorld.name })	: t('menu.status-none'))
 			.setIcon('globe')
 			.setDisabled(true)
 		);
 
 		menu.addItem(item => item
-			.setTitle(`Default template set: ${this.settings.defaultTemplateSet || 'none'}`)
+			.setTitle(t('menu.status-default-set', {
+				name: this.settings.defaultTemplateSet || t('menu.status-default-none'),
+			}))
 			.setIcon('layout-template')
 			.setDisabled(true)
 		);
@@ -149,7 +153,7 @@ export default class WorldBuilderPlugin extends Plugin {
 		menu.addSeparator();
 
 		menu.addItem(item => item
-			.setTitle('Open worldbuilder settings')
+			.setTitle(t('menu.open-settings'))
 			.setIcon('settings')
 			.onClick(() => {
 				this.app.setting.open();
@@ -167,7 +171,7 @@ export default class WorldBuilderPlugin extends Plugin {
 		if (file instanceof TFolder) {
 			const parentPath = file.parent?.path ?? '';
 			if (parentPath === templatesRoot) {
-				new Notice(`Template set "${file.name}" was deleted.`);
+				new Notice(t('notice.template-set-deleted', { name: file.name }));
 			}
 		}
 
