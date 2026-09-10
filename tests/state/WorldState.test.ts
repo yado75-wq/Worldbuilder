@@ -183,4 +183,51 @@ describe('scanVault worlds', () => {
 		expect(state.templateSets.map(s => s.name)).toEqual(['defaults']);
 		expect(state.templateSets.some(s => s.name === '_archived')).toBe(false);
 	});
+
+	it('missing Generic_Fields.md is not an error; set remains valid', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFolder('_system/templates/defaults');
+		vault.seedFile(
+			'_system/templates/defaults/WorldMeta_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		vault.seedFile(
+			'_system/templates/defaults/Character_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		// no Generic_Fields.md
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+		const set = state.templateSets.find(s => s.name === 'defaults');
+		expect(set).toBeDefined();
+		expect(set!.isValid).toBe(true);
+		expect(
+			set!.issues.some(
+				i => i.kind === 'missing-file' && i.file === 'Generic_Fields.md'
+			)
+		).toBe(false);
+	});
+
+	it('missing WorldMeta_Fields.md is an error; set is invalid', async () => {
+		const vault = app.vault as unknown as FakeVault;
+		vault.seedFolder('_system/templates/defaults');
+		vault.seedFile(
+			'_system/templates/defaults/Generic_Fields.md',
+			'name | Name | mandatory | text | title\n'
+		);
+		// no WorldMeta_Fields.md
+
+		const state = await scanVault(app, DEFAULT_SETTINGS);
+		const set = state.templateSets.find(s => s.name === 'defaults');
+		expect(set).toBeDefined();
+		expect(set!.isValid).toBe(false);
+		expect(
+			set!.issues.some(
+				i =>
+					i.severity === 'error' &&
+					i.kind === 'missing-file' &&
+					i.file === 'WorldMeta_Fields.md'
+			)
+		).toBe(true);
+	});
 });

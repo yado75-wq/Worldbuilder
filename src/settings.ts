@@ -87,49 +87,83 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 					name: `${statusIcon} ${set.name}${isDefault ? ' ★' : ''}`,
 					desc,
 					render: (setting: Setting) => {
+						const setName = set.name;
+
 						setting
 							.addButton(btn => btn
 								.setButtonText(t('settings.set-as-default'))
 								.setDisabled(isDefault || !set.isValid)
 								.onClick(() => {
 									void (async () => {
-										this.plugin.settings.defaultTemplateSet = set.name;
+										this.plugin.settings.defaultTemplateSet = setName;
 										await this.plugin.saveSettings();
 										this.update();
 									})();
 								})
 							)
 							.addButton(btn => btn
-								.setButtonText(t('settings.clone'))
-								.onClick(() => this.cloneTemplateSet(set.name))
-							)
-							.addButton(btn => btn
 								.setButtonText(t('settings.assign-to-world'))
 								.onClick(() => {
-									void this.assignTemplateSetToWorld(set.name);
+									void this.assignTemplateSetToWorld(setName);
 								})
 							)
 							.addButton(btn => btn
-								.setButtonText(t('settings.reset-to-defaults'))
-								.setDestructive()
-								.onClick(() => {
-									void (async () => {
-										const result = await resetTemplateSet(
-											this.app,
-											this.plugin.settings,
-											this.plugin.pluginDir,
-											set.name
-										);
-										if (!result.ok) {
-											new Notice(t('settings.reset-failed', {
-												name: set.name,
-												detail: result.detail ?? '',
-											}));
-											return;
-										}
-										await this.plugin.refreshState();
-										this.update();
-									})();
+								.setButtonText(t('settings.manage'))
+								.onClick((evt: MouseEvent) => {
+									const menu = new Menu();
+
+									menu.addItem(item => item
+										.setTitle(t('settings.clone'))
+										.setIcon('copy')
+										.onClick(() => this.cloneTemplateSet(setName))
+									);
+
+									menu.addItem(item => item
+										.setTitle(t('settings.rename-entity-type'))
+										.setIcon('pencil')
+										.onClick(() => {
+											// Wired when RenameEntityTypeCommand lands
+											new Notice(t('notice.rename-entity-type-pending'));
+										})
+									);
+
+									menu.addItem(item => item
+										.setTitle(t('settings.audit-set'))
+										.setIcon('scan-search')
+										.onClick(() => {
+											// Wired when audit lands
+											new Notice(t('notice.audit-set-pending'));
+										})
+									);
+
+									menu.addSeparator();
+
+									menu.addItem(item => item
+										.setTitle(t('settings.reset-to-defaults'))
+										.setIcon('rotate-ccw')
+										.setWarning(true)
+										.onClick(() => {
+											void (async () => {
+												const result = await resetTemplateSet(
+													this.app,
+													this.plugin.settings,
+													this.plugin.pluginDir,
+													setName
+												);
+												if (!result.ok) {
+													new Notice(t('settings.reset-failed', {
+														name: setName,
+														detail: result.detail ?? '',
+													}));
+													return;
+												}
+												await this.plugin.refreshState();
+												this.update();
+											})();
+										})
+									);
+
+									menu.showAtMouseEvent(evt);
 								})
 							);
 

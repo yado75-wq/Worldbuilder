@@ -123,9 +123,7 @@ function findEntityFolder(
  * template set's field sets — not by which folder it happens to sit in.
  * A file tagged e.g. `event` is an Event regardless of whether it's inside
  * the folder folder-rules.md maps to Event, a folder that only matches the
- * `*` wildcard catch-all, or the world root itself. `generic` is excluded
- * explicitly — a generic entity has nothing structured worth editing
- * through this command.
+ * `*` wildcard catch-all, or the world root itself.
  */
 function findEntityFile(
 	app: App,
@@ -143,7 +141,6 @@ function findEntityFile(
 	const fileTags = new Set(rawTags.map(t => t.replace(/^#/, '').toLowerCase()));
 
 	for (const entityType of Object.keys(templateSet.fieldSets)) {
-		if (entityType.toLowerCase() === 'generic') continue;
 		if (fileTags.has(entityType.toLowerCase())) {
 			return { type: 'entity-file', world, entityType, file };
 		}

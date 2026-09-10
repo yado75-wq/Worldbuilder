@@ -13,8 +13,7 @@ import {
 // ── Required files in every template set ─────────────────────────────────────
 
 const REQUIRED_FILES = [	
-	'WorldMeta_Fields.md',
-	'Generic_Fields.md',
+	'WorldMeta_Fields.md',	
 ];
 
 // ── Main entry point ──────────────────────────────────────────────────────────
