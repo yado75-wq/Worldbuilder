@@ -4,8 +4,7 @@ import { FakeVault, resetFakeObsidian } from '../fakes/obsidian';
 import {
 	auditWorld,
 	compareInstanceToTemplate,
-	findOrphanEntityNotes,
-	findSchemaDrift,
+	findOrphanEntityNotes,	
 } from '../../src/state/worldAudit';
 import { TemplateSetInfo } from '../../src/types/templateSet';
 import { WorldInfo } from '../../src/types/world';
