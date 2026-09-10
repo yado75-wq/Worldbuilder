@@ -24,6 +24,7 @@ import { importWorld } from './commands/ImportWorldCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 import { hasLeadingUnderscore } from './util/names';
+import { auditTemplateSet } from './state/templateSetAudit';
 import { t } from './i18n';
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
@@ -131,8 +132,40 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										.setTitle(t('settings.audit-set'))
 										.setIcon('scan-search')
 										.onClick(() => {
-											// Wired when audit lands
-											new Notice(t('notice.audit-set-pending'));
+											void (async () => {
+												await this.plugin.refreshState();
+												const current = this.plugin.state.templateSets.find(s => s.name === setName);
+												if (!current) {
+													new Notice(t('notice.template-set-not-found', { name: setName }));
+													return;
+												}
+												const report = auditTemplateSet(current, this.plugin.state.worlds);
+												const used =
+													report.usedBy.length === 0
+														? t('notice.audit-set-unused')
+														: t('notice.audit-set-used-by', {
+																list: report.usedBy
+																	.map(w =>
+																		w.status === 'active' ? `${w.name} ★` : w.name
+																	)
+																	.join(', '),
+															});
+												if (report.issues.length === 0) {
+													new Notice(
+														t('notice.audit-set-clean', { name: setName, used })
+													);
+												} else {
+													new Notice(
+														t('notice.audit-set-found', {
+															name: setName,
+															errors: String(report.errorCount),
+															warnings: String(report.warningCount),
+															used,
+														})
+													);
+												}
+												this.update();
+											})();
 										})
 									);
 

@@ -9,7 +9,10 @@ import {
 	parseFieldsWithIssues,
 	parseFolderRulesWithIssues,
 } from './ParseTemplateLines';
-
+import {
+	missingLinkTargetIssues,
+	fieldsWithoutRuleIssues,
+} from './templateSetAudit';
 // ── Required files in every template set ─────────────────────────────────────
 
 const REQUIRED_FILES = [	
@@ -217,6 +220,9 @@ async function buildTemplateSetInfo(
 		}
 	}
 
+	issues.push(...missingLinkTargetIssues(fieldSets));
+	issues.push(...fieldsWithoutRuleIssues(fieldSets, folderRules));
+	
 	return {
 		name: folder.name,
 		path: folder.path,

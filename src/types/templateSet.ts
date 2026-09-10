@@ -22,9 +22,12 @@ export type ValidationIssueKind =
 	| 'duplicate-folder-rule'
 	| 'malformed-line'
 	| 'unknown-link-type'
+	| 'link-target-missing'
+	| 'fields-without-rule'
 	| 'empty-folder-rules'
 	| 'empty-world-template'
 	| 'other';
+	
 export interface ValidationIssue {
 	severity: 'error' | 'warning' | 'info';
 	kind: ValidationIssueKind;
