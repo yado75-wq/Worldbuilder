@@ -25,10 +25,71 @@ import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 import { hasLeadingUnderscore } from './util/names';
 import { auditTemplateSet } from './state/templateSetAudit';
+import { auditWorld } from './state/worldAudit';
+import { ValidationIssue } from './types/templateSet';
 import { t } from './i18n';
+
+/** Shared issues table — set issues vs world issues passed in separately (never mixed). */
+function renderIssuesTable(
+	parentEl: HTMLElement,
+	issues: ValidationIssue[],
+	summary: string,
+	cssClass: string
+): void {
+	parentEl.querySelectorAll(`.${cssClass}`).forEach(el => el.remove());
+	if (issues.length === 0) return;
+
+	const details = parentEl.createEl('details', { cls: cssClass });
+	details.open = true;
+	details.createEl('summary', { text: summary });
+
+	const table = details.createEl('table', { cls: 'wb-issues-table' });
+	const head = table.createEl('tr');
+	for (const label of [
+		t('settings.issues-sev'),
+		t('settings.issues-kind'),
+		t('settings.issues-where'),
+		t('settings.issues-message'),
+	]) {
+		head.createEl('th', { text: label });
+	}
+	for (const issue of issues) {
+		const row = table.createEl('tr');
+		row.createEl('td', { text: issue.severity });
+		row.createEl('td', { text: issue.kind });
+		const where =
+			issue.file && issue.line != null
+				? `${issue.file}:${issue.line}`
+				: issue.file ?? '—';
+		row.createEl('td', { text: where });
+		row.createEl('td', { text: issue.message });
+	}
+}
+
+function issuesSummaryText(issues: ValidationIssue[]): string {
+	const errorCount = issues.filter(i => i.severity === 'error').length;
+	const warningCount = issues.filter(i => i.severity === 'warning').length;
+	if (errorCount > 0 && warningCount > 0) {
+		return t('settings.show-errors-and-warnings', {
+			errors: String(errorCount),
+			warnings: String(warningCount),
+		});
+	}
+	if (errorCount > 0) {
+		return t('settings.show-errors', { count: String(errorCount) });
+	}
+	if (warningCount > 0) {
+		return t('settings.show-warnings', { count: String(warningCount) });
+	}
+	return t('settings.show-notes');
+}
+
 
 export class WorldBuilderSettingTab extends PluginSettingTab {
 	plugin: WorldBuilderPlugin;
+
+	/** Last Audit world results per world path (not mixed with template-set scan issues). */
+	private worldIssuesByPath = new Map<string, ValidationIssue[]>();
 
 	constructor(app: App, plugin: WorldBuilderPlugin) {
 		super(app, plugin);
@@ -201,37 +262,12 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 							);
 
 						if (set.issues.length > 0) {
-							setting.settingEl.querySelectorAll('.wb-template-issues').forEach(el => el.remove());
-
-							const details = setting.settingEl.createEl('details', {
-								cls: 'wb-template-issues',
-							});
-
-							details.createEl('summary', {
-								text: issuesSummary,
-							});
-
-							const table = details.createEl('table', { cls: 'wb-issues-table' });
-							const head = table.createEl('tr');
-							for (const label of [
-								t('settings.issues-sev'),
-								t('settings.issues-kind'),
-								t('settings.issues-where'),
-								t('settings.issues-message'),
-							]) {
-								head.createEl('th', { text: label });
-							}
-							for (const issue of set.issues) {
-								const row = table.createEl('tr');
-								row.createEl('td', { text: issue.severity });
-								row.createEl('td', { text: issue.kind });
-								const where =
-									issue.file && issue.line != null
-										? `${issue.file}:${issue.line}`
-										: issue.file ?? '—';
-								row.createEl('td', { text: where });
-								row.createEl('td', { text: issue.message });
-							}
+							renderIssuesTable(
+								setting.settingEl,
+								set.issues,
+								issuesSummary,
+								'wb-template-issues'
+							);
 						}
 					},
 				});
@@ -275,6 +311,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 				const folderName = world.folder.name;
 				const nameMismatch = world.name !== folderName;
+				const worldIssues = this.worldIssuesByPath.get(world.path) ?? [];
 
 				worldItems.push({
 					name: nameMismatch
@@ -346,6 +383,35 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 									})
 								);
 
+								menu.addItem(item => item
+									.setTitle(t('settings.audit-world'))
+									.setIcon('scan-search')
+									.onClick(() => {
+										const report = auditWorld(
+											this.app,
+											world,
+											this.plugin.state.templateSets
+										);
+										this.worldIssuesByPath.set(path, report.issues);
+										if (report.issues.length === 0) {
+											new Notice(
+												t('notice.audit-world-clean', {
+													name: report.worldName,
+													set: report.templateSetName,
+												})
+											);
+										} else {
+											new Notice(
+												t('notice.audit-world-table', {
+													name: report.worldName,
+													count: String(report.issues.length),
+												})
+											);
+										}
+										this.update();
+									})
+								);
+								
 								menu.addSeparator();
 
 								menu.addItem(item => item
@@ -387,6 +453,15 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 								menu.showAtMouseEvent(evt);
 							})
 						);
+
+						if (worldIssues.length > 0) {
+							renderIssuesTable(
+								setting.settingEl,
+								worldIssues,
+								issuesSummaryText(worldIssues),
+								'wb-world-issues'
+							);
+						}
 
 						if (conflict && isActive) {
 							setting.nameEl.addClass('wb-invalid');
