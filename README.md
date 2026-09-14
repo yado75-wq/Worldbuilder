@@ -1,6 +1,6 @@
 # WorldBuilder Tools for Obsidian
 
-A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate the core functionality of World building tools like Chronicler — directly inside your vault, with no external dependencies.  Plugin does not enable any presentation functionality which other applications have and Obsidian does not. The core philosophy is that the user can complicate his life as much as he wants, we will hand him the tools to do it. Everything is based on Entities and Rules. User doesn't have to create folders via command, it's just easier if the user already knows the structure. User can add folder rules later when the structure is clear and there is a command to move entities to specified folders to keep vault clean. We try to add `Hot create` functionality to menus so the workflow would be as smooth as possible.
+A worldbuilding plugin for [Obsidian](https://obsidian.md) designed to simulate the core functionality of World building tools like Chronicler — directly inside your vault, with no external dependencies. Plugin does not enable any presentation functionality which other applications have and Obsidian does not. The core philosophy is that the user can complicate his life as much as he wants, we will hand him the tools to do it. Everything is based on Entities and Rules. User doesn't have to create folders via command, it's just easier if the user already knows the structure. User can add folder rules later when the structure is clear and there is a command to move entities to specified folders to keep vault clean. We try to add `Hot create` functionality to menus so the workflow would be as smooth as possible.
 
 ---
 
@@ -16,7 +16,8 @@ These two failed so many times that it made me reconsider my view of project man
 - **World kits** — export a world plus its template set as a zip; import via Settings (system file picker). Imported worlds are inactive; name clashes use a localized `(imported)` suffix
 - **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu. Freeform notes added below the auto-generated content survive future edits, same protected-section behavior as the dashboard
 - **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
-- **Template set management** — create, clone, reset, assign to a world, and set a default template set from the plugin settings tab
+- **Template set management** — create, clone, reset, assign to a world, set a default, **audit**, and **rename entity types** from the plugin settings tab
+- **Audit** — template-set audit (bindings, link targets, fields without rules) and world audit (binding + instance↔template drift); findings show in the issues table under the matching settings row
 - **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, a `## Needs attention` section flagging entities missing mandatory fields, and a protected Notes section that survives refresh
 - **World meta** — structured world bible (genre, tone, themes, premise, conflict etc.) editable via form
 - **File sync** — move misplaced entity files to their correct folders based on their tags
@@ -81,7 +82,35 @@ Notes:
 
 Use `*` as target folder to allow placement anywhere (e.g. Generic | *).
 Entity types not listed in folder rules are treated as `*` (creatable anywhere).
-Worlds or folders whose names start with _ are ignored by the plugin (archive / system).
+Worlds or folders whose names start with `_` are ignored by the plugin (archive / system).
+
+## Settings tab (plugin settings)
+
+Template sets and worlds are managed here. Prefer these tools over hand-editing stems and tags when you can.
+
+### Template sets
+
+| Control | What it does |
+| ------- | ------------ |
+| **Set as default** | New worlds use this set |
+| **Assign to world** | Writes `template_set` on the world's `_index.md` |
+| **Manage → Clone** | Copy set under a new name |
+| **Manage → Rename entity type…** | Safe type rename (see below) |
+| **Manage → Audit set** | Link targets, fields without rules, worlds using the set; issues under the set row |
+| **Manage → Reset to defaults** | Overwrite set files from plugin built-ins |
+| Header **+** | New template set (from defaults) |
+
+### Worlds
+
+| Control | What it does |
+| ------- | ------------ |
+| **Set as active** | Exactly one active world; use this to repair conflicts |
+| **Actions → Export world** | World kit zip (world + bound template set) |
+| **Actions → Audit world** | Binding + instance↔template mismatches; issues under the world row |
+| **Actions →** edit meta / clone / sync / refresh | Same family of commands as the file-tree menus |
+| Header **+** | New world or **Import world** |
+
+Scan validation issues (malformed lines, etc.) appear under the set automatically after load/refresh. **Audit** adds deeper checks on demand.
 
 ## Right-click commands
 
@@ -124,7 +153,7 @@ npm install
 npm run dev
 ```
 
-Run the test suite (pure-logic unit tests, no Obsidian mocking) with:
+Run the test suite with:
 
 ```bash
 npm test
@@ -143,35 +172,56 @@ On first load the plugin creates `_system/templates/defaults/` in your vault wit
 - The plugin does **not** silently use another template set.
 - If the whole `templates` folder is deleted, the next load recreates `_system/templates/defaults/` from plugin built-ins.
 
-### Renaming `*_Fields.md` (entity type id)
+### Entity type id (`*_Fields.md` stem)
 
 The file stem is the **type id** (menus, tags, folder-rules, `link:Type`).
 
-Renaming e.g. `Character_Fields.md` → `Postava_Fields.md` by hand changes the type id for **new** scans only. Existing notes keep old tags; `folder-rules.md` and `link:Character` lines are not updated. The type can look broken or empty until everything is aligned.
+#### Prefer: **Rename entity type…** (Settings → template set → Manage)
 
-#### **Safe today**
+For a type in that set (not **WorldMeta**), the command:
 
-- Translate the **label** column only (forms and, after regenerate, generated headings).
-- Rename **folders** and update `folder-rules.md` / `world-template.md` to match.
-- Leave **keys**, type stems, and tags alone unless you migrate them all yourself.
+1. Rewrites `link:` / `multiselect:link:` type tokens in other field files in the set  
+2. Updates the entity column in `folder-rules.md` (folder column unchanged)  
+3. Renames `Old_Fields.md` → `New_Fields.md`  
+4. Retags notes in **worlds bound to this set** (`old` tag → `new` tag, lowercase)
 
-A dedicated **Rename entity type** command (rules + tags + link targets) is planned; until then, do not rely on renaming only the fields file.
+New name cannot start with `_`. Confirm shows impact counts before any write.
+
+#### Hand rename (not recommended)
+
+Renaming only `Character_Fields.md` → `Postava_Fields.md` in the file explorer changes the type id on the **next scan** only. Existing note tags, `folder-rules.md`, and `link:Character` lines are **not** updated. Use **Audit set** / **Audit world** to see the damage, then prefer the rename command or fix by hand.
+
+#### Safe without renaming the type
+
+- Translate the **label** column only (forms and, after regenerate, generated headings).  
+- Rename **folders** and update `folder-rules.md` / `world-template.md` to match.  
+- Leave **keys**, type stems, and tags alone unless you migrate them all (or use the rename command).
+
+### Audit (what the warnings mean)
+
+| Audit | Typical findings |
+| ----- | ---------------- |
+| **Audit set** | Missing link target types, fields without folder-rules, which worlds use the set |
+| **Audit world** | Missing bound template set; notes tagged for a type with no fields file; **extra** frontmatter keys not in the type’s fields file; missing mandatory keys |
+
+Extra keys on a note often mean the template lost fields (or the note is older than the template). That inventory is intentional for later “suggest fields from entities” recovery — audit does not rewrite notes.
 
 ## Releasing
 
 - Bump the version in manifest.json and package.json.
 - Update versions.json so the new version maps to the minimum Obsidian version.
 - Run `npm run build` to produce the release artifacts.
-- Create a Git tag matching the manifest version, for example `1.0.1`, and push it to GitHub.
+- Create a Git tag matching the manifest version, for example `1.0.5`, and push it to GitHub.
 - The existing GitHub Actions workflow will create a draft release containing a ready-to-install `worldbuilder.zip` archive.
 
 ## Customization
 
 - **Add entity types** — create a new `_Fields.md` file and add a line to `folder-rules.md`. No code changes needed.
-- **Translate labels** — change the label column in `*_Fields.md`; keep keys and type stems stable (see Renaming above)
+- **Rename entity types** — Settings → Manage → **Rename entity type…** (not only the file name)
+- **Translate labels** — change the label column in `*_Fields.md`; keep keys and type stems stable unless you run rename
 - **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
 - **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings
-- **Manage template sets** — in the plugin settings tab you can create a new set, clone an existing one, assign a set to a specific world, reset a set to plugin defaults, or mark one as the default for new worlds
+- **Manage template sets** — create, clone, assign, audit, rename types, reset, or mark default in the settings tab
 
 ## Localization
 
@@ -219,5 +269,5 @@ there's exactly one place this ever needs updating.
 
 ## Requirements
 
-- Obsidian v1.13.0 or later (check 'manifest.json' for the exact minimum)
+- Obsidian v1.13.0 or later (check `manifest.json` for the exact minimum)
 - Desktop only (Windows, macOS, Linux)

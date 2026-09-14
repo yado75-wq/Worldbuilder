@@ -48,11 +48,17 @@ to the GitHub Wiki — edit it here, not there.
   new world / import and new template set
 - **Leading `_` identity rules** — block creating worlds, entities, template sets
   with names starting with `_`
+- **Template-set audit** — bindings, link-target gaps, fields without rules;
+  issues table under the set row
+- **World audit** — binding, rule orphans, instance↔template drift (extra /
+  missing mandatory frontmatter keys); issues table under the world row
+- **Rename entity type** — Settings → Manage: rewrite link tokens + folder-rules,
+  rename `Type_Fields.md`, retag notes in bound worlds; WorldMeta reserved
 
 ## In design (not yet implemented)
 
-- **Rename / delete entity type** — migrate `*_Fields.md` stem, folder-rules,
-  tags, and `link:` / multiselect targets without breaking existing notes
+- **Delete entity type** — remove fields file + clean rules/tokens/tags with
+  confirm (rename is shipped; delete is separate)
 
 ## Deferred, not rejected
 
@@ -61,14 +67,13 @@ to the GitHub Wiki — edit it here, not there.
 - **Localized unit pluralization** (Time §10) — cosmetic.
 - **Comparability-by-matching-units enforcement** (Time §4) — low priority;
   widget does not currently produce divergent units alone (Time §12).
-- **Automatic propagation of stale `Resolved:` values** (Time §10–11) —
-  manual `Refresh all timeframes` covers this; full graph ordering later if needed.
 - **Decimal offsets in the Time widget** (Time §10) — storage allows; widget
   stays whole numbers for now.
 - **Multiselect picker search / large lists** — scale UX if vaults get huge
   equipment sets.
 - **Suggest fields from entities** — draft `*_Fields.md` from notes of a type
-  after fields were lost/overwritten (best-effort).
+  after fields were lost/overwritten (best-effort); world audit drift is the
+  pre-step inventory.
 - **Kit polish** — file-explorer Export world; richer template-set clash UI.
 
 ## Considered and dropped
@@ -91,10 +96,10 @@ silently re-proposed without anyone remembering why:
 
 ## Next version
 
-Primary candidate: **Rename / delete entity type** (design + implement).
+Primary candidates: **Delete entity type**; **suggest fields from entities**
+(using world-audit drift inventory).
 
-Supporting: kit polish, suggest-fields recovery, non-English locale packs when
-reviewers exist.
+Supporting: kit polish, non-English locale packs when reviewers exist.
 
 Policy reference: `docs/next-release-consistency-sharing.md` (language vs notes,
 safe template edits, sharing).
