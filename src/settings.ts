@@ -11,6 +11,7 @@ import {
 import WorldBuilderPlugin from './main';
 import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './formkit/ui/InputModal';
+import { ConfirmModal } from './ui/ConfirmModal';
 import { setActiveWorld } from './commands/SwitchWorldCommand';
 import { editWorldMeta } from './commands/EditWorldMetaCommand';
 import { cloneWorld } from './commands/CloneWorldCommand';
@@ -21,6 +22,7 @@ import { refreshAllTimeframes } from './commands/RefreshAllTimeframesCommand';
 import { newWorld } from './commands/NewWorldCommand';
 import { exportWorld } from './commands/ExportWorldCommand';
 import { importWorld } from './commands/ImportWorldCommand';
+import { listRenamableEntityTypes, renameEntityType } from './commands/RenameEntityTypeCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 import { hasLeadingUnderscore } from './util/names';
@@ -184,8 +186,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										.setTitle(t('settings.rename-entity-type'))
 										.setIcon('pencil')
 										.onClick(() => {
-											// Wired when RenameEntityTypeCommand lands
-											new Notice(t('notice.rename-entity-type-pending'));
+											void this.openRenameEntityType(setName);
 										})
 									);
 
@@ -663,6 +664,87 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		await this.plugin.refreshState();
 		this.update();
 		new Notice(t('settings.assigned', { templateSet: templateSetName, world: world.name }));
+	}
+
+	private openRenameEntityType(setName: string): void {
+		const set = this.plugin.state.templateSets.find(s => s.name === setName);
+		if (!set) {
+			new Notice(t('notice.template-set-not-found', { name: setName }));
+			return;
+		}
+		const types = listRenamableEntityTypes(set.fieldSets);
+		if (types.length === 0) {
+			new Notice(t('notice.rename-entity-none'));
+			return;
+		}
+
+		// 1) Pick old type
+		void (async () => {
+			const oldType = await new Promise<string | null>((resolve) => {
+				let done = false;
+				const modal = new Modal(this.app);
+				modal.titleEl.setText(t('modal.rename-entity-pick-title', { set: setName }));
+				for (const typeName of types) {
+					const btn = modal.contentEl.createEl('button', {
+						text: typeName,
+						cls: 'wb-world-picker-btn',
+					});
+					btn.addEventListener('click', () => {
+						if (done) return;
+						done = true;
+						modal.close();
+						resolve(typeName);
+					});
+				}
+				modal.onClose = () => {
+					if (!done) resolve(null);
+				};
+				modal.open();
+			});
+			if (!oldType) return;
+
+			// 2) New name
+			new InputModal(
+				this.app,
+				t('modal.rename-entity-new-prompt', { old: oldType }),
+				t('modal.rename-entity-new-placeholder'),
+				oldType,
+				(name) => {
+					void (async () => {
+						const result = await renameEntityType(
+							this.app,
+							this.plugin.state,
+							setName,
+							oldType,
+							name,
+							async (impact) => {
+								return await new Promise<boolean>((resolve) => {
+									new ConfirmModal(
+										this.app,
+										t('modal.rename-entity-confirm', {
+											old: oldType,
+											new: name.trim(),
+											rules: String(impact.rulesLines),
+											fields: String(impact.fieldTokenFiles),
+											notes: String(impact.notesEstimate),
+											worlds: String(impact.worldCount),
+										}),
+										(ok) => resolve(ok),
+										t('settings.rename-entity-type').replace('…', ''),
+										t('form.cancel'),
+										t('modal.rename-entity-confirm-title')
+									).open();
+								});
+							}
+						);
+						if (!result.ok) return;
+						await this.plugin.refreshState();
+						this.update();
+					})();
+				},
+				() => {}
+			).open();
+		})();
 	}
 }
 
