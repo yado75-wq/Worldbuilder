@@ -1,4 +1,5 @@
 import { TemplateSetInfo } from '../types/templateSet';
+import { FieldDefinition } from '../formkit';
 
 /**
  * Types that are not placed via folder-rules / auto-*.
@@ -6,16 +7,29 @@ import { TemplateSetInfo } from '../types/templateSet';
  */
 const NON_PLACEMENT_TYPES = new Set(['worldmeta']);
 
+function resolveFields(
+	templateSet: TemplateSetInfo,
+	entityType: string
+): FieldDefinition[] | undefined {
+	if (entityType in templateSet.fieldSets) {
+		return templateSet.fieldSets[entityType];
+	}
+	const key = Object.keys(templateSet.fieldSets).find(
+		k => k.toLowerCase() === entityType.toLowerCase()
+	);
+	return key ? templateSet.fieldSets[key] : undefined;
+}
+
 /**
- * A type is usable for New/Edit only when it has a non-empty field set
- * and at least one title field. Empty *_Fields.md ≡ absent.
+ * A type is usable for New/Edit/hot-create only when it has a non-empty field set
+ * and at least one title field. Empty or missing *_Fields.md ≡ not usable.
  */
 export function isEntityTypeUsable(
 	templateSet: TemplateSetInfo | null | undefined,
 	entityType: string
 ): boolean {
 	if (!templateSet) return false;
-	const fields = templateSet.fieldSets[entityType];
+	const fields = resolveFields(templateSet, entityType);
 	if (!fields || fields.length === 0) return false;
 	return fields.some(f => f.display === 'title');
 }

@@ -114,6 +114,16 @@ export async function createEntity(
 				);
 				return result.ok ? result.link : null;
 			},
+			canCreateLink: (field) => {
+				const types =
+					field.linkTypes && field.linkTypes.length > 0
+						? field.linkTypes
+						: field.linkFolder
+							? [field.linkFolder]
+							: [];
+				if (types.length !== 1) return false;
+				return isEntityTypeUsable(templateSet, types[0]!);
+			},
 		});
 		modal.open();
 	});

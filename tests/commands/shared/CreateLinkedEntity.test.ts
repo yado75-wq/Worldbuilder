@@ -37,7 +37,17 @@ function linkField(entityType: string): FieldDefinition {
 function buildState(
 	app: App,
 	folderRules: TemplateSetInfo['folderRules'],
-	fieldSets: TemplateSetInfo['fieldSets'] = {}
+	fieldSets: TemplateSetInfo['fieldSets'] = {
+		Faction: [
+			{
+				key: 'name',
+				label: 'Name',
+				mandatory: true,
+				type: 'text',
+				display: 'title',
+			},
+		],
+	}
 ): { state: PluginState; world: WorldInfo; templateSet: TemplateSetInfo } {
 	const vault = app.vault as unknown as FakeVault;
 	const indexFile = asTFile(
@@ -135,6 +145,21 @@ describe('createLinkedEntity', () => {
 
 		expect(result).toMatchObject({ ok: false, code: 'already-exists' });
 		expect(vault.contentAt(`${WORLD}/Factions/Iron.md`)).toContain('ORIGINAL');
+	});
+
+	it('rejects when target type has no usable fields file', async () => {
+		const { state, world, templateSet } = buildState(
+			app,
+			[{ entityType: 'Faction', targetFolder: 'Factions' }],
+			{} // no Faction_Fields
+		);
+
+		const result = await createLinkedEntity(
+			app, state, world, templateSet, CHAR_FOLDER, linkField('Faction'), 'Ghost'
+		);
+
+		expect(result).toEqual({ ok: false, code: 'type-not-usable', detail: 'Faction' });
+		expect(app.vault.getAbstractFileByPath(`${WORLD}/Factions/Ghost.md`)).toBeNull();
 	});
 
 	it('returns no-link-type when the field has no link type', async () => {

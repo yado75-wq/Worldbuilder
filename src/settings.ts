@@ -23,6 +23,7 @@ import { newWorld } from './commands/NewWorldCommand';
 import { exportWorld } from './commands/ExportWorldCommand';
 import { importWorld } from './commands/ImportWorldCommand';
 import { listRenamableEntityTypes, renameEntityType } from './commands/RenameEntityTypeCommand';
+import { listDeletableEntityTypes, deleteEntityType } from './commands/DeleteEntityTypeCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 import { hasLeadingUnderscore } from './util/names';
@@ -189,7 +190,7 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 											void this.openRenameEntityType(setName);
 										})
 									);
-
+							
 									menu.addItem(item => item
 										.setTitle(t('settings.audit-set'))
 										.setIcon('scan-search')
@@ -233,6 +234,15 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 
 									menu.addSeparator();
 
+									menu.addItem(item => item
+										.setTitle(t('settings.delete-entity-type'))
+										.setIcon('trash')
+										.setWarning(true)
+										.onClick(() => {
+											void this.openDeleteEntityType(setName);
+										})
+									);
+									
 									menu.addItem(item => item
 										.setTitle(t('settings.reset-to-defaults'))
 										.setIcon('rotate-ccw')
@@ -744,6 +754,86 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 				},
 				() => {}
 			).open();
+		})();
+	}
+
+	private openDeleteEntityType(setName: string): void {
+		const set = this.plugin.state.templateSets.find(s => s.name === setName);
+		if (!set) {
+			new Notice(t('notice.template-set-not-found', { name: setName }));
+			return;
+		}
+		const types = listDeletableEntityTypes(set.fieldSets);
+		if (types.length === 0) {
+			new Notice(t('notice.delete-entity-none'));
+			return;
+		}
+
+		void (async () => {
+			const typeName = await new Promise<string | null>((resolve) => {
+				let done = false;
+				const modal = new Modal(this.app);
+				modal.titleEl.setText(t('modal.delete-entity-pick-title', { set: setName }));
+				for (const name of types) {
+					const btn = modal.contentEl.createEl('button', {
+						text: name,
+						cls: 'wb-world-picker-btn',
+					});
+					btn.addEventListener('click', () => {
+						if (done) return;
+						done = true;
+						modal.close();
+						resolve(name);
+					});
+				}
+				modal.onClose = () => {
+					if (!done) resolve(null);
+				};
+				modal.open();
+			});
+			if (!typeName) return;
+
+			const result = await deleteEntityType(
+				this.app,
+				this.plugin.state,
+				setName,
+				typeName,
+				async (impact) => {
+					const lines = [
+						t('modal.delete-entity-confirm-head', {
+							type: typeName,
+							set: setName,
+						}),
+						'',
+						t('modal.delete-entity-confirm-instances', {
+							count: String(impact.instanceCount),
+						}),
+						t('modal.delete-entity-confirm-actions'),
+						impact.willRemoveFolderRule
+							? t('modal.delete-entity-will-remove-rule')
+							: t('modal.delete-entity-keep-rule'),
+						impact.willCleanLinkTokens
+							? t('modal.delete-entity-will-clean-links')
+							: t('modal.delete-entity-keep-links'),
+					];
+					if (impact.genericDefaultsWarning) {
+						lines.push('', t('modal.delete-entity-generic-warn'));
+					}
+					return await new Promise<boolean>((resolve) => {
+						new ConfirmModal(
+							this.app,
+							lines.join('\n'),
+							(ok) => resolve(ok),
+							t('settings.delete-entity-type').replace('…', ''),
+							t('form.cancel'),
+							t('modal.delete-entity-confirm-title')
+						).open();
+					});
+				}
+			);
+			if (!result.ok) return;
+			await this.plugin.refreshState();
+			this.update();
 		})();
 	}
 }

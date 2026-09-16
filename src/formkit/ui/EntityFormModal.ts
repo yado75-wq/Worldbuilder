@@ -20,6 +20,8 @@ export interface EntityFormModalOptions {
 	onSubmit: (result: FormResult) => void;
 	onCancel: () => void;
 	onCreateLink?: (field: FieldDefinition, name: string) => Promise<string | null>;
+	/** When set, "Create new …" is shown only if this returns true (e.g. target type has fields). */
+	canCreateLink?: (field: FieldDefinition) => boolean;
 	worldTimeUnit?: string;
 	timeframePointCandidates?: Record<string, string[]>;
 }
@@ -263,7 +265,11 @@ export class EntityFormModal extends Modal {
 			}
 		}
 
-		if (this.options.onCreateLink && typeForCreate) {
+		const allowCreate =
+			!!this.options.onCreateLink &&
+			!!typeForCreate &&
+			(this.options.canCreateLink?.(field) ?? true);
+		if (allowCreate) {
 			drop.addOption(CREATE_VALUE, t('form.create-new', { type: typeForCreate }));
 		}
 

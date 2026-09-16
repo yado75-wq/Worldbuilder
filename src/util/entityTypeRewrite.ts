@@ -1,5 +1,5 @@
 /**
- * Pure rewrites for rename-entity-type (template set files + note tags).
+ * Pure rewrites for rename/delete entity type (template set files + note tags).
  * No vault I/O — command layer applies results.
  */
 
@@ -38,7 +38,46 @@ function replaceTypeInChain(chain: string, oldType: string, newType: string): st
 	return chain
 		.split('>')
 		.map(seg => (seg.trim() === oldType ? newType : seg.trim()))
-		.filter((seg, i, arr) => !(seg === '' && i > 0 && i < arr.length - 1))
+		.filter(seg => seg.length > 0)
+		.join('>');
+}
+
+/** Remove an exact type segment from link / multiselect:link chains. */
+export function removeTypeFromFieldTypeSpec(typeRaw: string, typeToRemove: string): string {
+	const trimmed = typeRaw.trim();
+	const lower = trimmed.toLowerCase();
+
+	if (lower.startsWith('link:')) {
+		const colon = trimmed.indexOf(':');
+		const prefix = trimmed.slice(0, colon + 1);
+		const chain = trimmed.slice(colon + 1);
+		const next = removeTypeFromChain(chain, typeToRemove);
+		if (next === '') return 'text';
+		return prefix + next;
+	}
+
+	if (lower.startsWith('multiselect:')) {
+		const firstColon = trimmed.indexOf(':');
+		const after = trimmed.slice(firstColon + 1);
+		const kindSep = after.indexOf(':');
+		if (kindSep === -1) return trimmed;
+		const kind = after.slice(0, kindSep).trim().toLowerCase();
+		if (kind !== 'link') return trimmed;
+		const head = trimmed.slice(0, firstColon + 1) + after.slice(0, kindSep + 1);
+		const payload = after.slice(kindSep + 1);
+		const next = removeTypeFromChain(payload, typeToRemove);
+		if (next === '') return 'text';
+		return head + next;
+	}
+
+	return trimmed;
+}
+
+function removeTypeFromChain(chain: string, typeToRemove: string): string {
+	return chain
+		.split('>')
+		.map(seg => seg.trim())
+		.filter(seg => seg.length > 0 && seg !== typeToRemove)
 		.join('>');
 }
 
@@ -73,6 +112,33 @@ export function rewriteFieldsFileContent(
 	return { content: out.join('\n'), replacements };
 }
 
+/** Strip type segments from link cells in a fields file (delete-entity-type cleanup). */
+export function removeTypeFromFieldsFileContent(
+	raw: string,
+	typeToRemove: string
+): { content: string; replacements: number } {
+	let replacements = 0;
+	const lines = raw.split(/\r?\n/);
+	const out = lines.map(line => {
+		const listPrefix = line.match(/^([-*]\s*)/)?.[1] ?? '';
+		const withoutList = listPrefix ? line.slice(listPrefix.length) : line;
+		const trimmedLine = withoutList.trim();
+		if (!trimmedLine || trimmedLine.startsWith('#')) return line;
+
+		const parts = withoutList.split('|');
+		if (parts.length < 4) return line;
+
+		const typeCell = parts[3] ?? '';
+		const rewritten = removeTypeFromFieldTypeSpec(typeCell, typeToRemove);
+		if (rewritten === typeCell.trim()) return line;
+
+		replacements += 1;
+		parts[3] = ` ${rewritten} `;
+		return listPrefix + parts.map(p => p.trim()).join(' | ');
+	});
+	return { content: out.join('\n'), replacements };
+}
+
 /** Rewrite entity-type column in folder-rules.md; folder column unchanged. */
 export function rewriteFolderRulesContent(
 	raw: string,
@@ -97,6 +163,34 @@ export function rewriteFolderRulesContent(
 		return `${listPrefix}${newType} | ${folder}`;
 	});
 	return { content: out.join('\n'), replacements };
+}
+
+/** Remove folder-rules lines whose entity column equals entityType. */
+export function removeFolderRulesEntityLine(
+	raw: string,
+	entityType: string
+): { content: string; removals: number } {
+	let removals = 0;
+	const lines = raw.split(/\r?\n/);
+	const out: string[] = [];
+	for (const line of lines) {
+		const listPrefix = line.match(/^([-*]\s*)/)?.[1] ?? '';
+		const withoutList = listPrefix ? line.slice(listPrefix.length) : line;
+		const cleaned = withoutList.trim();
+		if (!cleaned || cleaned.startsWith('#')) {
+			out.push(line);
+			continue;
+		}
+		const parts = cleaned.split('|').map(s => s.trim());
+		const et = parts[0];
+		const folder = parts[1];
+		if (et && folder && et === entityType) {
+			removals += 1;
+			continue;
+		}
+		out.push(line);
+	}
+	return { content: out.join('\n'), removals };
 }
 
 /**
@@ -151,4 +245,26 @@ export function fieldsFileName(typeStem: string): string {
 
 export function isReservedEntityType(typeStem: string): boolean {
 	return typeStem.trim().toLowerCase() === 'worldmeta';
+}
+
+/** True if type cell mentions typeName as a link-chain segment. */
+export function fieldTypeSpecReferencesType(typeRaw: string, typeName: string): boolean {
+	const trimmed = typeRaw.trim();
+	const lower = trimmed.toLowerCase();
+	let chain = '';
+	if (lower.startsWith('link:')) {
+		chain = trimmed.slice(trimmed.indexOf(':') + 1);
+	} else if (lower.startsWith('multiselect:')) {
+		const after = trimmed.slice(trimmed.indexOf(':') + 1);
+		const kindSep = after.indexOf(':');
+		if (kindSep === -1) return false;
+		if (after.slice(0, kindSep).trim().toLowerCase() !== 'link') return false;
+		chain = after.slice(kindSep + 1);
+	} else {
+		return false;
+	}
+	return chain
+		.split('>')
+		.map(s => s.trim())
+		.some(s => s === typeName);
 }

@@ -3,9 +3,10 @@ import { TemplateSetInfo } from '../../types/templateSet';
 import { WorldInfo } from '../../types/world';
 import { PluginState } from '../../types/runtime';
 import { FieldDefinition } from '../../formkit';
-import { buildEntityContent, buildMinimalEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
+import { buildEntityContent, DEFAULT_ENTITY_NOTES } from './EntityContent';
 import { refreshDashboard, worldDashboardPath } from '../RefreshDashboardCommand';
 import { hasLeadingUnderscore } from '../../util/names';
+import { isEntityTypeUsable } from '../../context/EntityTypeUsable';
 import { t } from '../../i18n';
 
 export type CreateLinkedEntityResult =
@@ -16,7 +17,8 @@ export type CreateLinkedEntityResult =
 				| 'no-link-type'
 				| 'empty-name'
 				| 'already-exists'
-				| 'leading-underscore';
+				| 'leading-underscore'
+				| 'type-not-usable';
 			detail?: string;
 	  };
 
@@ -29,6 +31,7 @@ function err(
 
 /**
  * Hot-create a linked entity from a link field.
+ * Requires a usable field set for the target type (fields file present + title).
  * Placement: concrete folder-rule → that folder; * or no rule → currentEntityFolderPath.
  */
 export async function createLinkedEntity(
@@ -45,16 +48,32 @@ export async function createLinkedEntity(
 		return err('no-link-type');
 	}
 
+	if (!isEntityTypeUsable(templateSet, entityType)) {
+		new Notice(t('notice.no-usable-fields', { type: entityType }));
+		return err('type-not-usable', entityType);
+	}
+
 	const trimmedName = name.trim();
 	if (!trimmedName) {
 		return err('empty-name');
 	}
-	
+
 	if (hasLeadingUnderscore(trimmedName)) {
 		new Notice(t('notice.leading-underscore'));
 		return err('leading-underscore', trimmedName);
 	}
-	const linkedFields = templateSet.fieldSets[entityType];
+
+	const linkedFields =
+		templateSet.fieldSets[entityType] ??
+		Object.entries(templateSet.fieldSets).find(
+			([k]) => k.toLowerCase() === entityType.toLowerCase()
+		)?.[1];
+
+	if (!linkedFields || linkedFields.length === 0) {
+		new Notice(t('notice.no-usable-fields', { type: entityType }));
+		return err('type-not-usable', entityType);
+	}
+
 	const targetFolder = resolveLinkedTargetFolderForType(
 		world,
 		templateSet,
@@ -74,9 +93,13 @@ export async function createLinkedEntity(
 		return err('already-exists', targetPath);
 	}
 
-	const content = linkedFields && linkedFields.length > 0
-		? buildEntityContent(linkedFields, {}, entityType, trimmedName, DEFAULT_ENTITY_NOTES)
-		: buildMinimalEntityContent(entityType, trimmedName, DEFAULT_ENTITY_NOTES);
+	const content = buildEntityContent(
+		linkedFields,
+		{},
+		entityType,
+		trimmedName,
+		DEFAULT_ENTITY_NOTES
+	);
 
 	await app.vault.create(targetPath, content);
 	new Notice(
@@ -85,7 +108,7 @@ export async function createLinkedEntity(
 			name: trimmedName,
 		})
 	);
-	
+
 	const dashPath = worldDashboardPath(world.path);
 	if (app.vault.getAbstractFileByPath(dashPath)) {
 		await refreshDashboard(app, state, world.path, false);
@@ -100,7 +123,11 @@ function resolveLinkedTargetFolderForType(
 	entityType: string,
 	currentEntityFolderPath: string
 ): string {
-	const rule = templateSet.folderRules.find(r => r.entityType === entityType);
+	const rule =
+		templateSet.folderRules.find(r => r.entityType === entityType) ??
+		templateSet.folderRules.find(
+			r => r.entityType.toLowerCase() === entityType.toLowerCase()
+		);
 	if (rule?.targetFolder && rule.targetFolder !== '*') {
 		return `${world.path}/${rule.targetFolder}`;
 	}

@@ -121,17 +121,27 @@ export async function editEntity(
 			onSubmit: (r) => { submitted = true; resolve(r); },
 			onCancel: () => { if (!submitted) resolve(null); },
 			onCreateLink: async (field, name) => {
-					const result = await createLinkedEntity(
-						app,
-						state,
-						world,
-						templateSet,
-						file.parent?.path ?? world.path,
-						field,
-						name
-					);
-					return result.ok ? result.link : null;
-				},
+				const result = await createLinkedEntity(
+					app,
+					state,
+					world,
+					templateSet,
+					file.parent?.path ?? world.path,
+					field,
+					name
+				);
+				return result.ok ? result.link : null;
+			},
+			canCreateLink: (field) => {
+				const types =
+					field.linkTypes && field.linkTypes.length > 0
+						? field.linkTypes
+						: field.linkFolder
+							? [field.linkFolder]
+							: [];
+				if (types.length !== 1) return false;
+				return isEntityTypeUsable(templateSet, types[0]!);
+			},
 		});
 		modal.open();
 	});
