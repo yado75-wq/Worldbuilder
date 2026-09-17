@@ -5,6 +5,33 @@ Keep `manifest.json` / tag / zip assets in sync with the version heading.
 
 ---
 
+## 1.0.5
+
+**Delete entity type and catalog-safe hot-create**
+
+### What’s new
+
+- **Delete entity type** (Settings → template set → **Manage** → **Delete entity type…**)
+  - Removes `Type_Fields.md` so New / Edit / hot-create stop for that type
+  - **Does not** delete notes or strip type tags — notes stay linkable (catalog / rulebook mode)
+  - Zero instances: default cleanup of folder-rules line and inbound link tokens
+  - With instances: keep rules and link tokens by default
+  - **WorldMeta** cannot be deleted; **Generic** on `defaults` may be restored on ensure-defaults
+- **Hot-create gated on usable fields** — form “Create new …” and `createLinkedEntity` require a usable field set for the target type (same rule as honest menus)
+
+### Fixes / behavior notes
+
+- Deleting only the fields file by hand is still incomplete; use **Delete entity type** when you want controlled cleanup
+- After delete, refresh settings/state before opening forms so menus and hot-create match the scan
+
+### Install
+
+Same as before: extract the release zip into `.obsidian/plugins/world-builder-tools/`, or update via BRAT.
+
+Requires **Obsidian 1.13.0+** (desktop).
+
+---
+
 ## 1.0.4
 
 **Template hygiene and type rename**
@@ -65,4 +92,3 @@ Useful context if this is the first time you publish release text:
 Extract the zip into `.obsidian/plugins/world-builder-tools/`, or update via BRAT.
 Requires Obsidian 1.13.0+ (desktop).
 ```
-

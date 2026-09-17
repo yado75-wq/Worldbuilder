@@ -16,7 +16,7 @@ These two failed so many times that it made me reconsider my view of project man
 - **World kits** — export a world plus its template set as a zip; import via Settings (system file picker). Imported worlds are inactive; name clashes use a localized `(imported)` suffix
 - **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu. Freeform notes added below the auto-generated content survive future edits, same protected-section behavior as the dashboard
 - **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
-- **Template set management** — create, clone, reset, assign to a world, set a default, **audit**, and **rename entity types** from the plugin settings tab
+- **Template set management** — create, clone, reset, assign to a world, set a default, **audit**, **rename** and **delete entity types** from the plugin settings tab
 - **Audit** — template-set audit (bindings, link targets, fields without rules) and world audit (binding + instance↔template drift); findings show in the issues table under the matching settings row
 - **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, a `## Needs attention` section flagging entities missing mandatory fields, and a protected Notes section that survives refresh
 - **World meta** — structured world bible (genre, tone, themes, premise, conflict etc.) editable via form
@@ -70,7 +70,7 @@ Each `_Fields.md` file defines one field per line:
 Notes:
 
 - Links and multiselect:link target entity types, not folder names (folder placement still comes from folder-rules.md).
-- Hot-create is available only for single link: fields with exactly one type.
+- Hot-create is available only for single `link:` fields with exactly one type, and only when that type has a usable `*_Fields.md` (fields + title). Missing fields file → no New / Edit / hot-create; existing tagged notes remain linkable (catalog mode).
 - Multiselect values are stored as a YAML list in frontmatter and shown as nested bullets under the property in the note body.
 - Invalid or unknown type tokens are reported in Settings → template issues (file, line, message).
 
@@ -96,6 +96,7 @@ Template sets and worlds are managed here. Prefer these tools over hand-editing 
 | **Assign to world** | Writes `template_set` on the world's `_index.md` |
 | **Manage → Clone** | Copy set under a new name |
 | **Manage → Rename entity type…** | Safe type rename (see below) |
+| **Manage → Delete entity type…** | Remove fields file; optional rules/token cleanup (see below) |
 | **Manage → Audit set** | Link targets, fields without rules, worlds using the set; issues under the set row |
 | **Manage → Reset to defaults** | Overwrite set files from plugin built-ins |
 | Header **+** | New template set (from defaults) |
@@ -187,6 +188,17 @@ For a type in that set (not **WorldMeta**), the command:
 
 New name cannot start with `_`. Confirm shows impact counts before any write.
 
+#### Prefer: **Delete entity type…** (Settings → template set → Manage)
+
+Removes the type **definition** (`Type_Fields.md`) so New / Edit / hot-create stop. **Does not** delete notes or strip type tags — existing notes stay linkable (rulebook / equipment catalog pattern).
+
+| Instances in bound worlds | Default cleanup |
+| ------------------------- | --------------- |
+| **0** | Also remove the folder-rules line and inbound `link:` / `multiselect:link:` tokens for that type |
+| **≥ 1** | Keep folder-rules and link tokens (catalog still usable) |
+
+**WorldMeta** cannot be deleted. **Generic** on the `defaults` set may reappear after ensure-defaults / next load.
+
 #### Hand rename (not recommended)
 
 Renaming only `Character_Fields.md` → `Postava_Fields.md` in the file explorer changes the type id on the **next scan** only. Existing note tags, `folder-rules.md`, and `link:Character` lines are **not** updated. Use **Audit set** / **Audit world** to see the damage, then prefer the rename command or fix by hand.
@@ -218,6 +230,7 @@ Extra keys on a note often mean the template lost fields (or the note is older t
 
 - **Add entity types** — create a new `_Fields.md` file and add a line to `folder-rules.md`. No code changes needed.
 - **Rename entity types** — Settings → Manage → **Rename entity type…** (not only the file name)
+- **Delete entity types** — Settings → Manage → **Delete entity type…** (fields file only; notes/tags kept)
 - **Translate labels** — change the label column in `*_Fields.md`; keep keys and type stems stable unless you run rename
 - **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
 - **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings

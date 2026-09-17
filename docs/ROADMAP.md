@@ -54,11 +54,19 @@ to the GitHub Wiki — edit it here, not there.
   missing mandatory frontmatter keys); issues table under the world row
 - **Rename entity type** — Settings → Manage: rewrite link tokens + folder-rules,
   rename `Type_Fields.md`, retag notes in bound worlds; WorldMeta reserved
+- **Delete entity type** — Settings → Manage: remove `Type_Fields.md` (stops
+  New/Edit/hot-create); note tags kept so existing notes stay linkable
+  (catalog / rulebook mode); with zero instances, folder-rules line and inbound
+  link tokens are cleaned by default; with instances, rules/tokens kept by
+  default; WorldMeta cannot be deleted; Generic on `defaults` may be restored
+  on ensure-defaults
+- **Hot-create gated on usable fields** — `createLinkedEntity` and the form
+  “Create new …” row require a usable field set for the target type (same rule
+  as honest menus); no minimal stub file when fields are missing
 
 ## In design (not yet implemented)
 
-- **Delete entity type** — remove fields file + clean rules/tokens/tags with
-  confirm (rename is shipped; delete is separate)
+_(none currently)_
 
 ## Deferred, not rejected
 
@@ -75,6 +83,8 @@ to the GitHub Wiki — edit it here, not there.
   after fields were lost/overwritten (best-effort); world audit drift is the
   pre-step inventory.
 - **Kit polish** — file-explorer Export world; richer template-set clash UI.
+- **Catalog-aware audit wording** — treat “tagged notes, no fields file” as
+  intentional catalog info rather than a hard error (optional polish).
 
 ## Considered and dropped
 
@@ -96,10 +106,11 @@ silently re-proposed without anyone remembering why:
 
 ## Next version
 
-Primary candidates: **Delete entity type**; **suggest fields from entities**
-(using world-audit drift inventory).
+Primary candidate: **Suggest fields from entities** (using world-audit drift
+inventory).
 
-Supporting: kit polish, non-English locale packs when reviewers exist.
+Supporting: kit polish, non-English locale packs when reviewers exist,
+catalog-aware audit wording.
 
 Policy reference: `docs/next-release-consistency-sharing.md` (language vs notes,
 safe template edits, sharing).
