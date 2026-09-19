@@ -16,7 +16,7 @@ These two failed so many times that it made me reconsider my view of project man
 - **World kits** — export a world plus its template set as a zip; import via Settings (system file picker). Imported worlds are inactive; name clashes use a localized `(imported)` suffix
 - **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu. Freeform notes added below the auto-generated content survive future edits, same protected-section behavior as the dashboard
 - **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
-- **Template set management** — create, clone, reset, assign to a world, set a default, **audit**, **rename** and **delete entity types** from the plugin settings tab
+- **Template set management** — create, clone, **rename template set**, reset, assign to a world, set a default, **audit**, **rename** and **delete entity types** from the plugin settings tab
 - **Audit** — template-set audit (bindings, link targets, fields without rules) and world audit (binding + instance↔template drift); findings show in the issues table under the matching settings row
 - **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, a `## Needs attention` section flagging entities missing mandatory fields, and a protected Notes section that survives refresh
 - **World meta** — structured world bible (genre, tone, themes, premise, conflict etc.) editable via form
@@ -95,6 +95,7 @@ Template sets and worlds are managed here. Prefer these tools over hand-editing 
 | **Set as default** | New worlds use this set |
 | **Assign to world** | Writes `template_set` on the world's `_index.md` |
 | **Manage → Clone** | Copy set under a new name |
+| **Manage → Rename template set…** | Rename the set folder; choose which worlds follow (see below) |
 | **Manage → Rename entity type…** | Safe type rename (see below) |
 | **Manage → Delete entity type…** | Remove fields file; optional rules/token cleanup (see below) |
 | **Manage → Audit set** | Link targets, fields without rules, worlds using the set; issues under the set row |
@@ -173,6 +174,17 @@ On first load the plugin creates `_system/templates/defaults/` in your vault wit
 - The plugin does **not** silently use another template set.
 - If the whole `templates` folder is deleted, the next load recreates `_system/templates/defaults/` from plugin built-ins.
 
+
+### Rename template set
+
+**Settings → template set → Manage → Rename template set…**
+
+- Renames the folder under `_system/templates/`. Schema content moves with the folder.
+- **Live → live:** confirm lists worlds bound to the old name (default: all checked). Checked worlds get `template_set` rewritten; unchecked keep the old name and will show a missing set until you **Assign** or fix `_index.md`.
+- **Live → `_…`:** archives the set (ignored by the plugin), same as renaming the folder by hand — **no** world `template_set` updates; those worlds become orphaned until reassigned. Default template setting falls back to a live set when needed.
+- If finished campaigns must keep an older schema, **Clone** the set first, then rename or archive the copy you no longer need — rename alone cannot leave the old folder name in place.
+- Prefer this over renaming the folder only in the file explorer.
+
 ### Entity type id (`*_Fields.md` stem)
 
 The file stem is the **type id** (menus, tags, folder-rules, `link:Type`).
@@ -234,7 +246,8 @@ Extra keys on a note often mean the template lost fields (or the note is older t
 - **Translate labels** — change the label column in `*_Fields.md`; keep keys and type stems stable unless you run rename
 - **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
 - **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings
-- **Manage template sets** — create, clone, assign, audit, rename types, reset, or mark default in the settings tab
+- **Rename a template set** — Settings → Manage → **Rename template set…** (choose which worlds follow)
+- **Manage template sets** — create, clone, rename set, assign, audit, rename/delete types, reset, or mark default in the settings tab
 
 ## Localization
 

@@ -63,6 +63,10 @@ to the GitHub Wiki — edit it here, not there.
 - **Hot-create gated on usable fields** — `createLinkedEntity` and the form
   “Create new …” row require a usable field set for the target type (same rule
   as honest menus); no minimal stub file when fields are missing
+- **Rename template set** — Settings → Manage: rename the set folder; live→live
+  offers a world checklist (default all) for who gets `template_set` updated;
+  unchecked worlds keep the old name (orphaned until Assign); rename to `_…`
+  archives like a hand-rename (no world updates); clone-first hint for frozen schemas
 
 ## In design (not yet implemented)
 

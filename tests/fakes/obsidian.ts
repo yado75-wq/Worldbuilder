@@ -249,6 +249,72 @@ export class FakeVault {
 		this.files.set(to, stored);
 	}
 
+	/**
+	 * Test helper — rename a folder and rewrite all descendant file/folder paths.
+	 * Used by FakeFileManager.renameFile when the target is a TFolder.
+	 */
+	renameFolder(from: string, to: string): void {
+		const normFrom = from === '/' ? '' : from;
+		const normTo = to === '/' ? '' : to;
+		const folder = this.folders.get(normFrom);
+		if (!folder) throw new Error(`Folder not found: ${from}`);
+		if (this.folders.has(normTo) || this.files.has(normTo)) {
+			throw new Error(`Target already exists: ${to}`);
+		}
+
+		const oldParent = folder.parent;
+		if (oldParent) {
+			oldParent.children = oldParent.children.filter(c => c !== folder);
+		}
+
+		this.folders.delete(normFrom);
+		folder.path = normTo;
+		folder.name = normTo.includes('/') ? normTo.slice(normTo.lastIndexOf('/') + 1) : normTo;
+
+		const parentPath = normTo.includes('/') ? normTo.slice(0, normTo.lastIndexOf('/')) : '';
+		const newParent = this.ensureFolder(parentPath);
+		folder.parent = newParent;
+		if (!newParent.children.includes(folder)) newParent.children.push(folder);
+		this.folders.set(normTo, folder);
+
+		const prefix = normFrom === '' ? null : normFrom + '/';
+		// Move nested folders (deepest first so parents still resolve while iterating)
+		const folderKeys = [...this.folders.keys()]
+			.filter(k => prefix !== null && (k === normFrom || k.startsWith(prefix)))
+			.sort((a, b) => b.length - a.length);
+		for (const key of folderKeys) {
+			if (key === normFrom) continue;
+			const child = this.folders.get(key);
+			if (!child) continue;
+			const rel = key.slice(normFrom.length + 1);
+			const newKey = normTo === '' ? rel : `${normTo}/${rel}`;
+			this.folders.delete(key);
+			child.path = newKey;
+			child.name = newKey.includes('/') ? newKey.slice(newKey.lastIndexOf('/') + 1) : newKey;
+			this.folders.set(newKey, child);
+		}
+
+		const fileKeys = [...this.files.keys()].filter(
+			k => prefix !== null && (k === normFrom || k.startsWith(prefix))
+		);
+		for (const key of fileKeys) {
+			const stored = this.files.get(key);
+			if (!stored) continue;
+			const rel = key.slice(normFrom.length + 1);
+			const newKey = normTo === '' ? rel : `${normTo}/${rel}`;
+			this.files.delete(key);
+			stored.file.path = newKey;
+			stored.file.name = newKey.includes('/') ? newKey.slice(newKey.lastIndexOf('/') + 1) : newKey;
+			const dot = stored.file.name.lastIndexOf('.');
+			stored.file.basename = dot === -1 ? stored.file.name : stored.file.name.slice(0, dot);
+			const parentPath2 = newKey.includes('/') ? newKey.slice(0, newKey.lastIndexOf('/')) : '';
+			const parent = this.ensureFolder(parentPath2);
+			stored.file.parent = parent;
+			if (!parent.children.includes(stored.file)) parent.children.push(stored.file);
+			this.files.set(newKey, stored);
+		}
+	}
+
 	/** Test helper — remove a file or folder from the in-memory vault. */
 	deletePath(path: string): void {
 		const stored = this.files.get(path);
@@ -281,6 +347,10 @@ export class FakeFileManager {
 	constructor(private vault: FakeVault) {}
 
 	async renameFile(file: TAbstractFile, newPath: string): Promise<void> {
+		if (file instanceof TFolder) {
+			this.vault.renameFolder(file.path, newPath);
+			return;
+		}
 		this.vault.movePath(file.path, newPath);
 	}
 

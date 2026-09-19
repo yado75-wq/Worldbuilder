@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { App, TFile } from 'obsidian';
+import { App, /*TFile*/ } from 'obsidian';
 import { FakeVault, resetFakeObsidian } from '../fakes/obsidian';
 import {
 	listRenamableEntityTypes,
@@ -76,30 +76,6 @@ function buildState(overrides?: {
 	};
 }
 
-/** Obsidian Vault#rename is missing on FakeVault — emulate with read/create/delete. */
-function installVaultRename(app: App): void {
-	const vault = app.vault as unknown as FakeVault & {
-		rename?: (file: TFile, newPath: string) => Promise<TFile>;
-		delete?: (file: TFile) => Promise<void>;
-	};
-
-	vault.rename = async (file: TFile, newPath: string) => {
-		const content = await app.vault.read(file);
-		const created = await app.vault.create(newPath, content);
-		if (typeof vault.delete === 'function') {
-			await vault.delete(file);
-		} else {
-			const files = (vault as unknown as { files?: Map<string, string> }).files;
-			if (files?.delete) {
-				files.delete(file.path);
-			} else {
-				vault.seedFile(file.path, '');
-			}
-		}
-		return created;
-	};
-}
-
 describe('listRenamableEntityTypes', () => {
 	it('excludes WorldMeta', () => {
 		const types = listRenamableEntityTypes({
@@ -117,8 +93,7 @@ describe('renameEntityType', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
-		setCatalogForTests(en);
-		installVaultRename(app);
+		setCatalogForTests(en);		
 	});
 
 	it('returns reserved-type for WorldMeta', async () => {
@@ -252,8 +227,7 @@ describe('previewRenameEntityType', () => {
 	beforeEach(() => {
 		app = new App();
 		resetFakeObsidian();
-		setCatalogForTests(en);
-		installVaultRename(app);
+		setCatalogForTests(en);		
 	});
 
 	it('returns impact counts without writing', async () => {

@@ -218,7 +218,7 @@ export async function renameEntityType(
 		new Notice(t('notice.rename-entity-new-exists', { type: newTrim }));
 		return { ok: false, code: 'new-exists' };
 	}
-	await app.vault.rename(oldFile, newPath);
+	await app.fileManager.renameFile(oldFile, newPath);
 
 	// 4) Retag notes in bound worlds
 	const oldTag = oldKey.toLowerCase();

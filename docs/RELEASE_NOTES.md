@@ -7,7 +7,7 @@ Keep `manifest.json` / tag / zip assets in sync with the version heading.
 
 ## 1.0.5
 
-**Delete entity type and catalog-safe hot-create**
+**Delete entity type, catalog-safe hot-create, rename template set**
 
 ### What’s new
 
@@ -18,11 +18,17 @@ Keep `manifest.json` / tag / zip assets in sync with the version heading.
   - With instances: keep rules and link tokens by default
   - **WorldMeta** cannot be deleted; **Generic** on `defaults` may be restored on ensure-defaults
 - **Hot-create gated on usable fields** — form “Create new …” and `createLinkedEntity` require a usable field set for the target type (same rule as honest menus)
+- **Rename template set** (Settings → template set → **Manage** → **Rename template set…**)
+  - Renames the set folder under `_system/templates/`
+  - Live→live: world checklist (default all selected) for who gets `template_set` updated; unchecked worlds stay on the old name (orphaned until Assign)
+  - Rename to `_…`: archive path — no world updates (same as a hand-rename outside the plugin)
+  - Confirm reminds you to **Clone** first when finished worlds need a frozen schema
 
 ### Fixes / behavior notes
 
 - Deleting only the fields file by hand is still incomplete; use **Delete entity type** when you want controlled cleanup
-- After delete, refresh settings/state before opening forms so menus and hot-create match the scan
+- After delete or rename, refresh settings/state before relying on menus
+- FakeVault tests support folder rename via `fileManager.renameFile` (parity with production)
 
 ### Install
 

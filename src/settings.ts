@@ -11,6 +11,7 @@ import {
 import WorldBuilderPlugin from './main';
 import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './formkit/ui/InputModal';
+import { RenameTemplateSetWorldModal } from './ui/RenameTemplateSetModal';
 import { ConfirmModal } from './ui/ConfirmModal';
 import { setActiveWorld } from './commands/SwitchWorldCommand';
 import { editWorldMeta } from './commands/EditWorldMetaCommand';
@@ -24,6 +25,7 @@ import { exportWorld } from './commands/ExportWorldCommand';
 import { importWorld } from './commands/ImportWorldCommand';
 import { listRenamableEntityTypes, renameEntityType } from './commands/RenameEntityTypeCommand';
 import { listDeletableEntityTypes, deleteEntityType } from './commands/DeleteEntityTypeCommand';
+import { renameTemplateSet, updateTemplateSetFrontmatter } from './commands/RenameTemplateSetCommand';
 import { hasActiveWorldConflict } from './context/ActiveWorld';
 import { resolveTemplateSetByName } from './context/TemplateSetResolve';
 import { hasLeadingUnderscore } from './util/names';
@@ -181,6 +183,14 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 										.setTitle(t('settings.clone'))
 										.setIcon('copy')
 										.onClick(() => this.cloneTemplateSet(setName))
+									);
+
+									menu.addItem(item => item
+										.setTitle(t('settings.rename-template-set'))
+										.setIcon('folder-pen') // or 'pencil' / 'folder-input'
+										.onClick(() => {
+											void this.openRenameTemplateSet(setName);
+										})
 									);
 
 									menu.addItem(item => item
@@ -626,6 +636,85 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 		).open();
 	}
 
+	private openRenameTemplateSet(setName: string): void {
+		const set = this.plugin.state.templateSets.find(s => s.name === setName);
+		if (!set) {
+			new Notice(t('notice.template-set-not-found', { name: setName }));
+			return;
+		}
+
+		new InputModal(
+			this.app,
+			t('settings.rename-template-set').replace('…', ''),
+			setName,
+			setName,
+			(name) => {
+				void (async () => {
+					const result = await renameTemplateSet(
+						this.app,
+						this.plugin.state,
+						this.plugin.settings,
+						setName,
+						name,
+						async (info) =>
+							await new Promise<string[] | null>((resolve) => {
+								new RenameTemplateSetWorldModal(this.app, {
+									oldName: info.oldName,
+									newName: info.newName,
+									worlds: info.worlds,
+									defaultsWarning: info.defaultsWarning,
+									onDone: resolve,
+								}).open();
+							}),
+						async (info) =>
+							await new Promise<boolean>((resolve) => {
+								new ConfirmModal(
+									this.app,
+									t('modal.rename-template-archive-body', {
+										old: info.oldName,
+										new: info.newName,
+									}),
+									(ok) => resolve(ok),
+									t('modal.rename-template-archive-ok'),
+									t('form.cancel'),
+									t('modal.rename-template-archive-title')
+								).open();
+							})
+					);
+
+					if (!result.ok) return;
+
+					if ( result.ok && this.plugin.settings.defaultTemplateSet === result.oldName ) {
+						if (result.archived) {
+							const live = this.plugin.state.templateSets
+								.map(s => s.name)
+								.filter(n => n !== result.oldName);
+							const next =
+								live.includes('defaults') ? 'defaults' : (live[0] ?? '');
+							this.plugin.settings.defaultTemplateSet = next;
+							await this.plugin.saveSettings();
+							if (next) {
+								new Notice(
+									t('notice.default-template-set-switched', {
+										from: result.oldName,
+										to: next,
+									})
+								);
+							}
+						} else {
+							this.plugin.settings.defaultTemplateSet = result.newName;
+							await this.plugin.saveSettings();
+						}
+					}
+
+					await this.plugin.refreshState();
+					this.update();
+				})();
+			},
+			() => {}
+		).open();
+	}
+
 	private async assignTemplateSetToWorld(templateSetName: string): Promise<void> {
 		const worlds = this.plugin.state.worlds;
 		if (worlds.length === 0) {
@@ -838,26 +927,3 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 	}
 }
 
-function updateTemplateSetFrontmatter(content: string, templateSetName: string): string {
-	const frontmatterPattern = /^---\s*\n([\s\S]*?)\n---\s*(?:\n|$)/;
-	const match = content.match(frontmatterPattern);
-
-	if (!match?.[1]) {
-		return `---\ntags:\n  - world\ntemplate_set: ${templateSetName}\n---\n\n${content}`;
-	}
-
-	const frontmatterBody = match[1];
-	const updatedFrontmatter = frontmatterBody.replace(
-		/^template_set:.*$/m,
-		`template_set: ${templateSetName}`
-	);
-
-	if (updatedFrontmatter === frontmatterBody) {
-		return content.replace(
-			frontmatterPattern,
-			`---\n${frontmatterBody}\ntemplate_set: ${templateSetName}\n---\n`
-		);
-	}
-
-	return content.replace(frontmatterPattern, `---\n${updatedFrontmatter}\n---\n`);
-}
