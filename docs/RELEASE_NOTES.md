@@ -7,7 +7,7 @@ Keep `manifest.json` / tag / zip assets in sync with the version heading.
 
 ## 1.0.5
 
-**Delete entity type, catalog-safe hot-create, rename template set**
+**Delete entity type, catalog-safe hot-create, rename template set, catalog audit**
 
 ### What’s new
 
@@ -23,12 +23,16 @@ Keep `manifest.json` / tag / zip assets in sync with the version heading.
   - Live→live: world checklist (default all selected) for who gets `template_set` updated; unchecked worlds stay on the old name (orphaned until Assign)
   - Rename to `_…`: archive path — no world updates (same as a hand-rename outside the plugin)
   - Confirm reminds you to **Clone** first when finished worlds need a frozen schema
+- **Catalog-aware world audit** — notes tagged for a type with no `*_Fields.md` are reported as **info** (`catalog-type`): linkable, New/Edit/hot-create off; not framed as a broken restore target
+- **Schema drift** findings use kind `schema-drift` (warning) for extra / missing mandatory keys
+- **Link target without fields** on set audit is a **warning** (catalog-friendly), so intentional rulebook types do not mark the set invalid by themselves
 
 ### Fixes / behavior notes
 
 - Deleting only the fields file by hand is still incomplete; use **Delete entity type** when you want controlled cleanup
 - After delete or rename, refresh settings/state before relying on menus
 - FakeVault tests support folder rename via `fileManager.renameFile` (parity with production)
+- `fields-without-rule` remains an **info** note when a type has fields but no folder-rules row (`*` placement)
 
 ### Install
 

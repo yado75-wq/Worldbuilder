@@ -56,10 +56,11 @@ export function missingLinkTargetIssues(
 			if (seen.has(key)) continue;
 			seen.add(key);
 			issues.push({
-				severity: 'error',
+				// Warning: catalog / rulebook types may omit fields on purpose (linkable tags only).
+				severity: 'warning',
 				kind: 'link-target-missing',
 				file,
-				message: `Link target "${target}" has no ${target}_Fields.md in this template set.`,
+				message: `Link target "${target}" has no ${target}_Fields.md in this set (catalog mode: existing notes stay linkable; New/Edit/hot-create off).`,
 			});
 		}
 	}

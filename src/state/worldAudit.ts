@@ -3,6 +3,7 @@ import { FieldDefinition } from '../formkit';
 import { TemplateSetInfo, ValidationIssue } from '../types/templateSet';
 import { WorldInfo } from '../types/world';
 import { resolveTemplateSetByName } from '../context/TemplateSetResolve';
+import { t } from '../i18n';
 
 /** Frontmatter keys that are never template fields. */
 const RESERVED_FM_KEYS = new Set([
@@ -10,10 +11,14 @@ const RESERVED_FM_KEYS = new Set([
 	'position', // Obsidian
 ]);
 
+/** Tags that never identify an entity type. */
+const NON_ENTITY_TAGS = new Set(['world']);
+
 export interface OrphanEntityNote {
 	path: string;
 	basename: string;
 	tag: string;
+	/** Display type id when known from folder-rules; otherwise tag casing as on the note. */
 	entityType: string;
 }
 
@@ -66,8 +71,19 @@ function fieldSetKeyForTag(
 }
 
 /**
+ * Prefer folder-rules spelling for a tag; otherwise the tag itself.
+ */
+function displayTypeForTag(templateSet: TemplateSetInfo, tag: string): string {
+	const lower = tag.toLowerCase();
+	for (const rule of templateSet.folderRules) {
+		if (rule.entityType.toLowerCase() === lower) return rule.entityType;
+	}
+	return tag;
+}
+
+/**
  * Compare instance frontmatter to template field keys.
- * Pure — used by audit and unit tests; pre-step for “restore template from entities”.
+ * Pure — used by audit and unit tests.
  */
 export function compareInstanceToTemplate(
 	frontmatter: Record<string, unknown>,
@@ -99,37 +115,33 @@ export function compareInstanceToTemplate(
 }
 
 /**
- * Notes tagged for a folder-rules type that has no *_Fields.md.
+ * Notes tagged for an entity type that has no *_Fields.md in the set.
+ * Includes catalog / rulebook mode (delete type kept tags; link targets only).
+ * Covers folder-rules rows without fields and arbitrary tags with no field set.
  */
 export function findOrphanEntityNotes(
 	app: App,
 	worldPath: string,
 	templateSet: TemplateSetInfo
 ): OrphanEntityNote[] {
-	const knownTypes = new Set(
-		Object.keys(templateSet.fieldSets).map(k => k.toLowerCase())
-	);
-
-	const missingRuleTypes: { entityType: string; tag: string }[] = [];
-	for (const rule of templateSet.folderRules) {
-		const lower = rule.entityType.toLowerCase();
-		if (knownTypes.has(lower)) continue;
-		if (lower === 'worldmeta') continue;
-		missingRuleTypes.push({ entityType: rule.entityType, tag: lower });
-	}
-
-	if (missingRuleTypes.length === 0) return [];
-
 	const orphans: OrphanEntityNote[] = [];
+	const seen = new Set<string>(); // path::tag
+
 	for (const file of listWorldEntityFiles(app, worldPath)) {
-		const tags = new Set(normalizedTags(app, file));
-		for (const { entityType, tag } of missingRuleTypes) {
-			if (!tags.has(tag)) continue;
+		const tags = normalizedTags(app, file);
+		for (const tag of tags) {
+			if (NON_ENTITY_TAGS.has(tag)) continue;
+			if (fieldSetKeyForTag(templateSet.fieldSets, tag)) continue;
+
+			const key = `${file.path}::${tag}`;
+			if (seen.has(key)) continue;
+			seen.add(key);
+
 			orphans.push({
 				path: file.path,
 				basename: file.basename,
 				tag,
-				entityType,
+				entityType: displayTypeForTag(templateSet, tag),
 			});
 		}
 	}
@@ -139,7 +151,6 @@ export function findOrphanEntityNotes(
 
 /**
  * Instance ↔ template mismatches for notes whose tag matches a live field set.
- * Prefers metadataCache frontmatter; falls back to empty object if missing.
  */
 export function findSchemaDrift(
 	app: App,
@@ -152,7 +163,7 @@ export function findSchemaDrift(
 		const tags = normalizedTags(app, file);
 		let entityType: string | null = null;
 		for (const tag of tags) {
-			if (tag === 'world') continue;
+			if (NON_ENTITY_TAGS.has(tag)) continue;
 			entityType = fieldSetKeyForTag(templateSet.fieldSets, tag);
 			if (entityType) break;
 		}
@@ -163,7 +174,6 @@ export function findSchemaDrift(
 
 		const cache = app.metadataCache.getFileCache(file);
 		const frontmatter = { ...(cache?.frontmatter ?? {}) };
-		// Strip Obsidian internal keys if present
 		delete frontmatter.position;
 
 		const { extraKeys, missingMandatory } = compareInstanceToTemplate(
@@ -185,8 +195,7 @@ export function findSchemaDrift(
 }
 
 /**
- * Read-only world audit: binding, missing-type orphans, instance↔template drift.
- * Drift findings are the pre-step inventory for “restore / align template from entities”.
+ * Read-only world audit: binding, catalog-type notes, instance↔template drift.
  */
 export function auditWorld(
 	app: App,
@@ -202,8 +211,8 @@ export function auditWorld(
 			kind: 'other',
 			message:
 				resolved.reason === 'none'
-					? 'No template sets in the vault; restore or create one.'
-					: `Template set "${world.templateSet}" not found; reassign in settings or fix _index.md.`,
+					? t('audit.world-no-template-sets')
+					: t('audit.world-template-missing', { name: world.templateSet }),
 		});
 
 		return {
@@ -224,10 +233,13 @@ export function auditWorld(
 
 	for (const orphan of orphans) {
 		issues.push({
-			severity: 'warning',
-			kind: 'other',
+			severity: 'info',
+			kind: 'catalog-type',
 			file: orphan.path,
-			message: `Note tagged "${orphan.tag}" but type "${orphan.entityType}" has no fields file (folder-rules still references it). Candidate for restore-template-from-entities.`,
+			message: t('audit.catalog-type', {
+				tag: orphan.tag,
+				type: orphan.entityType,
+			}),
 		});
 	}
 
@@ -235,19 +247,27 @@ export function auditWorld(
 		const parts: string[] = [];
 		if (drift.extraKeys.length > 0) {
 			parts.push(
-				`extra keys not in ${drift.entityType}_Fields.md: ${drift.extraKeys.join(', ')}`
+				t('audit.schema-drift-extra', {
+					type: drift.entityType,
+					keys: drift.extraKeys.join(', '),
+				})
 			);
 		}
 		if (drift.missingMandatory.length > 0) {
 			parts.push(
-				`missing mandatory: ${drift.missingMandatory.join(', ')}`
+				t('audit.schema-drift-missing', {
+					keys: drift.missingMandatory.join(', '),
+				})
 			);
 		}
 		issues.push({
 			severity: 'warning',
-			kind: 'other',
+			kind: 'schema-drift',
 			file: drift.path,
-			message: `Instance ↔ template mismatch (${drift.entityType}): ${parts.join('; ')}.`,
+			message: t('audit.schema-drift', {
+				type: drift.entityType,
+				detail: parts.join('; '),
+			}),
 		});
 	}
 

@@ -1,6 +1,6 @@
+import { FolderRule } from './folderRule';
+import { FieldDefinition } from '../formkit';
 
-import { FolderRule } from "./folderRule";
-import { FieldDefinition } from "../formkit";
 // ── Template Sets ─────────────────────────────────────────────────────────────
 
 export interface TemplateSetInfo {
@@ -26,8 +26,10 @@ export type ValidationIssueKind =
 	| 'fields-without-rule'
 	| 'empty-folder-rules'
 	| 'empty-world-template'
+	| 'catalog-type'
+	| 'schema-drift'
 	| 'other';
-	
+
 export interface ValidationIssue {
 	severity: 'error' | 'warning' | 'info';
 	kind: ValidationIssueKind;

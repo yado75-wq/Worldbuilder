@@ -226,5 +226,11 @@
   "modal.rename-template-archive-title": "Archive template set",
   "modal.rename-template-archive-body": "Rename \"{old}\" → \"{new}\"? Sets whose names start with \"_\" are ignored. No world template_set fields will be changed; worlds still pointing at \"{old}\" will be orphaned until reassigned.",
   "modal.rename-template-archive-ok": "Archive",
-  "settings.rename-template-set": "Rename template set…"
+  "settings.rename-template-set": "Rename template set…",
+  "audit.world-no-template-sets": "No template sets in the vault; restore or create one.",
+  "audit.world-template-missing": "Template set \"{name}\" not found; reassign in settings or fix _index.md.",
+  "audit.catalog-type": "Catalog type: note tagged \"{tag}\" has no {type}_Fields.md — linkable, but New/Edit/hot-create are off for this type.",
+  "audit.schema-drift": "Instance ↔ template ({type}): {detail}",
+  "audit.schema-drift-extra": "extra keys not in {type}_Fields.md: {keys}",
+  "audit.schema-drift-missing": "missing mandatory: {keys}"
 }
