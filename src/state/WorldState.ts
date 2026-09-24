@@ -181,7 +181,11 @@ async function buildTemplateSetInfo(
 	);
 
 	for (const file of fieldFiles) {
-		const typeName = file.name.replace('_Fields.md', '');
+		// Leading "_" on the type stem → ignored (same rule as worlds/sets/notes).
+		// e.g. _Character_Fields.md, _report is already non-matching; keep one rule.
+		const typeName = file.name.replace(/_Fields\.md$/i, '');
+		if (!typeName || typeName.startsWith('_')) continue;
+
 		const raw = await app.vault.read(file);
 		const parsed = parseFieldsWithIssues(raw, file.name);
 		fieldSets[typeName] = parsed.fields;

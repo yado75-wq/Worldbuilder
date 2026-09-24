@@ -16,7 +16,7 @@ These two failed so many times that it made me reconsider my view of project man
 - **World kits** — export a world plus its template set as a zip; import via Settings (system file picker). Imported worlds are inactive; name clashes use a localized `(imported)` suffix
 - **Entity creation** — create Characters, Locations, Factions, and any custom entity type via a clean form UI, directly from the right-click menu. Freeform notes added below the auto-generated content survive future edits, same protected-section behavior as the dashboard
 - **Template-driven** — all entity fields, folder rules, and world structure defined in plain markdown files you can edit freely
-- **Template set management** — create, clone, **rename template set**, reset, assign to a world, set a default, **audit**, **rename** and **delete entity types** from the plugin settings tab
+- **Template set management** — create, clone, **rename template set**, reset, assign to a world, set a default, **audit**, **rename** and **delete entity types**, and **Suggest fields from worlds** from the plugin settings tab
 - **Audit** — template-set audit (bindings, link targets, fields without rules) and world audit (binding + instance↔template drift); findings show in the issues table under the matching settings row
 - **Dashboard** — auto-generated world dashboard with entity counts, world meta, TODO tracking, a `## Needs attention` section flagging entities missing mandatory fields, and a protected Notes section that survives refresh
 - **World meta** — structured world bible (genre, tone, themes, premise, conflict etc.) editable via form
@@ -82,7 +82,7 @@ Notes:
 
 Use `*` as target folder to allow placement anywhere (e.g. Generic | *).
 Entity types not listed in folder rules are treated as `*` (creatable anywhere).
-Worlds or folders whose names start with `_` are ignored by the plugin (archive / system).
+Worlds, template sets, notes, and `*_Fields.md` stems whose names start with `_` are ignored by the plugin (archive / system). Reserved plugin files (`_index.md`, `_dashboard.md`, `_system`) are hardcoded exceptions.
 
 ## Settings tab (plugin settings)
 
@@ -98,6 +98,7 @@ Template sets and worlds are managed here. Prefer these tools over hand-editing 
 | **Manage → Rename template set…** | Rename the set folder; choose which worlds follow (see below) |
 | **Manage → Rename entity type…** | Safe type rename (see below) |
 | **Manage → Delete entity type…** | Remove fields file; optional rules/token cleanup (see below) |
+| **Manage → Suggest fields from worlds…** | Build a **new** template set from entity notes (see below) |
 | **Manage → Audit set** | Link targets, fields without rules, worlds using the set; issues under the set row |
 | **Manage → Reset to defaults** | Overwrite set files from plugin built-ins |
 | Header **+** | New template set (from defaults) |
@@ -211,6 +212,20 @@ Removes the type **definition** (`Type_Fields.md`) so New / Edit / hot-create st
 
 **WorldMeta** cannot be deleted. **Generic** on the `defaults` set may reappear after ensure-defaults / next load.
 
+#### Suggest fields from worlds… (Settings → template set → Manage)
+
+Creates a **new** template set (never overwrites the source). Intended for catalog recovery, schema drift, or building a set from existing notes.
+
+1. **Clone** the source set (kit files, types not in this run stay as cloned).
+2. For each entity type that has tagged notes in selected worlds (default: worlds bound to the source set):
+   - Rebuild `Type_Fields.md` from **Generic** (name) **plus keys present on notes** — not a full copy of the source type template.
+   - Infer types conservatively (e.g. YAML lists of `[[wikilinks]]` → `multiselect:link`; second pass fills link chains when target notes exist).
+   - Update **folder-rules** for those types only: first-level folder under the world if ≥80% of notes agree (and ≥2 notes); otherwise `*`. Other rules stay from the clone.
+3. Write **`_report.md`** in the new set (underscore = ignored by scanners) with evidence in the plugin UI language; field keys and paths stay as in the vault.
+4. Worlds keep their current `template_set` until you **Assign**.
+
+Source set remains the place to copy labels or extra keys by hand. Names cannot start with `_`. Field files / type stems starting with `_` are ignored by the plugin (same archive rule as worlds and template sets).
+
 #### Hand rename (not recommended)
 
 Renaming only `Character_Fields.md` → `Postava_Fields.md` in the file explorer changes the type id on the **next scan** only. Existing note tags, `folder-rules.md`, and `link:Character` lines are **not** updated. Use **Audit set** / **Audit world** to see the damage, then prefer the rename command or fix by hand.
@@ -228,7 +243,7 @@ Renaming only `Character_Fields.md` → `Postava_Fields.md` in the file explorer
 | **Audit set** | Missing link target types, fields without folder-rules, which worlds use the set |
 | **Audit world** | Missing bound template set; notes tagged for a type with no fields file; **extra** frontmatter keys not in the type’s fields file; missing mandatory keys |
 
-Extra keys on a note often mean the template lost fields (or the note is older than the template). That inventory is intentional for later “suggest fields from entities” recovery — audit does not rewrite notes.
+Extra keys on a note often mean the template lost fields (or the note is older than the template). Use **Suggest fields from worlds…** to draft a recovery set; audit does not rewrite notes.
 
 ## Releasing
 
@@ -247,7 +262,7 @@ Extra keys on a note often mean the template lost fields (or the note is older t
 - **Change world structure** — edit `world-template.md` to add or remove subfolders, then use Sync world folders on existing worlds
 - **Multiple template sets** — create different sets for different genres (fantasy, sci-fi, horror) via plugin settings
 - **Rename a template set** — Settings → Manage → **Rename template set…** (choose which worlds follow)
-- **Manage template sets** — create, clone, rename set, assign, audit, rename/delete types, reset, or mark default in the settings tab
+- **Manage template sets** — create, clone, rename set, assign, audit, suggest fields from worlds, rename/delete types, reset, or mark default in the settings tab
 
 ## Localization
 

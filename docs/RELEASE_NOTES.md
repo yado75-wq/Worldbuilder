@@ -5,6 +5,34 @@ Keep `manifest.json` / tag / zip assets in sync with the version heading.
 
 ---
 
+## 1.0.6
+
+**Suggest fields from worlds, folder-rule inference, underscore type stems**
+
+### What's new
+
+- **Suggest fields from worlds…** (Settings → template set → **Manage**)
+  - Always creates a **new** template set (source set is not modified)
+  - Field files for types with note evidence: **Generic + keys from notes** (not a silent full copy of the source type template)
+  - Wikilink lists → `multiselect:link`; second pass resolves link chains from target note tags when possible
+  - **Folder rules (approach A):** for types in the run only, set first-level folder when ≥80% of notes agree (≥2 notes); otherwise `*`; other rules kept from the clone
+  - Writes **`_report.md`** (ignored by scanners) with localized prose and raw keys/paths
+  - Worlds are **not** rebound until **Assign**
+- **Underscore type stems ignored** — `_Character_Fields.md` is not registered as a type (same rule as archived worlds/sets and `_report.md`)
+
+### Fixes / behavior notes
+
+- Create / hot-create / rename already reject names starting with `_`; scan now matches that for field file stems
+- Audit still does not rewrite notes; Suggest is the recovery path for extra keys / missing fields files
+
+### Install
+
+Extract the release zip into `.obsidian/plugins/world-builder-tools/`, or update via BRAT.
+
+Requires **Obsidian 1.13.0+** (desktop).
+
+---
+
 ## 1.0.5
 
 **Delete entity type, catalog-safe hot-create, rename template set, catalog audit**

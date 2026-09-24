@@ -13,6 +13,7 @@ import { cloneTemplateSet, resetTemplateSet } from './commands/SetupCommand';
 import { InputModal } from './formkit/ui/InputModal';
 import { RenameTemplateSetWorldModal } from './ui/RenameTemplateSetModal';
 import { ConfirmModal } from './ui/ConfirmModal';
+import { suggestFieldsFromWorlds } from './commands/SuggestFieldsFromWorldsCommand';
 import { setActiveWorld } from './commands/SwitchWorldCommand';
 import { editWorldMeta } from './commands/EditWorldMetaCommand';
 import { cloneWorld } from './commands/CloneWorldCommand';
@@ -239,6 +240,14 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 												}
 												this.update();
 											})();
+										})
+									);
+
+									menu.addItem(item => item
+										.setTitle(t('settings.suggest-fields'))
+										.setIcon('sparkles') // or 'wand' / 'scan'
+										.onClick(() => {
+											void this.openSuggestFields(setName);
 										})
 									);
 
@@ -924,6 +933,50 @@ export class WorldBuilderSettingTab extends PluginSettingTab {
 			await this.plugin.refreshState();
 			this.update();
 		})();
+	}
+
+	private openSuggestFields(setName: string): void {
+		const set = this.plugin.state.templateSets.find(s => s.name === setName);
+		if (!set) {
+			new Notice(t('notice.template-set-not-found', { name: setName }));
+			return;
+		}
+
+		const placeholder = t('modal.suggest-name-placeholder', { source: setName })
+			.replace('{source}', setName);
+
+		new InputModal(
+			this.app,
+			t('modal.suggest-name-prompt'),
+			placeholder,
+			`${setName}-suggested`,
+			(name) => {
+				void (async () => {
+					const result = await suggestFieldsFromWorlds(
+						this.app,
+						this.plugin.state,
+						this.plugin.settings,
+						setName,
+						name,
+						async (preview) =>
+							await new Promise<boolean>((resolve) => {
+								new ConfirmModal(
+									this.app,
+									preview.summaryText,
+									(ok) => resolve(ok),
+									t('modal.suggest-fields-ok'),
+									t('form.cancel'),
+									t('modal.suggest-fields-title')
+								).open();
+							})
+					);
+					if (!result.ok) return;
+					await this.plugin.refreshState();
+					this.update();
+				})();
+			},
+			() => {}
+		).open();
 	}
 }
 
